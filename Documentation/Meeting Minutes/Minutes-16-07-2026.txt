@@ -1,0 +1,27 @@
+Kinsmen WIL Project — Meeting Minutes
+Date: 16 July 2026
+Time: 10:00–12:00
+Mode: In-person / Online
+Present: Kaehil, Zario, Gregory
+Absent: Kyra - Personal Obligations
+Minutes taken by: Kaehil
+Discussion:
+
+Reviewed the Task 1 requirements and mark breakdown from the INSY7315 Module Manual (Documentation 70%, Prototype 25%, Attendance 5%)
+Went through what Task 1 documentation needs to include: requirements, user roles/stories, UX journey map, WBS, analysis/architecture artifacts, data schema, security, DevOps, running costs, change management
+Drafted a client requirements questionnaire for Kinsmen covering business overview, services & pricing, booking system logic, notifications, payments, branding, admin needs, and technical constraints
+Sent the questionnaire to the Kinsmen client contact via email, requesting responses by [24 July]
+
+Decisions:
+
+Questionnaire will be the basis for our Requirements, User Roles, and User Stories sections once client responses are received
+Team to reconvene once client responses come in to begin domain modelling and WBS drafting
+
+Action items:
+
+Follow up with client if no response by 21 July -> Kaehil | 21 July
+Begin drafting User Stories from questionnaire answers -> Kaehil | 27 July
+Start Work Breakdown Structure outline -> Kaehil | 27 July
+
+Issues raised: None — awaiting client response before further progress on Requirements section.
+Next meeting: 21 July | 10:00
