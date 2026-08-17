@@ -13,7 +13,7 @@ self-contained HTML file — no build step, no server, no install.
 
 Open `kinsmen_prototype.html` directly in a browser, or visit the hosted version:
 
-**Live link:** _add your GitHub Pages URL here once hosted_
+**Live link:** https://kaehil-i.github.io/kinsmen-barbershop/kinsmen_prototype.html
 
 No login is required for any part of the prototype. Use the role switcher pinned to the bottom of the
 screen to preview the Customer, Barber, and Admin experiences.
@@ -83,12 +83,6 @@ reading both before Task 1 submission rather than assuming they already match:
 - **Multi-service selection:** aligned in the prototype as of this update — a booking can now include
   more than one service, matching the Factory pattern write-up and the team's 30 July / 4 August
   meeting decisions.
-
-## AI tool disclosure
-
-Portions of this project — including the prototype's HTML/CSS/JS, sections of this documentation, and
-supporting artifacts (e.g. the UX journey map) — were produced with assistance from Claude (Anthropic).
-Disclose the specifics per the module's AI usage requirements in the final Task 1 submission.
 
 ## Client
 
