@@ -332,7 +332,7 @@
     font-family:var(--mono); font-size:13px; color:var(--text-dim);
   }
 
-  @media (max-width: 1120px){
+  @media (max-width: 1220px){
     .nav-links{ display:none; }
     .nav-auth{ display:none; }
     .nav-toggle{ display:flex; }
@@ -645,6 +645,24 @@
     font-family:var(--mono); font-size:11px; padding:6px 9px; border-radius:8px; color:var(--text-dim);
   }
   .lang-switch button.active{ background:var(--base); color:var(--text); box-shadow:2px 2px 5px var(--sh-dark-soft), -2px -2px 5px var(--sh-light-soft); }
+  /* ---------- my bookings / reviews ---------- */
+  .my-booking-row{ padding:18px 20px; margin-bottom:12px; }
+  .my-booking-row .mtop{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:6px; }
+  .my-booking-row .mname{ font-family:var(--display); font-weight:600; font-size:15px; color:var(--text); }
+  .my-booking-row .mmeta{ font-size:13px; color:var(--text-dim); margin-bottom:12px; }
+  .my-booking-actions{ display:flex; gap:10px; flex-wrap:wrap; }
+  .my-booking-actions button{
+    font-family:var(--display); font-weight:600; font-size:12.5px; padding:10px 16px; border-radius:12px; color:var(--text);
+  }
+  .my-booking-actions .danger{ color:var(--accent); }
+  .badge-grey{ background:rgba(114,108,94,0.16); color:var(--text-dim); }
+  .star-picker{ display:flex; gap:6px; margin:10px 0; }
+  .star-picker button{ font-size:22px; color:var(--sh-dark); background:none; border:none; cursor:pointer; padding:2px; }
+  .star-picker button.active{ color:var(--ochre); }
+  .review-box textarea{
+    width:100%; min-height:70px; border:none; background:transparent; font-family:var(--body); font-size:14px;
+    color:var(--text); padding:12px 14px; resize:vertical;
+  }
 </style>
 </head>
 <body>
@@ -706,7 +724,7 @@
           <li style="margin-left:16px;"><strong style="color:var(--text);">Barber</strong> — My Bookings → click any booking to open the checkout (POS)</li>
           <li style="margin-left:16px;"><strong style="color:var(--text);">Admin</strong> — Products (add/remove stock) → Accounts (create/edit logins)</li>
         </ol>
-        <p style="font-size:12.5px; color:var(--text-dim); margin:0;">All data (bookings, products, accounts) is seeded in the browser for demo purposes and resets on refresh — nothing here is connected to a real database yet.</p>
+        <p style="font-size:12.5px; color:var(--text-dim); margin:0;">All data (bookings, products, accounts, services) is seeded in the browser for demo purposes and resets on refresh — nothing here is connected to a real database yet.</p>
       </div>
       <div class="tag" data-i18n="hero_tag">Durban North · Classic Barbershop</div>
       <h1 data-i18n="hero_h1">A proper cut, a proper shave, no fuss about it.</h1>
@@ -733,29 +751,29 @@
   <section id="book">
     <div class="wrap">
       <div class="book-head">
-        <div class="tag">Book a Chair</div>
-        <h2>Choose your barber, day and time</h2>
-        <p>No account needed to book — <em>creating one just saves your details for next time.</em></p>
+        <div class="tag" data-i18n="book_tag">Book a Chair</div>
+        <h2 data-i18n="book_h2">Choose your barber, day and time</h2>
+        <p data-i18n-html="book_p"></p>
       </div>
 
       <div class="booking-shell">
 
         <div class="field-row">
           <div class="panel neo-raised">
-            <label for="barber" class="accent-teal">Barber</label>
+            <label for="barber" class="accent-teal" data-i18n="label_barber">Barber</label>
             <div class="select-shell neo-pressed">
               <select id="barber" class="barber-select">
-                <option value="any">Any available barber</option>
+                <option value="any" data-i18n="option_any_barber">Any available barber</option>
                 <option value="sipho">Sipho — Fades &amp; Tapers</option>
                 <option value="luke">Luke — Classic Cuts</option>
                 <option value="ayanda">Ayanda — Beards &amp; Hot Towel Shaves</option>
               </select>
             </div>
-            <p class="barber-note" id="barber-note">First available chair, whoever's free.</p>
+            <p class="barber-note" id="barber-note" data-i18n="barber_note_any">First available chair, whoever's free.</p>
           </div>
 
           <div class="panel neo-raised">
-            <label class="accent-ochre">Service</label>
+            <label class="accent-ochre"><span data-i18n="label_services">Service(s)</span> <span style="text-transform:none; letter-spacing:0;" data-i18n="label_services_hint">— pick one or more</span></label>
             <div class="service-chip-row" id="service-row">
               <button class="service-chip neo-pill-pressed active" data-service="Haircut">Haircut</button>
               <button class="service-chip neo-pill-raised" data-service="Skin Fade">Skin Fade</button>
@@ -766,13 +784,13 @@
         </div>
 
         <div class="panel neo-raised" style="margin-top:0;">
-          <label class="accent-teal">Add-ons <span style="text-transform:none; letter-spacing:0;">(optional)</span></label>
+          <label class="accent-teal"><span data-i18n="label_addons">Add-ons</span> <span style="text-transform:none; letter-spacing:0;" data-i18n="label_addons_hint">(optional)</span></label>
           <div class="service-chip-row" id="addon-row">
             <button class="service-chip neo-pill-raised" data-addon="Eyebrow Trim">Eyebrow Trim · TBC</button>
             <button class="service-chip neo-pill-raised" data-addon="Hair Wash">Hair Wash · TBC</button>
             <button class="service-chip neo-pill-raised" data-addon="Scalp Massage">Scalp Massage · TBC</button>
           </div>
-          <p class="barber-note">Add-on pricing to be confirmed with the client — shown here so the flow is demonstrable.</p>
+          <p class="barber-note" data-i18n="addon_note">Add-on pricing to be confirmed with the client — shown here so the flow is demonstrable.</p>
         </div>
 
         <div class="picker-row">
@@ -789,27 +807,27 @@
 
           <div class="panel neo-raised time-pane">
             <div class="time-label-row">
-              <span class="month-label">Available Times</span>
+              <span class="month-label" data-i18n="label_available_times">Available Times</span>
             </div>
             <div id="time-grid" class="time-grid">
-              <span class="no-date-msg">Pick a date to see open times.</span>
+              <span class="no-date-msg" data-i18n="no_date_msg">Pick a date to see open times.</span>
             </div>
           </div>
         </div>
 
         <div class="panel neo-raised booking-summary" id="summary-panel">
-          <div class="summary-text" id="summary-text">
+          <div class="summary-text" id="summary-text" data-i18n="select_to_continue">
             Select a barber, date and time to continue.
           </div>
-          <button class="btn-confirm neo-pill-raised" id="confirm-btn" disabled>Confirm Booking</button>
+          <button class="btn-confirm neo-pill-raised" id="confirm-btn" disabled data-i18n="btn_confirm_booking">Confirm Booking</button>
         </div>
 
         <div class="panel neo-raised success-card" id="success-card">
           <div class="success-badge">&#10003;</div>
           <div>
-            <h3>You're booked in</h3>
+            <h3 data-i18n="success_heading">You're booked in</h3>
             <p id="success-text"></p>
-            <p style="margin-top:8px;"><a href="#" id="book-another" class="link-btn" style="color:var(--teal);">Book another appointment</a></p>
+            <p style="margin-top:8px;"><a href="#" id="book-another" class="link-btn" style="color:var(--teal);" data-i18n="book_another">Book another appointment</a></p>
           </div>
         </div>
       </div>
@@ -821,9 +839,9 @@
 <div id="view-services" class="view">
   <section class="page-intro">
     <div class="wrap">
-      <div class="tag">Durban North · Classic Barbershop</div>
-      <h1>Services &amp; Pricing</h1>
-      <p>
+      <div class="tag" data-i18n="hero_tag">Durban North · Classic Barbershop</div>
+      <h1 data-i18n="services_h1">Services &amp; Pricing</h1>
+      <p data-i18n="services_p">
         Straightforward pricing, no upsell. Every cut, fade and shave is done
         with proper tools and no rush — walk through what's on offer below,
         then book your chair.
@@ -834,94 +852,8 @@
   <!-- ---------- SERVICE LIST ---------- -->
   <section>
     <div class="wrap">
-      <p class="price-note">Pricing supplied by the client (requirements questionnaire) — durations not yet confirmed, to follow up.</p>
-      <div class="service-list">
-
-        <div class="panel neo-raised service-row">
-          <div><div class="name">Haircut</div></div>
-          <div class="price">R200</div>
-          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-route="book">Book</a>
-        </div>
-
-        <div class="panel neo-raised service-row">
-          <div><div class="name">Skin Fade</div></div>
-          <div class="price">R230</div>
-          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-route="book">Book</a>
-        </div>
-
-        <div class="panel neo-raised service-row">
-          <div><div class="name">Kinsman Groom</div><div class="desc">The full package</div></div>
-          <div class="price">R450</div>
-          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-route="book">Book</a>
-        </div>
-
-        <div class="panel neo-raised service-row">
-          <div><div class="name">Wash / Cut / Style</div></div>
-          <div class="price">R250</div>
-          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-route="book">Book</a>
-        </div>
-
-        <div class="panel neo-raised service-row">
-          <div><div class="name">Beard Trim</div></div>
-          <div class="price">R130</div>
-          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-route="book">Book</a>
-        </div>
-
-        <div class="panel neo-raised service-row">
-          <div><div class="name">Beard Colour</div></div>
-          <div class="price">R110</div>
-          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-route="book">Book</a>
-        </div>
-
-        <div class="panel neo-raised service-row">
-          <div><div class="name">Hot Towel Shave</div></div>
-          <div class="price">R110</div>
-          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-route="book">Book</a>
-        </div>
-
-        <div class="panel neo-raised service-row">
-          <div><div class="name">Head Shave</div></div>
-          <div class="price">R110</div>
-          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-route="book">Book</a>
-        </div>
-
-        <div class="panel neo-raised service-row">
-          <div><div class="name">Hair Colour</div></div>
-          <div class="price">R220</div>
-          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-route="book">Book</a>
-        </div>
-
-        <div class="panel neo-raised service-row">
-          <div><div class="name">Express Facial</div></div>
-          <div class="price">R240</div>
-          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-route="book">Book</a>
-        </div>
-
-        <div class="panel neo-raised service-row">
-          <div><div class="name">Kids Cut</div></div>
-          <div class="price">R160</div>
-          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-route="book">Book</a>
-        </div>
-
-        <div class="panel neo-raised service-row">
-          <div><div class="name">Sideburns</div></div>
-          <div class="price">R120</div>
-          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-route="book">Book</a>
-        </div>
-
-        <div class="panel neo-raised service-row">
-          <div><div class="name">Eyebrow Blade</div></div>
-          <div class="price">R50</div>
-          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-route="book">Book</a>
-        </div>
-
-        <div class="panel neo-raised service-row">
-          <div><div class="name">Ear / Nose Wax</div></div>
-          <div class="price">R50</div>
-          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-route="book">Book</a>
-        </div>
-
-      </div>
+      <p class="price-note" data-i18n="services_note">Pricing supplied by the client (requirements questionnaire) — durations not yet confirmed, to follow up.</p>
+      <div class="service-list" id="public-service-list"></div>
     </div>
   </section>
 
@@ -930,9 +862,9 @@
 <div id="view-location" class="view">
   <section class="page-intro">
     <div class="wrap">
-      <div class="tag">Durban North · Classic Barbershop</div>
-      <h1>Find Us</h1>
-      <p>
+      <div class="tag" data-i18n="hero_tag">Durban North · Classic Barbershop</div>
+      <h1 data-i18n="location_h1">Find Us</h1>
+      <p data-i18n="location_p">
         Shop 5 on Mackeurtan Ave, Durban North — easy to find, easy to park.
         Booked by appointment, so check the hours below before you head over.
       </p>
@@ -945,14 +877,14 @@
       <div class="loc-grid">
 
         <div class="panel neo-raised loc-panel">
-          <h3>Opening Hours</h3>
-          <div class="hours-row"><span>Monday</span><span>09:00 – 18:00</span></div>
-          <div class="hours-row"><span>Tuesday</span><span>09:00 – 18:00</span></div>
-          <div class="hours-row"><span>Wednesday</span><span>09:00 – 18:00</span></div>
-          <div class="hours-row"><span>Thursday</span><span>09:00 – 18:00</span></div>
-          <div class="hours-row"><span>Friday</span><span>09:00 – 18:00</span></div>
-          <div class="hours-row"><span>Saturday</span><span>09:00 – 18:00</span></div>
-          <div class="hours-row"><span>Sunday</span><span>09:00 – 15:00</span></div>
+          <h3 data-i18n="opening_hours">Opening Hours</h3>
+          <div class="hours-row"><span data-i18n="day_monday">Monday</span><span>09:00 – 18:00</span></div>
+          <div class="hours-row"><span data-i18n="day_tuesday">Tuesday</span><span>09:00 – 18:00</span></div>
+          <div class="hours-row"><span data-i18n="day_wednesday">Wednesday</span><span>09:00 – 18:00</span></div>
+          <div class="hours-row"><span data-i18n="day_thursday">Thursday</span><span>09:00 – 18:00</span></div>
+          <div class="hours-row"><span data-i18n="day_friday">Friday</span><span>09:00 – 18:00</span></div>
+          <div class="hours-row"><span data-i18n="day_saturday">Saturday</span><span>09:00 – 18:00</span></div>
+          <div class="hours-row"><span data-i18n="day_sunday">Sunday</span><span>09:00 – 15:00</span></div>
 
           <div class="addr">
             <strong>Shop 5, 8 Mackeurtan Ave</strong>
@@ -965,13 +897,13 @@
         </div>
 
         <div class="panel neo-raised map-panel">
-          <div class="map-inner">Embedded map goes here</div>
+          <div class="map-inner" data-i18n="map_placeholder">Embedded map goes here</div>
         </div>
 
       </div>
 
       <div class="cta-row">
-        <a href="javascript:void(0)" class="neo-pill-raised" data-route="book">Book a Chair</a>
+        <a href="javascript:void(0)" class="neo-pill-raised" data-route="book" data-i18n="book_tag">Book a Chair</a>
       </div>
     </div>
   </section>
@@ -981,9 +913,9 @@
 <div id="view-team" class="view">
   <section class="page-intro">
     <div class="wrap">
-      <div class="tag">Meet the Team</div>
-      <h1>Your Barber</h1>
-      <p>Pick a chair, or pick a person — every barber here has their own specialty.</p>
+      <div class="tag" data-i18n="team_tag">Meet the Team</div>
+      <h1 data-i18n="team_h1">Your Barber</h1>
+      <p data-i18n="team_p">Pick a chair, or pick a person — every barber here has their own specialty.</p>
     </div>
   </section>
   <section>
@@ -994,24 +926,24 @@
           <div class="tname">Sipho Mthembu</div>
           <div class="tspec">Fades &amp; Tapers</div>
           <p class="tbio">Known for skin fades and clean tapers — precise line-ups, no rushing.</p>
-          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-book-barber="sipho">Book with Sipho</a>
+          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-book-barber="sipho"><span data-i18n="book_with">Book with</span> Sipho</a>
         </div>
         <div class="panel neo-raised team-card">
           <div class="avatar"></div>
           <div class="tname">Luke Fourie</div>
           <div class="tspec">Scissor &amp; Classic Cuts</div>
           <p class="tbio">Scissor work and classic gentleman's cuts, styled the traditional way.</p>
-          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-book-barber="luke">Book with Luke</a>
+          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-book-barber="luke"><span data-i18n="book_with">Book with</span> Luke</a>
         </div>
         <div class="panel neo-raised team-card">
           <div class="avatar"></div>
           <div class="tname">Ayanda Zulu</div>
           <div class="tspec">Beards &amp; Hot Towel Shaves</div>
           <p class="tbio">Beard shaping and traditional hot towel straight-razor shaves.</p>
-          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-book-barber="ayanda">Book with Ayanda</a>
+          <a href="javascript:void(0)" class="book-link neo-pill-raised" data-book-barber="ayanda"><span data-i18n="book_with">Book with</span> Ayanda</a>
         </div>
       </div>
-      <p class="price-note" style="margin-top:-4px;">Photos are placeholders — the client has professional photography ready to swap in.</p>
+      <p class="price-note" style="margin-top:-4px;" data-i18n="team_note">Photos are placeholders — the client has professional photography ready to swap in.</p>
     </div>
   </section>
 </div>
@@ -1019,22 +951,22 @@
 <div id="view-gallery" class="view">
   <section class="page-intro">
     <div class="wrap">
-      <div class="tag">Gallery</div>
-      <h1>The Shop &amp; the Work</h1>
-      <p>A look at the space and some of the cuts that have come out of it.</p>
+      <div class="tag" data-i18n="gallery_tag">Gallery</div>
+      <h1 data-i18n="gallery_h1">The Shop &amp; the Work</h1>
+      <p data-i18n="gallery_p">A look at the space and some of the cuts that have come out of it.</p>
     </div>
   </section>
   <section>
     <div class="wrap">
       <div class="gallery-grid">
-        <div class="gallery-tile">Shop floor</div>
-        <div class="gallery-tile">Skin fade</div>
-        <div class="gallery-tile">Hot towel shave</div>
-        <div class="gallery-tile">Barber chairs</div>
-        <div class="gallery-tile">Beard trim</div>
-        <div class="gallery-tile">Kinsman groom</div>
+        <div class="gallery-tile" data-i18n="tile_shop_floor">Shop floor</div>
+        <div class="gallery-tile" data-i18n="tile_skin_fade">Skin fade</div>
+        <div class="gallery-tile" data-i18n="tile_hot_towel">Hot towel shave</div>
+        <div class="gallery-tile" data-i18n="tile_chairs">Barber chairs</div>
+        <div class="gallery-tile" data-i18n="tile_beard_trim">Beard trim</div>
+        <div class="gallery-tile" data-i18n="tile_groom">Kinsman groom</div>
       </div>
-      <p class="price-note" style="margin-top:-4px;">Placeholder tiles — the client has professional photos ready to drop in here.</p>
+      <p class="price-note" style="margin-top:-4px;" data-i18n="gallery_note">Placeholder tiles — the client has professional photos ready to drop in here.</p>
     </div>
   </section>
 </div>
@@ -1042,22 +974,22 @@
 <div id="view-about" class="view">
   <section class="page-intro">
     <div class="wrap">
-      <div class="tag">About Us</div>
-      <h1>Built on Trust</h1>
+      <div class="tag" data-i18n="about_tag">About Us</div>
+      <h1 data-i18n="about_h1">Built on Trust</h1>
     </div>
   </section>
   <section>
     <div class="wrap about-copy">
-      <p>
+      <p data-i18n="about_p1">
         Kinsman is a classic barbershop on Mackeurtan Ave — the kind of place where you
         get the same chair, the same barber, and a cut you don't have to explain twice.
       </p>
-      <p>
+      <p data-i18n="about_p2">
         Six barbers work out of the shop, each with their own specialty, from precision
         fades to traditional straight-razor shaves. No rush, no upsell — just proper tools
         and a chair that's warm when you get there.
       </p>
-      <a href="javascript:void(0)" class="neo-pill-raised" data-route="team" style="display:inline-block; padding:14px 26px; font-family:var(--display); font-weight:600; color:var(--text);">Meet the Barbers</a>
+      <a href="javascript:void(0)" class="neo-pill-raised" data-route="team" style="display:inline-block; padding:14px 26px; font-family:var(--display); font-weight:600; color:var(--text);" data-i18n="about_cta">Meet the Barbers</a>
     </div>
   </section>
 </div>
@@ -1065,32 +997,32 @@
 <div id="view-login" class="view">
   <div class="wrap auth-shell">
     <div class="panel neo-raised auth-card">
-      <h2>Welcome back</h2>
-      <p class="sub">Log in to see your booking history and rebook in a couple of taps.</p>
+      <h2 data-i18n="login_h2">Welcome back</h2>
+      <p class="sub" data-i18n="login_sub">Log in to see your booking history and rebook in a couple of taps.</p>
 
       <form id="login-form">
         <div class="form-field">
-          <label for="login-email">Email</label>
+          <label for="login-email" data-i18n="label_email">Email</label>
           <div class="input-shell neo-pressed">
             <input type="email" id="login-email" placeholder="you@example.com" required>
           </div>
         </div>
         <div class="form-field">
-          <label for="login-password">Password</label>
+          <label for="login-password" data-i18n="label_password">Password</label>
           <div class="input-shell neo-pressed">
             <input type="password" id="login-password" placeholder="••••••••" required>
           </div>
         </div>
-        <button type="submit" class="auth-submit neo-pill-raised">Log In</button>
+        <button type="submit" class="auth-submit neo-pill-raised" data-i18n="nav_login">Log In</button>
       </form>
 
       <div class="auth-success" id="login-success">
         <div class="success-badge">&#10003;</div>
-        <p>This is a prototype — hook this button up to real authentication once the backend is ready.</p>
+        <p data-i18n="auth_prototype_note">This is a prototype — hook this button up to real authentication once the backend is ready.</p>
       </div>
 
-      <p class="auth-switch">Don't have an account? <a href="javascript:void(0)" data-route="register">Create one</a></p>
-      <p class="auth-note">Accounts are optional — you can still <a href="javascript:void(0)" data-route="book" style="color:var(--teal);">book as a guest</a>.</p>
+      <p class="auth-switch"><span data-i18n="login_switch_prefix">Don't have an account?</span> <a href="javascript:void(0)" data-route="register" data-i18n="create_one">Create one</a></p>
+      <p class="auth-note"><span data-i18n="auth_guest_note">Accounts are optional — you can still</span> <a href="javascript:void(0)" data-route="book" style="color:var(--teal);" data-i18n="guest_link">book as a guest</a>.</p>
     </div>
   </div>
 </div>
@@ -1098,44 +1030,44 @@
 <div id="view-register" class="view">
   <div class="wrap auth-shell">
     <div class="panel neo-raised auth-card">
-      <h2>Create your account</h2>
-      <p class="sub">Save your details once and rebook faster next time — totally optional.</p>
+      <h2 data-i18n="register_h2">Create your account</h2>
+      <p class="sub" data-i18n="register_sub">Save your details once and rebook faster next time — totally optional.</p>
 
       <form id="register-form">
         <div class="form-field">
-          <label for="reg-name">Full Name</label>
+          <label for="reg-name" data-i18n="label_fullname">Full Name</label>
           <div class="input-shell neo-pressed">
             <input type="text" id="reg-name" placeholder="Your name" required>
           </div>
         </div>
         <div class="form-field">
-          <label for="reg-email">Email</label>
+          <label for="reg-email" data-i18n="label_email">Email</label>
           <div class="input-shell neo-pressed">
             <input type="email" id="reg-email" placeholder="you@example.com" required>
           </div>
         </div>
         <div class="form-field">
-          <label for="reg-phone">Phone</label>
+          <label for="reg-phone" data-i18n="label_phone">Phone</label>
           <div class="input-shell neo-pressed">
             <input type="tel" id="reg-phone" placeholder="082 000 0000" required>
           </div>
         </div>
         <div class="form-field">
-          <label for="reg-password">Password</label>
+          <label for="reg-password" data-i18n="label_password">Password</label>
           <div class="input-shell neo-pressed">
             <input type="password" id="reg-password" placeholder="••••••••" required>
           </div>
         </div>
-        <button type="submit" class="auth-submit neo-pill-raised">Create Account</button>
+        <button type="submit" class="auth-submit neo-pill-raised" data-i18n="nav_register">Create Account</button>
       </form>
 
       <div class="auth-success" id="register-success">
         <div class="success-badge">&#10003;</div>
-        <p>This is a prototype — hook this button up to real authentication once the backend is ready.</p>
+        <p data-i18n="auth_prototype_note">This is a prototype — hook this button up to real authentication once the backend is ready.</p>
       </div>
 
-      <p class="auth-switch">Already have an account? <a href="javascript:void(0)" data-route="login">Log in</a></p>
-      <p class="auth-note">Accounts are optional — you can still <a href="javascript:void(0)" data-route="book" style="color:var(--teal);">book as a guest</a>.</p>
+      <p class="auth-switch"><span data-i18n="register_switch_prefix">Already have an account?</span> <a href="javascript:void(0)" data-route="login" data-i18n="log_in_lower">Log in</a></p>
+      <p class="auth-note"><span data-i18n="auth_guest_note">Accounts are optional — you can still</span> <a href="javascript:void(0)" data-route="book" style="color:var(--teal);" data-i18n="guest_link">book as a guest</a>.</p>
     </div>
   </div>
 </div>
@@ -1143,9 +1075,9 @@
 <div id="view-shop" class="view">
   <section class="page-intro">
     <div class="wrap">
-      <div class="tag">Retail</div>
-      <h1>Shop</h1>
-      <p>Everything below is sold in-store at the counter — browse here, pick it up on your next visit.</p>
+      <div class="tag" data-i18n="shop_tag">Retail</div>
+      <h1 data-i18n="shop_h1">Shop</h1>
+      <p data-i18n="shop_p">Everything below is sold in-store at the counter — browse here, pick it up on your next visit.</p>
     </div>
   </section>
   <section>
@@ -1155,27 +1087,51 @@
   </section>
 </div>
 
-<div id="view-admin-products" class="view">
+<div id="view-admin-services" class="view">
   <section class="page-intro">
     <div class="wrap">
-      <div class="tag" style="color:var(--ochre);">Admin</div>
-      <h1>Product Catalog</h1>
-      <p>Stock changes here sync to the till once the site goes live.</p>
+      <div class="tag" style="color:var(--ochre);" data-i18n="admin_tag">Admin</div>
+      <h1 data-i18n="services_h1">Services &amp; Pricing</h1>
+      <p data-i18n="admin_services_p">Manage what's on the Services &amp; Pricing page — changes here reflect there immediately.</p>
     </div>
   </section>
   <section>
     <div class="wrap" style="max-width:640px;">
-      <button class="panel neo-raised add-toggle-btn" id="toggle-add-product">Add a Product</button>
-      <div class="panel neo-raised" id="add-product-form" style="padding:20px; display:none; margin-bottom:20px;">
-        <div class="form-field"><label>Name</label><div class="input-shell neo-pressed"><input type="text" id="np-name" placeholder="Sea Salt Spray"></div></div>
-        <div class="field-row" style="gap:14px;">
-          <div class="form-field"><label>Price (R)</label><div class="input-shell neo-pressed"><input type="number" id="np-price" placeholder="0"></div></div>
-          <div class="form-field"><label>Stock</label><div class="input-shell neo-pressed"><input type="number" id="np-stock" placeholder="0"></div></div>
-        </div>
-        <div class="form-field"><label>Description</label><div class="input-shell neo-pressed"><input type="text" id="np-desc" placeholder="Short description"></div></div>
+      <button class="panel neo-raised add-toggle-btn" id="toggle-add-service" data-i18n="admin_add_service_btn">Add a Service</button>
+      <div class="panel neo-raised" id="add-service-form" style="padding:20px; display:none; margin-bottom:20px;">
+        <div class="form-field"><label data-i18n="label_name">Name</label><div class="input-shell neo-pressed"><input type="text" id="ns-name" placeholder="e.g. Junior Cut"></div></div>
+        <div class="form-field"><label data-i18n="label_price">Price (R)</label><div class="input-shell neo-pressed"><input type="number" id="ns-price" placeholder="0"></div></div>
         <div style="display:flex; gap:10px; margin-top:6px;">
-          <button class="row-link" id="np-cancel" style="flex:1; padding:13px;">Cancel</button>
-          <button class="auth-submit neo-pill-raised" id="np-save" style="flex:1; background:var(--teal); color:var(--accent-ink);">Save Product</button>
+          <button class="row-link" id="ns-cancel" style="flex:1; padding:13px;" data-i18n="btn_cancel">Cancel</button>
+          <button class="auth-submit neo-pill-raised" id="ns-save" style="flex:1; background:var(--teal); color:var(--accent-ink);" data-i18n="admin_save_service">Save Service</button>
+        </div>
+      </div>
+      <div id="admin-service-list"></div>
+    </div>
+  </section>
+</div>
+
+<div id="view-admin-products" class="view">
+  <section class="page-intro">
+    <div class="wrap">
+      <div class="tag" style="color:var(--ochre);" data-i18n="admin_tag">Admin</div>
+      <h1 data-i18n="admin_products_h1">Product Catalog</h1>
+      <p data-i18n="admin_products_p">Stock changes here sync to the till once the site goes live.</p>
+    </div>
+  </section>
+  <section>
+    <div class="wrap" style="max-width:640px;">
+      <button class="panel neo-raised add-toggle-btn" id="toggle-add-product" data-i18n="admin_add_product_btn">Add a Product</button>
+      <div class="panel neo-raised" id="add-product-form" style="padding:20px; display:none; margin-bottom:20px;">
+        <div class="form-field"><label data-i18n="label_name">Name</label><div class="input-shell neo-pressed"><input type="text" id="np-name" placeholder="Sea Salt Spray"></div></div>
+        <div class="field-row" style="gap:14px;">
+          <div class="form-field"><label data-i18n="label_price">Price (R)</label><div class="input-shell neo-pressed"><input type="number" id="np-price" placeholder="0"></div></div>
+          <div class="form-field"><label data-i18n="label_stock">Stock</label><div class="input-shell neo-pressed"><input type="number" id="np-stock" placeholder="0"></div></div>
+        </div>
+        <div class="form-field"><label data-i18n="label_description">Description</label><div class="input-shell neo-pressed"><input type="text" id="np-desc" placeholder="Short description"></div></div>
+        <div style="display:flex; gap:10px; margin-top:6px;">
+          <button class="row-link" id="np-cancel" style="flex:1; padding:13px;" data-i18n="btn_cancel">Cancel</button>
+          <button class="auth-submit neo-pill-raised" id="np-save" style="flex:1; background:var(--teal); color:var(--accent-ink);" data-i18n="admin_save_product">Save Product</button>
         </div>
       </div>
       <div id="admin-product-list"></div>
@@ -1186,27 +1142,27 @@
 <div id="view-admin-accounts" class="view">
   <section class="page-intro">
     <div class="wrap">
-      <div class="tag" style="color:var(--ochre);">Admin</div>
-      <h1>Accounts</h1>
-      <p>Create logins for staff and customers.</p>
+      <div class="tag" style="color:var(--ochre);" data-i18n="admin_tag">Admin</div>
+      <h1 data-i18n="admin_accounts_h1">Accounts</h1>
+      <p data-i18n="admin_accounts_p">Create logins for staff and customers.</p>
     </div>
   </section>
   <section>
     <div class="wrap" style="max-width:640px;">
       <form class="panel neo-raised" id="add-account-form" style="padding:20px; margin-bottom:22px;">
-        <div class="form-field"><label>Full Name</label><div class="input-shell neo-pressed"><input type="text" id="na-name" placeholder="Full name" required></div></div>
-        <div class="form-field"><label>Email</label><div class="input-shell neo-pressed"><input type="email" id="na-email" placeholder="name@example.com" required></div></div>
+        <div class="form-field"><label data-i18n="label_fullname">Full Name</label><div class="input-shell neo-pressed"><input type="text" id="na-name" placeholder="Full name" required></div></div>
+        <div class="form-field"><label data-i18n="label_email">Email</label><div class="input-shell neo-pressed"><input type="email" id="na-email" placeholder="name@example.com" required></div></div>
         <div class="form-field">
-          <label>Account Type</label>
+          <label data-i18n="label_account_type">Account Type</label>
           <div class="input-shell neo-pressed">
             <select id="na-role" class="barber-select">
-              <option value="customer">Customer</option>
-              <option value="barber">Barber</option>
-              <option value="admin">Admin</option>
+              <option value="customer" data-i18n="option_customer">Customer</option>
+              <option value="barber" data-i18n="option_barber">Barber</option>
+              <option value="admin" data-i18n="option_admin">Admin</option>
             </select>
           </div>
         </div>
-        <button type="submit" class="auth-submit neo-pill-raised">Create Account</button>
+        <button type="submit" class="auth-submit neo-pill-raised" data-i18n="nav_register">Create Account</button>
       </form>
       <div id="account-list"></div>
     </div>
@@ -1216,9 +1172,9 @@
 <div id="view-admin-bookings" class="view">
   <section class="page-intro">
     <div class="wrap">
-      <div class="tag" style="color:var(--ochre);">Admin</div>
-      <h1>All Bookings</h1>
-      <p>Every barber's schedule in one place — helps catch the double-bookings paper diaries can't.</p>
+      <div class="tag" style="color:var(--ochre);" data-i18n="admin_tag">Admin</div>
+      <h1 data-i18n="admin_bookings_h1">All Bookings</h1>
+      <p data-i18n="admin_bookings_p">Every barber's schedule in one place — helps catch the double-bookings paper diaries can't.</p>
     </div>
   </section>
   <section>
@@ -1231,9 +1187,9 @@
 <div id="view-admin-analytics" class="view">
   <section class="page-intro">
     <div class="wrap">
-      <div class="tag" style="color:var(--ochre);">Admin</div>
-      <h1>Analytics</h1>
-      <p>Revenue, busiest days, and what's actually selling — based on demo booking data.</p>
+      <div class="tag" style="color:var(--ochre);" data-i18n="admin_tag">Admin</div>
+      <h1 data-i18n="admin_analytics_h1">Analytics</h1>
+      <p data-i18n="admin_analytics_p">Revenue, busiest days, and what's actually selling — based on demo booking data.</p>
     </div>
   </section>
   <section>
@@ -1245,9 +1201,9 @@
   <section style="padding:64px 0 100px;">
     <div class="wrap">
       <div class="panel neo-raised loyalty-card">
-        <div class="tag" style="justify-content:center; display:flex;">Loyalty</div>
-        <h2 style="font-family:var(--display); font-weight:600; font-size:24px; color:var(--heading); margin:10px 0 6px;">Every 10th Visit is On Us</h2>
-        <p style="color:var(--text-dim); font-size:14px;">Collect a stamp every visit. Hit 10 and choose a free haircut or a discount on your next one.</p>
+        <div class="tag" style="justify-content:center; display:flex;" data-i18n="nav_loyalty">Loyalty</div>
+        <h2 style="font-family:var(--display); font-weight:600; font-size:24px; color:var(--heading); margin:10px 0 6px;" data-i18n="loyalty_h2">Every 10th Visit is On Us</h2>
+        <p style="color:var(--text-dim); font-size:14px;" data-i18n="loyalty_p">Collect a stamp every visit. Hit 10 and choose a free haircut or a discount on your next one.</p>
         <div class="stamp-row" id="loyalty-stamps"></div>
         <p class="loyalty-reward" id="loyalty-status"></p>
       </div>
@@ -1255,15 +1211,30 @@
   </section>
 </div>
 
+<div id="view-my-bookings" class="view">
+  <section class="page-intro">
+    <div class="wrap">
+      <div class="tag" data-i18n="nav_my_bookings">My Bookings</div>
+      <h1 data-i18n="my_bookings_h1">Your Appointments</h1>
+      <p id="my-bookings-name"></p>
+    </div>
+  </section>
+  <section>
+    <div class="wrap" style="max-width:640px;">
+      <div id="my-booking-list"></div>
+    </div>
+  </section>
+</div>
+
 <div id="view-barber-bookings" class="view">
   <section class="page-intro">
     <div class="wrap">
-      <div class="tag">Staff</div>
-      <h1>My Bookings</h1>
+      <div class="tag" data-i18n="staff_tag">Staff</div>
+      <h1 data-i18n="nav_barber_bookings">My Bookings</h1>
       <p id="barber-display-name">Sipho Mthembu — Fades &amp; Tapers</p>
       <div class="filter-tabs">
-        <button class="filter-tab active" data-filter="upcoming">Upcoming</button>
-        <button class="filter-tab" data-filter="past">Past</button>
+        <button class="filter-tab active" data-filter="upcoming" data-i18n="filter_upcoming">Upcoming</button>
+        <button class="filter-tab" data-filter="past" data-i18n="filter_past">Past</button>
       </div>
     </div>
   </section>
@@ -1277,7 +1248,7 @@
 <div id="view-barber-pos" class="view">
   <section style="padding:56px 0 100px;">
     <div class="wrap">
-      <a href="javascript:void(0)" class="pos-back" data-route="barber-bookings">‹ Back to bookings</a>
+      <a href="javascript:void(0)" class="pos-back" data-route="barber-bookings" data-i18n="pos_back">‹ Back to bookings</a>
       <div id="pos-content"></div>
     </div>
   </section>
@@ -1298,28 +1269,25 @@
   let viewMonth = today.getMonth();
   let selectedDate = null;
   let selectedTime = null;
-  let selectedService = "Haircut";
+  let selectedServices = ["Haircut"];
+  let reschedulingBookingId = null;
 
-  const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  const dowNames = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const dowKeys = ["dow_mon","dow_tue","dow_wed","dow_thu","dow_fri","dow_sat","dow_sun"];
 
-  const barberNotes = {
-    any: "First available chair, whoever's free.",
-    sipho: "Known for skin fades and clean tapers.",
-    luke: "Scissor work and classic gentleman's cuts.",
-    ayanda: "Beard shaping and traditional hot towel shaves."
-  };
+  function barberNote(id){
+    return t('barber_note_' + (['any','sipho','luke','ayanda'].includes(id) ? id : 'any'));
+  }
 
   function renderCalendar(){
     const grid = document.getElementById('cal-grid');
     const label = document.getElementById('cal-month-label');
-    label.textContent = monthNames[viewMonth] + " " + viewYear;
+    label.textContent = t('month_' + (viewMonth + 1)) + " " + viewYear;
 
     grid.innerHTML = "";
-    dowNames.forEach(d => {
+    dowKeys.forEach(k => {
       const el = document.createElement('div');
       el.className = 'cal-dow';
-      el.textContent = d;
+      el.textContent = t(k);
       grid.appendChild(el);
     });
 
@@ -1388,7 +1356,7 @@
     wrap.innerHTML = "";
 
     if (!selectedDate){
-      wrap.innerHTML = '<span class="no-date-msg">Pick a date to see open times.</span>';
+      wrap.innerHTML = `<span class="no-date-msg">${t('no_date_msg')}</span>`;
       return;
     }
 
@@ -1408,20 +1376,20 @@
     // Client requirement: bookings need at least 2 hours' notice.
     const cutoff = new Date(Date.now() + 2 * 60 * 60 * 1000);
 
-    times.forEach((t, i) => {
-      const [h, m] = t.split(':').map(Number);
+    times.forEach((time, i) => {
+      const [h, m] = time.split(':').map(Number);
       const slotDate = new Date(selectedDate);
       slotDate.setHours(h, m, 0, 0);
       const tooSoon = slotDate < cutoff;
       const isBooked = booked.has(i) || tooSoon;
       const btn = document.createElement('button');
-      btn.className = 'time-slot' + (t === selectedTime ? ' selected' : '') + (isBooked ? ' booked' : '');
-      btn.innerHTML = isBooked ? `${t}<span class="booked-tag">${tooSoon && !booked.has(i) ? 'Too soon' : 'Booked'}</span>` : t;
+      btn.className = 'time-slot' + (time === selectedTime ? ' selected' : '') + (isBooked ? ' booked' : '');
+      btn.innerHTML = isBooked ? `${time}<span class="booked-tag">${tooSoon && !booked.has(i) ? t('slot_too_soon') : t('slot_booked')}</span>` : time;
       if (isBooked){
         btn.disabled = true;
       } else {
         btn.addEventListener('click', () => {
-          selectedTime = t;
+          selectedTime = time;
           renderTimeSlots();
           updateSummary();
         });
@@ -1433,13 +1401,21 @@
   document.getElementById('service-row').addEventListener('click', (e) => {
     const chip = e.target.closest('.service-chip');
     if (!chip) return;
-    document.querySelectorAll('.service-chip').forEach(c => {
-      c.classList.remove('active', 'neo-pill-pressed');
-      c.classList.add('neo-pill-raised');
-    });
-    chip.classList.add('active', 'neo-pill-pressed');
-    chip.classList.remove('neo-pill-raised');
-    selectedService = chip.dataset.service;
+    const service = chip.dataset.service;
+    const isActive = chip.classList.contains('active');
+
+    // Keep at least one service selected — an empty booking doesn't make sense.
+    if (isActive && selectedServices.length === 1) return;
+
+    if (isActive){
+      chip.classList.remove('active', 'neo-pill-pressed');
+      chip.classList.add('neo-pill-raised');
+      selectedServices = selectedServices.filter(s => s !== service);
+    } else {
+      chip.classList.add('active', 'neo-pill-pressed');
+      chip.classList.remove('neo-pill-raised');
+      selectedServices.push(service);
+    }
     updateSummary();
   });
 
@@ -1457,7 +1433,7 @@
   });
 
   document.getElementById('barber').addEventListener('change', (e) => {
-    document.getElementById('barber-note').textContent = barberNotes[e.target.value];
+    document.getElementById('barber-note').textContent = barberNote(e.target.value);
     selectedTime = null;
     renderTimeSlots();
     updateSummary();
@@ -1471,11 +1447,11 @@
     const addonsLabel = selectedAddons.length ? ` + ${selectedAddons.join(', ')}` : '';
 
     if (selectedDate && selectedTime){
-      const dateStr = selectedDate.toLocaleDateString('en-ZA', { weekday:'short', day:'numeric', month:'short' });
-      summaryEl.innerHTML = `<strong>${selectedService}${addonsLabel}</strong> with <strong>${barberName}</strong> — ${dateStr} at <strong>${selectedTime}</strong>`;
+      const dateStr = selectedDate.toLocaleDateString(LOCALE_MAP[currentLang], { weekday:'short', day:'numeric', month:'short' });
+      summaryEl.innerHTML = `<strong>${selectedServices.join(', ')}${addonsLabel}</strong> ${t('with_word')} <strong>${barberName}</strong> — ${dateStr} at <strong>${selectedTime}</strong>`;
       confirmBtn.disabled = false;
     } else {
-      summaryEl.textContent = "Select a barber, date and time to continue.";
+      summaryEl.textContent = t('select_to_continue');
       confirmBtn.disabled = true;
     }
   }
@@ -1490,12 +1466,35 @@
   document.getElementById('confirm-btn').addEventListener('click', () => {
     const barberSel = document.getElementById('barber');
     const barberName = barberSel.options[barberSel.selectedIndex].text;
-    const dateStr = selectedDate.toLocaleDateString('en-ZA', { weekday:'long', day:'numeric', month:'long' });
-    const ref = makeReference();
+    const dateStr = selectedDate.toLocaleDateString(LOCALE_MAP[currentLang], { weekday:'long', day:'numeric', month:'long' });
     const addonsLabel = selectedAddons.length ? ` + ${selectedAddons.join(', ')}` : '';
+    // "Any available barber" resolves to a default for demo purposes — a real
+    // build would assign the next actually-free barber.
+    const barberId = barberSel.value === 'any' ? 'sipho' : barberSel.value;
+    const totalPrice = selectedServices.reduce((sum, name) => {
+      const match = services.find(s => s.name === name);
+      return sum + (match ? match.price : 0);
+    }, 0);
 
-    document.getElementById('success-text').innerHTML =
-      `<strong>${selectedService}${addonsLabel}</strong> with <strong>${barberName}</strong> — ${dateStr} at <strong>${selectedTime}</strong>. Reference <strong>${ref}</strong>. A confirmation email is on its way.`;
+    if (reschedulingBookingId){
+      bookings = bookings.map(b => b.id === reschedulingBookingId ? {
+        ...b, barberId, service: selectedServices.join(', '), price: totalPrice,
+        dateISO: selectedDate.toISOString(), time: selectedTime, completed: false, cancelled: false
+      } : b);
+      document.getElementById('success-text').innerHTML =
+        `${t('rescheduled_prefix')} <strong>${selectedServices.join(', ')}${addonsLabel}</strong> ${t('with_word')} <strong>${barberName}</strong> — ${dateStr} at <strong>${selectedTime}</strong>. ${t('new_confirmation_note')}`;
+      reschedulingBookingId = null;
+    } else {
+      const ref = makeReference();
+      bookings.push({
+        id: "bk-" + Date.now(), barberId, customerName: DEMO_CUSTOMER_NAME,
+        service: selectedServices.join(', '), price: totalPrice,
+        dateISO: selectedDate.toISOString(), time: selectedTime,
+        completed: false, cancelled: false, review: null, saleTotal: null, saleProducts: []
+      });
+      document.getElementById('success-text').innerHTML =
+        `<strong>${selectedServices.join(', ')}${addonsLabel}</strong> ${t('with_word')} <strong>${barberName}</strong> — ${dateStr} at <strong>${selectedTime}</strong>. ${t('reference_label')} <strong>${ref}</strong>. ${t('confirmation_email_note')}`;
+    }
 
     document.getElementById('summary-panel').style.display = 'none';
     document.getElementById('success-card').classList.add('show');
@@ -1505,7 +1504,7 @@
     e.preventDefault();
     selectedDate = null;
     selectedTime = null;
-    selectedService = "Haircut";
+    selectedServices = ["Haircut"];
     selectedAddons = [];
     document.querySelectorAll('.service-chip').forEach(c => {
       c.classList.remove('active', 'neo-pill-pressed');
@@ -1514,7 +1513,7 @@
     document.querySelector('.service-chip[data-service="Haircut"]').classList.add('active', 'neo-pill-pressed');
     document.querySelector('.service-chip[data-service="Haircut"]').classList.remove('neo-pill-raised');
     document.getElementById('barber').value = 'any';
-    document.getElementById('barber-note').textContent = barberNotes.any;
+    document.getElementById('barber-note').textContent = barberNote('any');
     renderCalendar();
     renderTimeSlots();
     updateSummary();
@@ -1522,19 +1521,32 @@
     document.getElementById('summary-panel').style.display = '';
   });
 
-  renderCalendar();
-  renderTimeSlots();
-
 
 
   // ---------- view router ----------
   // Routing is handled entirely in JS (no href="#..." navigation, no
   // location.hash) so nothing ever triggers a real browser navigation —
   // that's what was escaping the preview sandbox before.
+  function renderDynamicContent(target){
+    if (target === 'home'){ renderCalendar(); renderTimeSlots(); updateSummary(); }
+    if (target === 'services') renderPublicServices();
+    if (target === 'shop') renderShop();
+    if (target === 'admin-products') renderAdminProducts();
+    if (target === 'admin-services') renderAdminServices();
+    if (target === 'admin-accounts') renderAdminAccounts();
+    if (target === 'barber-bookings') renderBookings();
+    if (target === 'barber-pos') renderPos();
+    if (target === 'loyalty') renderLoyalty();
+    if (target === 'admin-bookings') renderAdminBookings();
+    if (target === 'admin-analytics') renderAnalytics();
+    if (target === 'my-bookings') renderMyBookings();
+  }
+
   function showView(name){
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     const target = document.getElementById('view-' + name) ? name : 'home';
     document.getElementById('view-' + target).classList.add('active');
+    if (target !== 'home'){ reschedulingBookingId = null; }
     const titles = {
       home: 'Kinsman Barbers — Book a Chair', services: 'Kinsman Barbers — Services & Pricing',
       location: 'Kinsman Barbers — Find Us', login: 'Kinsman Barbers — Log In', register: 'Kinsman Barbers — Create Account',
@@ -1543,17 +1555,11 @@
       'barber-pos': 'Kinsman Barbers — Checkout', team: 'Kinsman Barbers — Meet the Team',
       gallery: 'Kinsman Barbers — Gallery', about: 'Kinsman Barbers — About Us',
       loyalty: 'Kinsman Barbers — Loyalty', 'admin-bookings': 'Kinsman Barbers — All Bookings',
-      'admin-analytics': 'Kinsman Barbers — Analytics'
+      'admin-analytics': 'Kinsman Barbers — Analytics', 'admin-services': 'Kinsman Barbers — Manage Services',
+      'my-bookings': 'Kinsman Barbers — My Bookings'
     };
     document.title = titles[target] || titles.home;
-    if (target === 'shop') renderShop();
-    if (target === 'admin-products') renderAdminProducts();
-    if (target === 'admin-accounts') renderAdminAccounts();
-    if (target === 'barber-bookings') renderBookings();
-    if (target === 'barber-pos') renderPos();
-    if (target === 'loyalty') renderLoyalty();
-    if (target === 'admin-bookings') renderAdminBookings();
-    if (target === 'admin-analytics') renderAnalytics();
+    renderDynamicContent(target);
   }
 
   function navigateTo(target){
@@ -1599,6 +1605,24 @@
   });
 
   // ---------- role-based data & views (Shop, Admin, Barber) ----------
+  const SERVICES_SEED = [
+    {id:"sv1", name:"Haircut", price:200, desc:""},
+    {id:"sv2", name:"Skin Fade", price:230, desc:""},
+    {id:"sv3", name:"Kinsman Groom", price:450, desc:"The full package"},
+    {id:"sv4", name:"Wash / Cut / Style", price:250, desc:""},
+    {id:"sv5", name:"Beard Trim", price:130, desc:""},
+    {id:"sv6", name:"Beard Colour", price:110, desc:""},
+    {id:"sv7", name:"Hot Towel Shave", price:110, desc:""},
+    {id:"sv8", name:"Head Shave", price:110, desc:""},
+    {id:"sv9", name:"Hair Colour", price:220, desc:""},
+    {id:"sv10", name:"Express Facial", price:240, desc:""},
+    {id:"sv11", name:"Kids Cut", price:160, desc:""},
+    {id:"sv12", name:"Sideburns", price:120, desc:""},
+    {id:"sv13", name:"Eyebrow Blade", price:50, desc:""},
+    {id:"sv14", name:"Ear / Nose Wax", price:50, desc:""}
+  ];
+  let services = SERVICES_SEED.map(s => ({ ...s }));
+
   const PRODUCTS_SEED = [
     {id:"p1", name:"Matte Clay Pomade", price:95, stock:14, desc:"Strong hold, no shine"},
     {id:"p2", name:"Classic Water-Based Pomade", price:85, stock:9, desc:"Medium hold, high shine"},
@@ -1630,6 +1654,8 @@
   ];
   const DAY_OFFSETS = [-9,-6,-4,-2,-1,0,0,1,2,3,5,8];
 
+  const DEMO_CUSTOMER_NAME = "Jordan Pillay"; // matches the customer account already seeded in Admin > Accounts
+
   function buildBookingsSeed(){
     const list = [];
     const base = new Date(); base.setHours(0,0,0,0);
@@ -1641,16 +1667,36 @@
       list.push({
         id: "bk" + i, barberId: barber.id, customerName: CUSTOMER_NAMES[i % CUSTOMER_NAMES.length],
         service: service.name, price: service.price, dateISO: date.toISOString(), time: hour + ":00",
-        completed: offset < 0, saleTotal: null, saleProducts: []
+        completed: offset < 0, cancelled: false, review: null, saleTotal: null, saleProducts: []
       });
     });
+
+    // A couple of dedicated bookings for the demo "logged in" customer, so the
+    // My Bookings screen has something to show (an upcoming one and a
+    // completed one, to demonstrate both the reschedule/cancel and review flows).
+    const upcoming = new Date(base); upcoming.setDate(upcoming.getDate() + 4);
+    const past = new Date(base); past.setDate(past.getDate() - 12);
+    list.push({
+      id: "bk-demo-upcoming", barberId: "sipho", customerName: DEMO_CUSTOMER_NAME,
+      service: "Skin Fade", price: 230, dateISO: upcoming.toISOString(), time: "11:00",
+      completed: false, cancelled: false, review: null, saleTotal: null, saleProducts: []
+    });
+    list.push({
+      id: "bk-demo-past", barberId: "luke", customerName: DEMO_CUSTOMER_NAME,
+      service: "Haircut", price: 200, dateISO: past.toISOString(), time: "14:00",
+      completed: true, cancelled: false, review: null, saleTotal: 200, saleProducts: []
+    });
+
     return list;
   }
 
   // ---------- translations ----------
-  // NOTE: this covers the nav, hero, and quick-facts only — a deliberate MVP
-  // slice to demonstrate the feature, not full site coverage. isiZulu strings
-  // in particular are a best-effort draft and should be checked by a native
+  // NOTE: this covers all application UI chrome — headings, labels, buttons,
+  // statuses, empty states, calendar, forms — across every view. It does NOT
+  // translate business/catalog data (service names, product names, barber
+  // names, customer names, addresses) since that's content the client would
+  // supply themselves in each language, not something to invent. isiZulu
+  // strings are a best-effort draft and should be checked by a native
   // speaker before this goes anywhere near production, same as the pricing
   // and photos elsewhere in this prototype are flagged as placeholder.
   const translations = {
@@ -1658,40 +1704,356 @@
       nav_book: "Book a Chair", nav_shop: "Shop", nav_services: "Services", nav_team: "Team",
       nav_gallery: "Gallery", nav_about: "About", nav_loyalty: "Loyalty", nav_location: "Location",
       nav_login: "Log In", nav_register: "Create Account", nav_logout: "Log Out",
-      nav_barber_bookings: "My Bookings", nav_admin_bookings: "Bookings", nav_admin_products: "Products",
+      nav_barber_bookings: "My Bookings", nav_my_bookings: "My Bookings", nav_admin_bookings: "Bookings", nav_admin_services: "Services", nav_admin_products: "Products",
       nav_admin_accounts: "Accounts", nav_admin_analytics: "Analytics",
       hero_tag: "Durban North · Classic Barbershop",
       hero_h1: "A proper cut, a proper shave, no fuss about it.",
       hero_p: "Kinsman is a classic barbershop on Mackeurtan Ave — blade & tapered fades, hot-towel prep and a traditional straight-razor finish. Pick a barber, pick a time, and we'll have the chair warm for you.",
       scroll_cue: "Book below",
-      qf_monsat: "Mon – Sat", qf_sun: "Sunday", qf_accounts: "Accounts", qf_accounts_val: "Optional — book as guest"
+      qf_monsat: "Mon – Sat", qf_sun: "Sunday", qf_accounts: "Accounts", qf_accounts_val: "Optional — book as guest",
+
+      book_tag: "Book a Chair", book_h2: "Choose your barber, day and time",
+      book_p: "No account needed to book — <em>creating one just saves your details for next time.</em>",
+      label_barber: "Barber",
+      barber_note_any: "First available chair, whoever's free.",
+      barber_note_sipho: "Known for skin fades and clean tapers.",
+      barber_note_luke: "Scissor work and classic gentleman's cuts.",
+      barber_note_ayanda: "Beard shaping and traditional hot towel shaves.",
+      label_services: "Service(s)", label_services_hint: "— pick one or more",
+      label_addons: "Add-ons", label_addons_hint: "(optional)",
+      addon_note: "Add-on pricing to be confirmed with the client — shown here so the flow is demonstrable.",
+      label_available_times: "Available Times",
+      no_date_msg: "Pick a date to see open times.",
+      select_to_continue: "Select a barber, date and time to continue.",
+      btn_confirm_booking: "Confirm Booking",
+      success_heading: "You're booked in",
+      book_another: "Book another appointment",
+      confirmation_email_note: "A confirmation email is on its way.",
+      new_confirmation_note: "A new confirmation email is on its way.",
+      reference_label: "Reference",
+      rescheduled_prefix: "Rescheduled:",
+
+      services_h1: "Services &amp; Pricing",
+      services_p: "Straightforward pricing, no upsell. Every cut, fade and shave is done with proper tools and no rush — walk through what's on offer below, then book your chair.",
+      services_note: "Pricing supplied by the client (requirements questionnaire) — durations not yet confirmed, to follow up.",
+
+      location_h1: "Find Us",
+      location_p: "Shop 5 on Mackeurtan Ave, Durban North — easy to find, easy to park. Booked by appointment, so check the hours below before you head over.",
+      opening_hours: "Opening Hours",
+      day_monday: "Monday", day_tuesday: "Tuesday", day_wednesday: "Wednesday", day_thursday: "Thursday",
+      day_friday: "Friday", day_saturday: "Saturday", day_sunday: "Sunday",
+      map_placeholder: "Embedded map goes here",
+
+      team_tag: "Meet the Team", team_h1: "Your Barber",
+      team_p: "Pick a chair, or pick a person — every barber here has their own specialty.",
+      book_with: "Book with",
+      team_note: "Photos are placeholders — the client has professional photography ready to swap in.",
+
+      gallery_tag: "Gallery", gallery_h1: "The Shop &amp; the Work",
+      gallery_p: "A look at the space and some of the cuts that have come out of it.",
+      tile_shop_floor: "Shop floor", tile_skin_fade: "Skin fade", tile_hot_towel: "Hot towel shave",
+      tile_chairs: "Barber chairs", tile_beard_trim: "Beard trim", tile_groom: "Kinsman groom",
+      gallery_note: "Placeholder tiles — the client has professional photos ready to drop in here.",
+
+      about_tag: "About Us", about_h1: "Built on Trust",
+      about_p1: "Kinsman is a classic barbershop on Mackeurtan Ave — the kind of place where you get the same chair, the same barber, and a cut you don't have to explain twice.",
+      about_p2: "Six barbers work out of the shop, each with their own specialty, from precision fades to traditional straight-razor shaves. No rush, no upsell — just proper tools and a chair that's warm when you get there.",
+      about_cta: "Meet the Barbers",
+
+      login_h2: "Welcome back", login_sub: "Log in to see your booking history and rebook in a couple of taps.",
+      label_email: "Email", label_password: "Password",
+      auth_prototype_note: "This is a prototype — hook this button up to real authentication once the backend is ready.",
+      login_switch_prefix: "Don't have an account?", create_one: "Create one",
+      auth_guest_note: "Accounts are optional — you can still", guest_link: "book as a guest",
+
+      register_h2: "Create your account", register_sub: "Save your details once and rebook faster next time — totally optional.",
+      label_fullname: "Full Name", label_phone: "Phone",
+      register_switch_prefix: "Already have an account?", log_in_lower: "Log in",
+
+      shop_tag: "Retail", shop_h1: "Shop",
+      shop_p: "Everything below is sold in-store at the counter — browse here, pick it up on your next visit.",
+      stock_out: "Out of stock", stock_low: "Low stock", stock_in: "In stock",
+
+      admin_tag: "Admin", label_name: "Name", label_price: "Price (R)", label_stock: "Stock",
+      label_description: "Description", btn_cancel: "Cancel", btn_remove: "Remove",
+      label_account_type: "Account Type", option_customer: "Customer", option_barber: "Barber", option_admin: "Admin",
+      btn_edit: "Edit", btn_delete: "Delete", btn_save: "Save",
+
+      admin_services_p: "Manage what's on the Services &amp; Pricing page — changes here reflect there immediately.",
+      admin_add_service_btn: "Add a Service", admin_save_service: "Save Service",
+
+      admin_products_h1: "Product Catalog", admin_products_p: "Stock changes here sync to the till once the site goes live.",
+      admin_add_product_btn: "Add a Product", admin_save_product: "Save Product",
+
+      admin_accounts_h1: "Accounts", admin_accounts_p: "Create logins for staff and customers.",
+
+      admin_bookings_h1: "All Bookings", admin_bookings_p: "Every barber's schedule in one place — helps catch the double-bookings paper diaries can't.",
+
+      admin_analytics_h1: "Analytics", admin_analytics_p: "Revenue, busiest days, and what's actually selling — based on demo booking data.",
+      analytics_revenue_label: "Total Revenue (completed sales)", analytics_days: "Busiest Days",
+      analytics_services: "Popular Services", analytics_barbers: "Bookings per Barber",
+
+      loyalty_h2: "Every 10th Visit is On Us", loyalty_p: "Collect a stamp every visit. Hit 10 and choose a free haircut or a discount on your next one.",
+      loyalty_status_progress: "{n} of 10 visits — {remaining} more for a free haircut or a discount, your choice.",
+      loyalty_status_done: "10 visits reached — free haircut or discount unlocked!",
+
+      my_bookings_h1: "Your Appointments",
+      my_bookings_intro: "Showing bookings for {name} — this prototype doesn't have real accounts yet, so it's a fixed demo customer.",
+      no_my_bookings_msg: "No bookings yet — head to Book a Chair to make one.",
+      btn_reschedule: "Reschedule", btn_leave_review: "Leave a Review", btn_submit_review: "Submit",
+      review_placeholder: "How was it?",
+
+      staff_tag: "Staff", filter_upcoming: "Upcoming", filter_past: "Past",
+      no_bookings_msg: "No bookings here.",
+
+      pos_back: "‹ Back to bookings", pos_sale_complete: "Sale complete",
+      pos_haircut_only: "Haircut only", pos_add_product_label: "Add a product to this sale",
+      pos_total_label: "Total", pos_complete_sale_btn: "Complete Sale",
+
+      status_confirmed: "Confirmed", status_completed: "Completed", status_cancelled: "Cancelled", status_noshow: "No-Show",
+
+      month_1: "January", month_2: "February", month_3: "March", month_4: "April", month_5: "May", month_6: "June",
+      month_7: "July", month_8: "August", month_9: "September", month_10: "October", month_11: "November", month_12: "December",
+      dow_mon: "Mon", dow_tue: "Tue", dow_wed: "Wed", dow_thu: "Thu", dow_fri: "Fri", dow_sat: "Sat", dow_sun: "Sun",
+      slot_booked: "Booked", slot_too_soon: "Too soon", btn_book_short: "Book", with_word: "with", option_any_barber: "Any available barber"
     },
     af: {
       nav_book: "Bespreek 'n Stoel", nav_shop: "Winkel", nav_services: "Dienste", nav_team: "Span",
       nav_gallery: "Galery", nav_about: "Oor Ons", nav_loyalty: "Lojaliteit", nav_location: "Ligging",
       nav_login: "Meld Aan", nav_register: "Skep Rekening", nav_logout: "Meld Af",
-      nav_barber_bookings: "My Besprekings", nav_admin_bookings: "Besprekings", nav_admin_products: "Produkte",
+      nav_barber_bookings: "My Besprekings", nav_my_bookings: "My Besprekings", nav_admin_bookings: "Besprekings", nav_admin_services: "Dienste", nav_admin_products: "Produkte",
       nav_admin_accounts: "Rekeninge", nav_admin_analytics: "Analise",
       hero_tag: "Durban North · Klassieke Haarkapperswinkel",
       hero_h1: "'n Ordentlike sny, 'n ordentlike skeer, sonder fuss.",
       hero_p: "Kinsman is 'n klassieke haarkapperswinkel op Mackeurtan Ave — lem- en getrapte fades, warm-handdoek voorbereiding en 'n tradisionele skeermes-afwerking. Kies 'n haarkapper, kies 'n tyd, en ons hou die stoel warm vir jou.",
       scroll_cue: "Bespreek hieronder",
-      qf_monsat: "Ma – Sa", qf_sun: "Sondag", qf_accounts: "Rekeninge", qf_accounts_val: "Opsioneel — bespreek as gas"
+      qf_monsat: "Ma – Sa", qf_sun: "Sondag", qf_accounts: "Rekeninge", qf_accounts_val: "Opsioneel — bespreek as gas",
+
+      book_tag: "Bespreek 'n Stoel", book_h2: "Kies jou haarkapper, dag en tyd",
+      book_p: "Geen rekening nodig om te bespreek nie — <em>een skep spaar net jou besonderhede vir volgende keer.</em>",
+      label_barber: "Haarkapper",
+      barber_note_any: "Eerste beskikbare stoel, wie ook al vry is.",
+      barber_note_sipho: "Bekend vir gladde fades en netjiese tapers.",
+      barber_note_luke: "Skêrwerk en klassieke, tradisionele snitte.",
+      barber_note_ayanda: "Baardvorming en tradisionele warm-handdoek skeerwerk.",
+      label_services: "Diens(te)", label_services_hint: "— kies een of meer",
+      label_addons: "Byvoegings", label_addons_hint: "(opsioneel)",
+      addon_note: "Byvoeging-pryse moet nog met die kliënt bevestig word — hier gewys sodat die vloei gedemonstreer kan word.",
+      label_available_times: "Beskikbare Tye",
+      no_date_msg: "Kies 'n datum om oop tye te sien.",
+      select_to_continue: "Kies 'n haarkapper, datum en tyd om voort te gaan.",
+      btn_confirm_booking: "Bevestig Bespreking",
+      success_heading: "Jy is bespreek",
+      book_another: "Bespreek nog 'n afspraak",
+      confirmation_email_note: "'n Bevestigingse-pos is op pad.",
+      new_confirmation_note: "'n Nuwe bevestigingse-pos is op pad.",
+      reference_label: "Verwysing",
+      rescheduled_prefix: "Herskeduleer:",
+
+      services_h1: "Dienste &amp; Pryse",
+      services_p: "Eenvoudige pryse, geen opverkoop nie. Elke sny, fade en skeer word met die regte gereedskap en sonder haas gedoen — kyk gerus wat hieronder aangebied word, en bespreek dan jou stoel.",
+      services_note: "Pryse deur die kliënt verskaf (vereistevraelys) — duur nog nie bevestig nie, om op te volg.",
+
+      location_h1: "Vind Ons",
+      location_p: "Winkel 5 op Mackeurtanlaan, Durban North — maklik om te vind, maklik om te parkeer. Slegs per afspraak, kyk dus na die ure hieronder voor jy kom.",
+      opening_hours: "Openingsure",
+      day_monday: "Maandag", day_tuesday: "Dinsdag", day_wednesday: "Woensdag", day_thursday: "Donderdag",
+      day_friday: "Vrydag", day_saturday: "Saterdag", day_sunday: "Sondag",
+      map_placeholder: "Ingebedde kaart kom hier",
+
+      team_tag: "Ontmoet die Span", team_h1: "Jou Haarkapper",
+      team_p: "Kies 'n stoel, of kies 'n persoon — elke haarkapper hier het sy eie spesialiteit.",
+      book_with: "Bespreek met",
+      team_note: "Foto's is plekhouers — die kliënt het professionele fotografie gereed om in te sit.",
+
+      gallery_tag: "Galery", gallery_h1: "Die Winkel &amp; die Werk",
+      gallery_p: "'n Kykie na die spasie en van die snitte wat daaruit voortgekom het.",
+      tile_shop_floor: "Winkelvloer", tile_skin_fade: "Skin fade", tile_hot_towel: "Warm-handdoek skeer",
+      tile_chairs: "Haarkapperstoele", tile_beard_trim: "Baardsny", tile_groom: "Kinsman-versorging",
+      gallery_note: "Plekhouer-teëls — die kliënt het professionele foto's gereed om hier in te sit.",
+
+      about_tag: "Oor Ons", about_h1: "Gebou op Vertroue",
+      about_p1: "Kinsman is 'n klassieke haarkapperswinkel op Mackeurtan Ave — die soort plek waar jy dieselfde stoel, dieselfde haarkapper, en 'n snit kry wat jy nie twee keer hoef te verduidelik nie.",
+      about_p2: "Ses haarkappers werk uit die winkel, elk met hul eie spesialiteit, van presiese fades tot tradisionele skeermes-skeerwerk. Geen haas, geen opverkoop nie — net die regte gereedskap en 'n stoel wat warm is wanneer jy daar aankom.",
+      about_cta: "Ontmoet die Haarkappers",
+
+      login_h2: "Welkom terug", login_sub: "Meld aan om jou besprekingsgeskiedenis te sien en vinniger weer te bespreek.",
+      label_email: "E-pos", label_password: "Wagwoord",
+      auth_prototype_note: "Dit is 'n prototipe — koppel hierdie knoppie aan werklike verifikasie sodra die agterkant gereed is.",
+      login_switch_prefix: "Het jy nie 'n rekening nie?", create_one: "Skep een",
+      auth_guest_note: "Rekeninge is opsioneel — jy kan steeds", guest_link: "as gas bespreek",
+
+      register_h2: "Skep jou rekening", register_sub: "Stoor jou besonderhede een keer en bespreek vinniger volgende keer — heeltemal opsioneel.",
+      label_fullname: "Volle Naam", label_phone: "Foon",
+      register_switch_prefix: "Het jy reeds 'n rekening?", log_in_lower: "Meld aan",
+
+      shop_tag: "Kleinhandel", shop_h1: "Winkel",
+      shop_p: "Alles hieronder word in die winkel by die toonbank verkoop — blaai hier, en tel dit op tydens jou volgende besoek.",
+      stock_out: "Uitverkoop", stock_low: "Min voorraad", stock_in: "In voorraad",
+
+      admin_tag: "Admin", label_name: "Naam", label_price: "Prys (R)", label_stock: "Voorraad",
+      label_description: "Beskrywing", btn_cancel: "Kanselleer", btn_remove: "Verwyder",
+      label_account_type: "Rekeningtipe", option_customer: "Kliënt", option_barber: "Haarkapper", option_admin: "Admin",
+      btn_edit: "Wysig", btn_delete: "Skrap", btn_save: "Stoor",
+
+      admin_services_p: "Bestuur wat op die Dienste &amp; Pryse-bladsy is — veranderinge hier wys dadelik daar.",
+      admin_add_service_btn: "Voeg 'n Diens By", admin_save_service: "Stoor Diens",
+
+      admin_products_h1: "Produkkatalogus", admin_products_p: "Voorraadveranderinge hier sinchroniseer met die kassa sodra die werf regstreeks is.",
+      admin_add_product_btn: "Voeg 'n Produk By", admin_save_product: "Stoor Produk",
+
+      admin_accounts_h1: "Rekeninge", admin_accounts_p: "Skep aanmeldings vir personeel en kliënte.",
+
+      admin_bookings_h1: "Alle Besprekings", admin_bookings_p: "Elke haarkapper se skedule op een plek — help om dubbele besprekings raak te sien wat papierdagboeke nie kan nie.",
+
+      admin_analytics_h1: "Analise", admin_analytics_p: "Inkomste, besigste dae, en wat werklik verkoop — gebaseer op demo-besprekingsdata.",
+      analytics_revenue_label: "Totale Inkomste (voltooide verkope)", analytics_days: "Besigste Dae",
+      analytics_services: "Gewilde Dienste", analytics_barbers: "Besprekings per Haarkapper",
+
+      loyalty_h2: "Elke 10de Besoek is Op Ons", loyalty_p: "Versamel 'n stempel elke besoek. Bereik 10 en kies 'n gratis snit of 'n afslag op jou volgende een.",
+      loyalty_status_progress: "{n} van 10 besoeke — nog {remaining} vir 'n gratis snit of 'n afslag, jou keuse.",
+      loyalty_status_done: "10 besoeke bereik — gratis snit of afslag ontsluit!",
+
+      my_bookings_h1: "Jou Afsprake",
+      my_bookings_intro: "Wys besprekings vir {name} — hierdie prototipe het nog nie werklike rekeninge nie, dus is dit 'n vaste demo-kliënt.",
+      no_my_bookings_msg: "Nog geen besprekings nie — gaan na Bespreek 'n Stoel om een te maak.",
+      btn_reschedule: "Herskeduleer", btn_leave_review: "Laat 'n Resensie", btn_submit_review: "Dien In",
+      review_placeholder: "Hoe was dit?",
+
+      staff_tag: "Personeel", filter_upcoming: "Aankomend", filter_past: "Verby",
+      no_bookings_msg: "Geen besprekings hier nie.",
+
+      pos_back: "‹ Terug na besprekings", pos_sale_complete: "Verkoop voltooi",
+      pos_haircut_only: "Slegs haarsny", pos_add_product_label: "Voeg 'n produk by hierdie verkoop",
+      pos_total_label: "Totaal", pos_complete_sale_btn: "Voltooi Verkoop",
+
+      status_confirmed: "Bevestig", status_completed: "Voltooi", status_cancelled: "Gekanselleer", status_noshow: "Nie Opgedaag",
+
+      month_1: "Januarie", month_2: "Februarie", month_3: "Maart", month_4: "April", month_5: "Mei", month_6: "Junie",
+      month_7: "Julie", month_8: "Augustus", month_9: "September", month_10: "Oktober", month_11: "November", month_12: "Desember",
+      dow_mon: "Ma", dow_tue: "Di", dow_wed: "Wo", dow_thu: "Do", dow_fri: "Vr", dow_sat: "Sa", dow_sun: "So",
+      slot_booked: "Bespreek", slot_too_soon: "Te gou", btn_book_short: "Bespreek", with_word: "met", option_any_barber: "Enige beskikbare haarkapper"
     },
     zu: {
       nav_book: "Bhukha Isihlalo", nav_shop: "Isitolo", nav_services: "Izinsizakalo", nav_team: "Ithimba",
       nav_gallery: "Izithombe", nav_about: "Mayelana Nathi", nav_loyalty: "Ukwethembeka", nav_location: "Indawo",
       nav_login: "Ngena", nav_register: "Vula I-akhawunti", nav_logout: "Phuma",
-      nav_barber_bookings: "Ama-bhukingi Ami", nav_admin_bookings: "Ama-bhukingi", nav_admin_products: "Imikhiqizo",
+      nav_barber_bookings: "Ama-bhukingi Ami", nav_my_bookings: "Ama-bhukingi Ami", nav_admin_bookings: "Ama-bhukingi", nav_admin_services: "Izinsizakalo", nav_admin_products: "Imikhiqizo",
       nav_admin_accounts: "Ama-akhawunti", nav_admin_analytics: "Ukuhlaziya",
       hero_tag: "Durban North · Isitshefu Esejwayelekile",
       hero_h1: "Ukugundwa okufanele, ukushefwa okufanele, ngaphandle kwenkathazo.",
       hero_p: "I-Kinsman iyisitshefu esidala e-Mackeurtan Ave — ama-fade, ukulungiswa ngethawula elishisayo, nokushefwa ngendlela yesintu. Khetha umgundi, khetha isikhathi, sizokugcinela isihlalo sishisa.",
       scroll_cue: "Bhukha ngezansi",
-      qf_monsat: "MsoMb – MgqiSathu", qf_sun: "ISonto", qf_accounts: "Ama-akhawunti", qf_accounts_val: "Akuphoqelekile — bhukha njengesihambeli"
+      qf_monsat: "MsoMb – MgqiSathu", qf_sun: "ISonto", qf_accounts: "Ama-akhawunti", qf_accounts_val: "Akuphoqelekile — bhukha njengesihambeli",
+
+      book_tag: "Bhukha Isihlalo", book_h2: "Khetha umgundi wakho, usuku nesikhathi",
+      book_p: "Ayikho i-akhawunti edingekayo ukuze ubhukhe — <em>ukuyivula kusindisa nje imininingwane yakho ngokuzayo.</em>",
+      label_barber: "Umgundi",
+      barber_note_any: "Isihlalo esitholakalayo kuqala, noma ubani okhululekile.",
+      barber_note_sipho: "Aziwa nge-fade ecacile nama-taper ahlanzekile.",
+      barber_note_luke: "Umsebenzi wesikelo nokugunda okujwayelekile.",
+      barber_note_ayanda: "Ukulungiswa kwesilevu nokushefwa ngethawula elishisayo ngendlela yesintu.",
+      label_services: "Izinsizakalo", label_services_hint: "— khetha eyodwa noma ngaphezulu",
+      label_addons: "Okwengeziwe", label_addons_hint: "(akuphoqelekile)",
+      addon_note: "Amanani okwengeziwe kusazoqinisekiswa neklayenti — abonisiwe lapha ukuze inqubo ikhonjiswe.",
+      label_available_times: "Izikhathi Ezitholakalayo",
+      no_date_msg: "Khetha usuku ukuze ubone izikhathi ezivulekile.",
+      select_to_continue: "Khetha umgundi, usuku nesikhathi ukuze uqhubeke.",
+      btn_confirm_booking: "Qinisekisa Ukubhukha",
+      success_heading: "Usubhukhile",
+      book_another: "Bhukha esinye isikhathi",
+      confirmation_email_note: "I-imeyili yokuqinisekisa isendleleni.",
+      new_confirmation_note: "I-imeyili entsha yokuqinisekisa isendleleni.",
+      reference_label: "Inombolo Yereferensi",
+      rescheduled_prefix: "Kushintshiwe isikhathi:",
+
+      services_h1: "Izinsizakalo &amp; Amanani",
+      services_p: "Amanani alula, akukho ukuthengiswa okwengeziwe. Ukugundwa nokushefwa konke kwenziwa ngamathuluzi afanele futhi ngaphandle kokushesha — bheka lokho okutholakalayo ngezansi, bese ubhukha isihlalo sakho.",
+      services_note: "Amanani anikezwe iklayenti (kusuka kuhlu lwemibuzo) — isikhathi asikaqinisekiswa, kuzolandelelwa.",
+
+      location_h1: "Sithole",
+      location_p: "Isitolo 5 e-Mackeurtan Ave, Durban North — kulula ukuthola, kulula ukupaka. Kusebenza ngokubhukha kuphela, ngakho hlola izikhathi ezingezansi ngaphambi kokuza.",
+      opening_hours: "Izikhathi Zokuvula",
+      day_monday: "UMsombuluko", day_tuesday: "ULwesibili", day_wednesday: "ULwesithathu", day_thursday: "ULwesine",
+      day_friday: "ULwesihlanu", day_saturday: "UMgqibelo", day_sunday: "ISonto",
+      map_placeholder: "Imephu efakiwe izofika lapha",
+
+      team_tag: "Yazi Ithimba", team_h1: "Umgundi Wakho",
+      team_p: "Khetha isihlalo, noma khetha umuntu — wonke umgundi lapha unobuchule bakhe obuhlukile.",
+      book_with: "Bhukha no",
+      team_note: "Izithombe ziyizibambeli — iklayenti linezithombe zochwepheshe ezilungele ukufakwa.",
+
+      gallery_tag: "Izithombe", gallery_h1: "Isitolo &amp; Umsebenzi",
+      gallery_p: "Ukubuka indawo kanye nokunye ukugundwa okuvele kuyo.",
+      tile_shop_floor: "Phansi kwesitolo", tile_skin_fade: "I-skin fade", tile_hot_towel: "Ukushefwa ngethawula elishisayo",
+      tile_chairs: "Izihlalo zomgundi", tile_beard_trim: "Ukulungiswa kwesilevu", tile_groom: "Ukulungiswa kwe-Kinsman",
+      gallery_note: "Amathayela ayizibambeli — iklayenti linezithombe zochwepheshe ezilungele ukufakwa lapha.",
+
+      about_tag: "Mayelana Nathi", about_h1: "Yakhelwe Ekwethembekeni",
+      about_p1: "I-Kinsman iyisitshefu esidala e-Mackeurtan Ave — uhlobo lwendawo lapho uthola khona isihlalo esifanayo, umgundi ofanayo, nokugundwa ongadingi ukukuchaza kabili.",
+      about_p2: "Abagundi abayisithupha basebenza esitolo, ngamunye enobuchule bakhe, kusukela ku-fade enembile kuya ekushefweni ngendlela yesintu. Akukho ukushesha, akukho ukuthengiswa okwengeziwe — amathuluzi afanele nesihlalo esishisiwe uma ufika.",
+      about_cta: "Yazi Abagundi",
+
+      login_h2: "Siyakwamukela futhi", login_sub: "Ngena ukuze ubone umlando wakho wokubhukha futhi ubhukhe kabusha ngokushesha.",
+      label_email: "I-imeyili", label_password: "Iphasiwedi",
+      auth_prototype_note: "Lokhu kuyisibonelo — xhuma le nkinobho ekuqinisekisweni kwangempela uma isistimu sesilungile.",
+      login_switch_prefix: "Awunayo i-akhawunti?", create_one: "Vula eyodwa",
+      auth_guest_note: "Ama-akhawunti awaphoqelekile — usengabhukha", guest_link: "njengesihambeli",
+
+      register_h2: "Vula i-akhawunti yakho", register_sub: "Gcina imininingwane yakho kanye ubuye ubhukhe ngokushesha ngokuzayo — akuphoqelekile.",
+      label_fullname: "Igama Eliphelele", label_phone: "Ucingo",
+      register_switch_prefix: "Usunayo i-akhawunti?", log_in_lower: "Ngena",
+
+      shop_tag: "Ukuthengisa", shop_h1: "Isitolo",
+      shop_p: "Konke okungezansi kuthengiswa esitolo ekhawuntala — bheka lapha, ukuthathe ngesikhathi sakho esilandelayo.",
+      stock_out: "Akusekho", stock_low: "Kuncane", stock_in: "Kukhona",
+
+      admin_tag: "Admin", label_name: "Igama", label_price: "Inani (R)", label_stock: "Isitoko",
+      label_description: "Incazelo", btn_cancel: "Khansela", btn_remove: "Susa",
+      label_account_type: "Uhlobo Lwe-akhawunti", option_customer: "Iklayenti", option_barber: "Umgundi", option_admin: "Admin",
+      btn_edit: "Hlela", btn_delete: "Susa", btn_save: "Gcina",
+
+      admin_services_p: "Phatha okusekhasini Lezinsizakalo &amp; Amanani — izinguquko lapha zibonakala khona ngokushesha.",
+      admin_add_service_btn: "Engeza Isevisi", admin_save_service: "Gcina Isevisi",
+
+      admin_products_h1: "Uhlu Lwemikhiqizo", admin_products_p: "Izinguquko zesitoko lapha zivumelana nekhawunta uma isayithi seliphilile.",
+      admin_add_product_btn: "Engeza Umkhiqizo", admin_save_product: "Gcina Umkhiqizo",
+
+      admin_accounts_h1: "Ama-akhawunti", admin_accounts_p: "Dala ukungena kwabasebenzi namakhasimende.",
+
+      admin_bookings_h1: "Wonke Amabhukingi", admin_bookings_p: "Ishejuli yomgundi ngamunye endaweni eyodwa — kusiza ukubona ukubhukha okuphindiwe okungeke kubonwe idayari yephepha.",
+
+      admin_analytics_h1: "Ukuhlaziya", admin_analytics_p: "Imali engenayo, izinsuku ezimatasa, nokuthengiswa ngempela — kususelwa kudatha yesibonelo yokubhukha.",
+      analytics_revenue_label: "Imali Engenayo Yonke (ukuthengiswa okuphelele)", analytics_days: "Izinsuku Ezimatasa",
+      analytics_services: "Izinsizakalo Ezithandwayo", analytics_barbers: "Amabhukingi Ngomgundi",
+
+      loyalty_h2: "Ukuvakasha Kwe-10 Kuvela Kithi", loyalty_p: "Qoqa isitembu ngokuvakasha ngakunye. Fica ku-10 bese ukhetha ukugundwa mahhala noma isaphulelo kokuzayo kwakho.",
+      loyalty_status_progress: "{n} kwezingu-10 zokuvakasha — kusasele {remaining} ukuze uthole ukugundwa mahhala noma isaphulelo, ukukhetha kwakho.",
+      loyalty_status_done: "Kufinyelelwe kokuvakasha okungu-10 — ukugundwa mahhala noma isaphulelo sivuliwe!",
+
+      my_bookings_h1: "Izikhathi Zakho",
+      my_bookings_intro: "Kukhonjiswa amabhukingi ka-{name} — lesi sibonelo asikabi nawo ama-akhawunti angempela okwamanje, ngakho leli yikhasimende lesibonelo elimisiwe.",
+      no_my_bookings_msg: "Awukabi namabhukingi — hamba ku-Bhukha Isihlalo ukuze wenze elilodwa.",
+      btn_reschedule: "Shintsha Isikhathi", btn_leave_review: "Shiya Ukubuyekeza", btn_submit_review: "Thumela",
+      review_placeholder: "Bekunjani?",
+
+      staff_tag: "Abasebenzi", filter_upcoming: "Ezizayo", filter_past: "Ezidlulile",
+      no_bookings_msg: "Awekho amabhukingi lapha.",
+
+      pos_back: "‹ Buyela emabhukingini", pos_sale_complete: "Ukuthengisa kuphelile",
+      pos_haircut_only: "Ukugundwa kuphela", pos_add_product_label: "Engeza umkhiqizo kulokhu kuthengisa",
+      pos_total_label: "Isamba", pos_complete_sale_btn: "Qedela Ukuthengisa",
+
+      status_confirmed: "Kuqinisekisiwe", status_completed: "Kuphelile", status_cancelled: "Kukhanseliwe", status_noshow: "Akazange Afike",
+
+      month_1: "Januwari", month_2: "Februwari", month_3: "Mashi", month_4: "Ephreli", month_5: "Meyi", month_6: "Juni",
+      month_7: "Julayi", month_8: "Agasti", month_9: "Septhemba", month_10: "Okthoba", month_11: "Novemba", month_12: "Disemba",
+      dow_mon: "Mso", dow_tue: "Bi", dow_wed: "Tha", dow_thu: "Ne", dow_fri: "Hla", dow_sat: "Mgq", dow_sun: "Son",
+      slot_booked: "Kubhukhiwe", slot_too_soon: "Kusheshile kakhulu", btn_book_short: "Bhukha", with_word: "no", option_any_barber: "Noma imuphi umgundi otholakalayo"
     }
   };
   let currentLang = "en";
+  const LOCALE_MAP = { en: "en-ZA", af: "af-ZA", zu: "zu-ZA" };
 
   function t(key){
     return (translations[currentLang] && translations[currentLang][key]) || translations.en[key] || key;
@@ -1701,6 +2063,9 @@
     document.querySelectorAll("[data-i18n]").forEach(el => {
       el.textContent = t(el.dataset.i18n);
     });
+    document.querySelectorAll("[data-i18n-html]").forEach(el => {
+      el.innerHTML = t(el.dataset.i18nHtml);
+    });
   }
 
   document.querySelectorAll("#lang-switch button").forEach(btn => {
@@ -1709,6 +2074,13 @@
       document.querySelectorAll("#lang-switch button").forEach(b => b.classList.toggle("active", b.dataset.lang === currentLang));
       applyTranslations();
       renderNav();
+
+      // barber-note isn't static markup (it's set dynamically based on the
+      // selected barber), so it needs an explicit refresh here.
+      document.getElementById('barber-note').textContent = barberNote(document.getElementById('barber').value);
+
+      const activeView = document.querySelector('.view.active');
+      if (activeView) renderDynamicContent(activeView.id.replace('view-', ''));
     });
   });
 
@@ -1745,11 +2117,13 @@
         <a href="javascript:void(0)" data-route="gallery">${t('nav_gallery')}</a>
         <a href="javascript:void(0)" data-route="about">${t('nav_about')}</a>
         <a href="javascript:void(0)" data-route="loyalty">${t('nav_loyalty')}</a>
+        <a href="javascript:void(0)" data-route="my-bookings">${t('nav_my_bookings')}</a>
         <a href="javascript:void(0)" data-route="location">${t('nav_location')}</a>`;
     } else if (role === "barber"){
       linksHtml = `<a href="javascript:void(0)" data-route="barber-bookings">${t('nav_barber_bookings')}</a>`;
     } else if (role === "admin"){
       linksHtml = `<a href="javascript:void(0)" data-route="admin-bookings">${t('nav_admin_bookings')}</a>
+        <a href="javascript:void(0)" data-route="admin-services">${t('nav_admin_services')}</a>
         <a href="javascript:void(0)" data-route="admin-products">${t('nav_admin_products')}</a>
         <a href="javascript:void(0)" data-route="admin-accounts">${t('nav_admin_accounts')}</a>
         <a href="javascript:void(0)" data-route="admin-analytics">${t('nav_admin_analytics')}</a>`;
@@ -1788,11 +2162,27 @@
   });
 
   // ---------- Shop ----------
+  // ---------- Public Services & Pricing page (reads from `services`) ----------
+  function renderPublicServices(){
+    const list = document.getElementById("public-service-list");
+    list.innerHTML = "";
+    services.forEach(s => {
+      const row = document.createElement("div");
+      row.className = "panel neo-raised service-row";
+      row.innerHTML = `
+        <div><div class="name">${s.name}</div>${s.desc ? `<div class="desc">${s.desc}</div>` : ""}</div>
+        <div class="price">R${s.price}</div>
+        <a href="javascript:void(0)" class="book-link neo-pill-raised" data-route="book">${t('btn_book_short')}</a>`;
+      list.appendChild(row);
+    });
+    bindRoutes(list);
+  }
+
   function renderShop(){
     const grid = document.getElementById("shop-product-grid");
     grid.innerHTML = "";
     products.forEach(p => {
-      const status = p.stock === 0 ? "Out of stock" : p.stock <= 5 ? "Low stock" : "In stock";
+      const status = p.stock === 0 ? t('stock_out') : p.stock <= 5 ? t('stock_low') : t('stock_in');
       const badgeClass = p.stock === 0 ? "badge-brick" : p.stock <= 5 ? "badge-ochre" : "badge-teal";
       const card = document.createElement("div");
       card.className = "panel neo-raised product-card";
@@ -1827,7 +2217,7 @@
             <span class="stock-count">${p.stock}</span>
             <button class="stock-btn" data-act="inc" data-id="${p.id}">+</button>
           </div>
-          <button class="row-link brick" data-act="del" data-id="${p.id}">Remove</button>
+          <button class="row-link brick" data-act="del" data-id="${p.id}">${t('btn_remove')}</button>
         </div>`;
       list.appendChild(row);
     });
@@ -1841,6 +2231,52 @@
       });
     });
   }
+
+  // ---------- Admin: Services (the barbershop services & pricing, not retail Products) ----------
+  function renderAdminServices(){
+    const list = document.getElementById("admin-service-list");
+    list.innerHTML = "";
+    services.forEach(s => {
+      const row = document.createElement("div");
+      row.className = "panel neo-raised admin-row";
+      row.innerHTML = `
+        <div>
+          <div class="aname">${s.name}</div>
+          ${s.desc ? `<div class="adesc">${s.desc}</div>` : ""}
+        </div>
+        <div style="display:flex; align-items:center; gap:18px;">
+          <span class="aprice">R${s.price}</span>
+          <button class="row-link brick" data-id="${s.id}">${t('btn_remove')}</button>
+        </div>`;
+      list.appendChild(row);
+    });
+    list.querySelectorAll("button[data-id]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        services = services.filter(s => s.id !== btn.dataset.id);
+        renderAdminServices();
+        // Keep the public Services page and booking summary in sync if either is showing.
+        if (document.getElementById("view-services").classList.contains("active")) renderPublicServices();
+      });
+    });
+  }
+
+  const addServiceForm = document.getElementById("add-service-form");
+  document.getElementById("toggle-add-service").addEventListener("click", () => {
+    addServiceForm.style.display = addServiceForm.style.display === "none" ? "block" : "none";
+  });
+  document.getElementById("ns-cancel").addEventListener("click", () => {
+    addServiceForm.style.display = "none";
+    ["ns-name","ns-price"].forEach(id => document.getElementById(id).value = "");
+  });
+  document.getElementById("ns-save").addEventListener("click", () => {
+    const name = document.getElementById("ns-name").value.trim();
+    const price = Number(document.getElementById("ns-price").value) || 0;
+    if (!name || !price) return;
+    services.push({ id: "sv" + Date.now(), name, price, desc: "" });
+    addServiceForm.style.display = "none";
+    ["ns-name","ns-price"].forEach(id => document.getElementById(id).value = "");
+    renderAdminServices();
+  });
 
   const addProductForm = document.getElementById("add-product-form");
   document.getElementById("toggle-add-product").addEventListener("click", () => {
@@ -1864,6 +2300,7 @@
 
   // ---------- Admin: Accounts ----------
   function roleBadgeClass(r){ return r === "barber" ? "badge-brick" : r === "admin" ? "badge-ochre" : "badge-teal"; }
+  function roleLabel(r){ return t('option_' + (['customer','barber','admin'].includes(r) ? r : 'customer')); }
 
   function renderAdminAccounts(){
     const list = document.getElementById("account-list");
@@ -1879,14 +2316,14 @@
           <div class="input-shell neo-pressed" style="margin-bottom:10px;"><input type="email" id="edit-email" value="${a.email}"></div>
           <div class="input-shell neo-pressed" style="margin-bottom:12px;">
             <select id="edit-role" class="barber-select">
-              <option value="customer" ${a.role === "customer" ? "selected" : ""}>Customer</option>
-              <option value="barber" ${a.role === "barber" ? "selected" : ""}>Barber</option>
-              <option value="admin" ${a.role === "admin" ? "selected" : ""}>Admin</option>
+              <option value="customer" ${a.role === "customer" ? "selected" : ""}>${t('option_customer')}</option>
+              <option value="barber" ${a.role === "barber" ? "selected" : ""}>${t('option_barber')}</option>
+              <option value="admin" ${a.role === "admin" ? "selected" : ""}>${t('option_admin')}</option>
             </select>
           </div>
           <div style="display:flex; gap:10px;">
-            <button class="row-link" data-act="cancel-edit" style="flex:1; padding:11px;">Cancel</button>
-            <button class="row-link teal" data-act="save-edit" data-id="${a.id}" style="flex:1; padding:11px;">Save</button>
+            <button class="row-link" data-act="cancel-edit" style="flex:1; padding:11px;">${t('btn_cancel')}</button>
+            <button class="row-link teal" data-act="save-edit" data-id="${a.id}" style="flex:1; padding:11px;">${t('btn_save')}</button>
           </div>`;
       } else {
         row.className = "panel neo-raised admin-row";
@@ -1896,9 +2333,9 @@
             <div class="aemail">${a.email}</div>
           </div>
           <div style="display:flex; align-items:center; gap:14px;">
-            <span class="badge-pill ${roleBadgeClass(a.role)}">${a.role.charAt(0).toUpperCase() + a.role.slice(1)}</span>
-            <button class="row-link teal" data-act="edit" data-id="${a.id}">Edit</button>
-            <button class="row-link brick" data-act="delete" data-id="${a.id}">Delete</button>
+            <span class="badge-pill ${roleBadgeClass(a.role)}">${roleLabel(a.role)}</span>
+            <button class="row-link teal" data-act="edit" data-id="${a.id}">${t('btn_edit')}</button>
+            <button class="row-link brick" data-act="delete" data-id="${a.id}">${t('btn_delete')}</button>
           </div>`;
       }
       list.appendChild(row);
@@ -1937,24 +2374,29 @@
   });
 
   // ---------- Barber: Bookings ----------
+  function bookingStatusLabel(b, now){
+    return b.cancelled ? t('status_cancelled') : b.completed ? t('status_completed') : (new Date(b.dateISO) < now ? t('status_noshow') : t('status_confirmed'));
+  }
+
   function renderBookings(){
     const now = new Date(); now.setHours(0,0,0,0);
     const list = document.getElementById("booking-list");
     list.innerHTML = "";
     const filtered = bookings
       .filter(b => b.barberId === CURRENT_BARBER_ID)
+      .filter(b => !(b.cancelled && bookingFilter === "upcoming")) // a cancelled slot isn't something the barber needs to prep for
       .filter(b => { const d = new Date(b.dateISO); return bookingFilter === "upcoming" ? d >= now : d < now; })
       .sort((a, b) => new Date(a.dateISO) - new Date(b.dateISO));
 
     if (!filtered.length){
-      list.innerHTML = '<p style="color:var(--text-dim); font-size:14px;">No bookings here.</p>';
+      list.innerHTML = `<p style="color:var(--text-dim); font-size:14px;">${t('no_bookings_msg')}</p>`;
       return;
     }
     filtered.forEach(b => {
       const d = new Date(b.dateISO);
-      const dateLabel = d.toLocaleDateString("en-ZA", { weekday: "short", day: "numeric", month: "short" });
-      const statusLabel = b.completed ? "Paid" : (d < now ? "Missed" : "Upcoming");
-      const badgeClass = b.completed ? "badge-teal" : "badge-ochre";
+      const dateLabel = d.toLocaleDateString(LOCALE_MAP[currentLang], { weekday: "short", day: "numeric", month: "short" });
+      const statusLabel = bookingStatusLabel(b, now);
+      const badgeClass = b.cancelled ? "badge-grey" : b.completed ? "badge-teal" : "badge-ochre";
       const row = document.createElement("div");
       row.className = "panel neo-raised booking-row";
       row.innerHTML = `
@@ -1972,7 +2414,7 @@
   document.querySelectorAll(".filter-tab").forEach(tab => {
     tab.addEventListener("click", () => {
       bookingFilter = tab.dataset.filter;
-      document.querySelectorAll(".filter-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".filter-tab").forEach(tab2 => tab2.classList.remove("active"));
       tab.classList.add("active");
       renderBookings();
     });
@@ -1994,15 +2436,15 @@
     if (booking.completed){
       const productsLabel = booking.saleProducts && booking.saleProducts.length
         ? booking.saleProducts.map(l => l.qty + "x " + l.name).join(", ")
-        : "Haircut only";
+        : t('pos_haircut_only');
       const totalLabel = "R" + (booking.saleTotal !== null ? booking.saleTotal : booking.price);
       container.innerHTML = `
         <div class="panel neo-raised pos-card" style="text-align:center;">
           <div class="success-badge" style="margin:0 auto;">&#10003;</div>
-          <h3 style="font-family:var(--display); font-weight:600; font-size:18px; color:var(--heading); margin:0;">Sale complete</h3>
+          <h3 style="font-family:var(--display); font-weight:600; font-size:18px; color:var(--heading); margin:0;">${t('pos_sale_complete')}</h3>
           <p style="color:var(--text-dim); font-size:14px; margin:0;">${productsLabel}</p>
           <p style="font-family:var(--mono); font-size:20px; color:var(--accent); margin:0;">${totalLabel}</p>
-          <a href="javascript:void(0)" class="pos-back" data-route="barber-bookings" style="margin:0;">Back to bookings</a>
+          <a href="javascript:void(0)" class="pos-back" data-route="barber-bookings" style="margin:0;">${t('pos_back')}</a>
         </div>`;
       bindRoutes(container);
       return;
@@ -2024,7 +2466,7 @@
     }, 0);
     const total = booking.price + productsTotal;
     const d = new Date(booking.dateISO);
-    const dateLabel = d.toLocaleDateString("en-ZA", { weekday: "short", day: "numeric", month: "short" });
+    const dateLabel = d.toLocaleDateString(LOCALE_MAP[currentLang], { weekday: "short", day: "numeric", month: "short" });
 
     container.innerHTML = `
       <div class="panel neo-raised pos-card">
@@ -2033,18 +2475,18 @@
           <p style="font-size:13.5px; color:var(--text-dim); margin:0;">${booking.service} · ${dateLabel} at ${booking.time}</p>
         </div>
         <div style="border-top:1px solid var(--sh-dark-soft); padding-top:14px; display:flex; flex-direction:column; gap:8px;">
-          <div class="pos-line"><span>${booking.customerName}'s haircut</span><span style="font-family:var(--mono);">R${booking.price}</span></div>
+          <div class="pos-line"><span>${booking.customerName} — ${booking.service}</span><span style="font-family:var(--mono);">R${booking.price}</span></div>
           ${cartLines}
         </div>
         <div>
-          <span style="display:block; font-family:var(--display); font-weight:600; font-size:13px; color:var(--heading); margin-bottom:10px;">Add a product to this sale</span>
+          <span style="display:block; font-family:var(--display); font-weight:600; font-size:13px; color:var(--heading); margin-bottom:10px;">${t('pos_add_product_label')}</span>
           <div class="pos-chip-row">${chips}</div>
         </div>
         <div class="pos-total-row">
-          <span style="font-family:var(--display); font-weight:700; font-size:16px; color:var(--heading);">Total</span>
+          <span style="font-family:var(--display); font-weight:700; font-size:16px; color:var(--heading);">${t('pos_total_label')}</span>
           <span class="ptotal">R${total}</span>
         </div>
-        <button class="auth-submit neo-pill-raised" id="pos-complete" style="background:var(--teal); color:var(--accent-ink);">Complete Sale</button>
+        <button class="auth-submit neo-pill-raised" id="pos-complete" style="background:var(--teal); color:var(--accent-ink);">${t('pos_complete_sale_btn')}</button>
       </div>`;
 
     container.querySelectorAll(".pos-chip").forEach(chip => {
@@ -2090,8 +2532,8 @@
     }
     const remaining = 10 - DEMO_CUSTOMER_VISITS;
     document.getElementById("loyalty-status").textContent = remaining > 0
-      ? `${DEMO_CUSTOMER_VISITS} of 10 visits — ${remaining} more for a free haircut or a discount, your choice.`
-      : "10 visits reached — free haircut or discount unlocked!";
+      ? t('loyalty_status_progress').replace('{n}', DEMO_CUSTOMER_VISITS).replace('{remaining}', remaining)
+      : t('loyalty_status_done');
   }
 
   // ---------- Admin: All Bookings ----------
@@ -2102,26 +2544,139 @@
     sorted.forEach(b => {
       const barber = BARBERS_LIST.find(x => x.id === b.barberId);
       const d = new Date(b.dateISO);
-      const dateLabel = d.toLocaleDateString("en-ZA", { weekday: "short", day: "numeric", month: "short" });
-      const statusLabel = b.completed ? "Paid" : "Upcoming";
-      const badgeClass = b.completed ? "badge-teal" : "badge-ochre";
+      const dateLabel = d.toLocaleDateString(LOCALE_MAP[currentLang], { weekday: "short", day: "numeric", month: "short" });
+      const statusLabel = b.cancelled ? t('status_cancelled') : b.completed ? t('status_completed') : t('status_confirmed');
+      const badgeClass = b.cancelled ? "badge-grey" : b.completed ? "badge-teal" : "badge-ochre";
       const row = document.createElement("div");
       row.className = "panel neo-raised admin-booking-row";
       row.innerHTML = `
         <div>
           <div class="bwho">${b.customerName}</div>
-          <div class="bwith">${b.service} with ${barber ? barber.name : b.barberId} · ${dateLabel} at ${b.time}</div>
+          <div class="bwith">${b.service} ${t('with_word')} ${barber ? barber.name : b.barberId} · ${dateLabel} at ${b.time}</div>
         </div>
         <div style="display:flex; align-items:center; gap:14px;">
           <span class="badge-pill ${badgeClass}">${statusLabel}</span>
-          <button class="row-link brick" data-id="${b.id}">Cancel</button>
+          ${!b.cancelled && !b.completed ? `<button class="row-link brick" data-id="${b.id}">${t('btn_cancel')}</button>` : ""}
         </div>`;
       list.appendChild(row);
     });
     list.querySelectorAll("button[data-id]").forEach(btn => {
       btn.addEventListener("click", () => {
-        bookings = bookings.filter(b => b.id !== btn.dataset.id);
+        bookings = bookings.map(b => b.id === btn.dataset.id ? { ...b, cancelled: true } : b);
         renderAdminBookings();
+      });
+    });
+  }
+
+  // ---------- Customer: My Bookings (view / reschedule / cancel / review) ----------
+  function renderMyBookings(){
+    document.getElementById("my-bookings-name").textContent = t('my_bookings_intro').replace('{name}', DEMO_CUSTOMER_NAME);
+    const now = new Date(); now.setHours(0,0,0,0);
+    const list = document.getElementById("my-booking-list");
+    list.innerHTML = "";
+    const mine = bookings
+      .filter(b => b.customerName === DEMO_CUSTOMER_NAME)
+      .sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO));
+
+    if (!mine.length){
+      list.innerHTML = `<p style="color:var(--text-dim); font-size:14px;">${t('no_my_bookings_msg')}</p>`;
+      return;
+    }
+
+    mine.forEach(b => {
+      const d = new Date(b.dateISO);
+      const dateLabel = d.toLocaleDateString(LOCALE_MAP[currentLang], { weekday: "short", day: "numeric", month: "short" });
+      const isUpcoming = !b.cancelled && !b.completed && d >= now;
+      const statusLabel = bookingStatusLabel(b, now);
+      const badgeClass = b.cancelled ? "badge-grey" : b.completed ? "badge-teal" : "badge-ochre";
+
+      const row = document.createElement("div");
+      row.className = "panel neo-raised my-booking-row";
+
+      let actionsHtml = "";
+      if (isUpcoming){
+        actionsHtml = `
+          <div class="my-booking-actions">
+            <button class="neo-pill-raised" data-act="reschedule" data-id="${b.id}">${t('btn_reschedule')}</button>
+            <button class="neo-pill-raised danger" data-act="cancel" data-id="${b.id}">${t('btn_cancel')}</button>
+          </div>`;
+      } else if (b.completed && !b.review){
+        actionsHtml = `
+          <div class="my-booking-actions">
+            <button class="neo-pill-raised" data-act="review" data-id="${b.id}">${t('btn_leave_review')}</button>
+          </div>
+          <div class="review-box panel neo-pressed" id="review-box-${b.id}" style="display:none; margin-top:12px; padding:14px;">
+            <div class="star-picker" data-id="${b.id}">
+              ${[1,2,3,4,5].map(n => `<button type="button" data-star="${n}">&#9733;</button>`).join("")}
+            </div>
+            <textarea id="review-text-${b.id}" placeholder="${t('review_placeholder')}"></textarea>
+            <button class="neo-pill-raised" data-act="submit-review" data-id="${b.id}" style="margin-top:8px; padding:9px 16px; font-family:var(--mono); font-size:12px;">${t('btn_submit_review')}</button>
+          </div>`;
+      } else if (b.review){
+        actionsHtml = `<p style="font-family:var(--mono); font-size:12.5px; color:var(--ochre); margin-top:4px;">${"&#9733;".repeat(b.review.rating)} — "${b.review.comment}"</p>`;
+      }
+
+      row.innerHTML = `
+        <div class="mtop">
+          <span class="mname">${b.service}</span>
+          <span class="badge-pill ${badgeClass}">${statusLabel}</span>
+        </div>
+        <div class="mmeta">${dateLabel} at ${b.time} · R${b.price}</div>
+        ${actionsHtml}`;
+      list.appendChild(row);
+    });
+
+    let selectedStar = 0;
+
+    list.querySelectorAll('[data-act="reschedule"]').forEach(btn => {
+      btn.addEventListener("click", () => {
+        const booking = bookings.find(x => x.id === btn.dataset.id);
+        if (!booking) return;
+        reschedulingBookingId = booking.id;
+        document.getElementById("barber").value = BARBERS_LIST.some(x => x.id === booking.barberId) ? booking.barberId : "any";
+        document.getElementById("barber-note").textContent = barberNote(document.getElementById("barber").value);
+        selectedDate = null;
+        selectedTime = null;
+        renderCalendar();
+        renderTimeSlots();
+        updateSummary();
+        navigateTo("book");
+      });
+    });
+
+    list.querySelectorAll('[data-act="cancel"]').forEach(btn => {
+      btn.addEventListener("click", () => {
+        bookings = bookings.map(b => b.id === btn.dataset.id ? { ...b, cancelled: true } : b);
+        renderMyBookings();
+      });
+    });
+
+    list.querySelectorAll('[data-act="review"]').forEach(btn => {
+      btn.addEventListener("click", () => {
+        const box = document.getElementById("review-box-" + btn.dataset.id);
+        box.style.display = box.style.display === "none" ? "block" : "none";
+      });
+    });
+
+    list.querySelectorAll(".star-picker").forEach(picker => {
+      picker.querySelectorAll("button").forEach(starBtn => {
+        starBtn.addEventListener("click", () => {
+          const rating = Number(starBtn.dataset.star);
+          picker.dataset.rating = rating;
+          picker.querySelectorAll("button").forEach(b => b.classList.toggle("active", Number(b.dataset.star) <= rating));
+        });
+      });
+    });
+
+    list.querySelectorAll('[data-act="submit-review"]').forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.id;
+        const picker = list.querySelector(`.star-picker[data-id="${id}"]`);
+        const rating = Number(picker.dataset.rating || 0);
+        const comment = document.getElementById("review-text-" + id).value.trim();
+        if (!rating) return;
+        bookings = bookings.map(b => b.id === id ? { ...b, review: { rating, comment } } : b);
+        renderMyBookings();
       });
     });
   }
@@ -2131,7 +2686,7 @@
     const revenue = bookings.filter(b => b.completed).reduce((sum, b) => sum + (b.saleTotal ?? b.price), 0);
     const dayCounts = {}, serviceCounts = {}, barberCounts = {};
     bookings.forEach(b => {
-      const day = new Date(b.dateISO).toLocaleDateString("en-ZA", { weekday: "long" });
+      const day = new Date(b.dateISO).toLocaleDateString(LOCALE_MAP[currentLang], { weekday: "long" });
       dayCounts[day] = (dayCounts[day] || 0) + 1;
       serviceCounts[b.service] = (serviceCounts[b.service] || 0) + 1;
       const barber = BARBERS_LIST.find(x => x.id === b.barberId);
@@ -2151,13 +2706,13 @@
 
     document.getElementById("analytics-content").innerHTML = `
       <div class="panel neo-raised" style="padding:24px; margin-bottom:20px;">
-        <div style="font-family:var(--mono); font-size:12px; text-transform:uppercase; color:var(--text-dim); margin-bottom:6px;">Total Revenue (completed sales)</div>
+        <div style="font-family:var(--mono); font-size:12px; text-transform:uppercase; color:var(--text-dim); margin-bottom:6px;">${t('analytics_revenue_label')}</div>
         <div style="font-family:var(--display); font-weight:700; font-size:32px; color:var(--accent);">R${revenue}</div>
       </div>
       <div class="analytics-grid">
-        <div class="panel neo-raised analytics-card"><h3>Busiest Days</h3>${bars(dayCounts)}</div>
-        <div class="panel neo-raised analytics-card"><h3>Popular Services</h3>${bars(serviceCounts)}</div>
-        <div class="panel neo-raised analytics-card"><h3>Bookings per Barber</h3>${bars(barberCounts)}</div>
+        <div class="panel neo-raised analytics-card"><h3>${t('analytics_days')}</h3>${bars(dayCounts)}</div>
+        <div class="panel neo-raised analytics-card"><h3>${t('analytics_services')}</h3>${bars(serviceCounts)}</div>
+        <div class="panel neo-raised analytics-card"><h3>${t('analytics_barbers')}</h3>${bars(barberCounts)}</div>
       </div>`;
   }
 
@@ -2173,7 +2728,7 @@
       const id = btn.dataset.bookBarber;
       const barberSelect = document.getElementById("barber");
       barberSelect.value = id;
-      document.getElementById("barber-note").textContent = barberNotes[id];
+      document.getElementById("barber-note").textContent = barberNote(id);
       selectedTime = null;
       navigateTo("book");
       renderTimeSlots();
