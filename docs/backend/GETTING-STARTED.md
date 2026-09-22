@@ -33,6 +33,14 @@ Copy the `mongodb+srv://` URI from Atlas without editing it and paste it only at
 
 To run the API after initialization, set the same `Mongo__ConnectionString` and `Mongo__Database` values in the terminal that starts the API. Use the commands below for a fully manual setup.
 
+To prove the complete booking lifecycle against Atlas after initialisation, run:
+
+```powershell
+./scripts/Verify-Atlas-Booking.ps1
+```
+
+It builds the API, starts it locally, verifies readiness, creates a synthetic booking, retries it safely, confirms it as the assigned barber, reschedules it, cancels it and reads the final record. The synthetic booking remains in the development database with `cancelled` status as evidence. It uses short-lived development tokens only and stops the local API when finished.
+
 ```powershell
 dotnet restore --locked-mode
 dotnet build --no-restore
