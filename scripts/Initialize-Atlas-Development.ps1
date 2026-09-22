@@ -26,7 +26,15 @@ if ($atlasUri.Contains('<db_password>')) {
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
 $env:Mongo__ConnectionString = $atlasUri
 $env:Mongo__Database = $Database
-$env:Auth__DevelopmentSigningKey = [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+$keyBytes = New-Object byte[] 32
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+try {
+    $rng.GetBytes($keyBytes)
+    $env:Auth__DevelopmentSigningKey = [Convert]::ToBase64String($keyBytes)
+}
+finally {
+    $rng.Dispose()
+}
 
 try {
     dotnet run --project src/Kinsmen.Api -- --initialize --seed-demo
