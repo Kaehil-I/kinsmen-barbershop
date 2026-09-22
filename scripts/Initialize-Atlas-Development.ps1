@@ -18,9 +18,9 @@ function ConvertFrom-SecureInput([Security.SecureString]$InputValue) {
 # The Atlas URI and password are held only for this PowerShell process. Do not put
 # either value in source control, appsettings.json, screenshots, or a shared chat.
 $secureUri = Read-Host 'Paste the Atlas connection string exactly as copied from Atlas' -AsSecureString
-$atlasUri = ConvertFrom-SecureInput $secureUri
-if ([string]::IsNullOrWhiteSpace($atlasUri) -or -not $atlasUri.StartsWith('mongodb+srv://')) {
-    throw 'Use the mongodb+srv:// connection string copied from Atlas.'
+$atlasUri = (ConvertFrom-SecureInput $secureUri).Trim().Trim('"')
+if ([string]::IsNullOrWhiteSpace($atlasUri) -or -not ($atlasUri.StartsWith('mongodb+srv://') -or $atlasUri.StartsWith('mongodb://'))) {
+    throw 'Use the MongoDB connection string copied from Atlas. It must begin with mongodb+srv:// or mongodb://.'
 }
 if ($atlasUri.Contains('<db_password>')) {
     $securePassword = Read-Host 'Enter the database-user password' -AsSecureString
