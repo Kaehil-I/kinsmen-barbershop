@@ -1,0 +1,98 @@
+{
+  "bsonType": "object",
+  "required": [
+    "_id",
+    "customerId",
+    "barberId",
+    "startUtc",
+    "endUtc",
+    "services",
+    "totalCents",
+    "status",
+    "createdUtc",
+    "version"
+  ],
+  "properties": {
+    "_id": {
+      "bsonType": "string"
+    },
+    "customerId": {
+      "bsonType": "string",
+      "minLength": 1
+    },
+    "barberId": {
+      "bsonType": "string"
+    },
+    "startUtc": {
+      "bsonType": "date"
+    },
+    "endUtc": {
+      "bsonType": "date"
+    },
+    "createdUtc": {
+      "bsonType": "date"
+    },
+    "totalCents": {
+      "bsonType": "int",
+      "minimum": 0
+    },
+    "version": {
+      "bsonType": "long",
+      "minimum": 1
+    },
+    "notes": {
+      "bsonType": [
+        "string",
+        "null"
+      ],
+      "maxLength": 500
+    },
+    "creationFingerprint": {
+      "bsonType": [
+        "string",
+        "null"
+      ],
+      "maxLength": 64
+    },
+    "status": {
+      "enum": [
+        "Pending",
+        "Confirmed",
+        "Cancelled",
+        "Completed",
+        "NoShow"
+      ]
+    },
+    "services": {
+      "bsonType": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {
+        "bsonType": "object",
+        "required": [
+          "serviceId",
+          "name",
+          "priceCents",
+          "durationMinutes"
+        ],
+        "properties": {
+          "serviceId": {
+            "bsonType": "string"
+          },
+          "name": {
+            "bsonType": "string"
+          },
+          "priceCents": {
+            "bsonType": "int",
+            "minimum": 0
+          },
+          "durationMinutes": {
+            "bsonType": "int",
+            "minimum": 1,
+            "maximum": 480
+          }
+        }
+      }
+    }
+  }
+}

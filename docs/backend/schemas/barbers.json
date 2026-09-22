@@ -1,0 +1,58 @@
+{
+  "bsonType": "object",
+  "required": [
+    "_id",
+    "name",
+    "userId",
+    "hours",
+    "active",
+    "revision"
+  ],
+  "properties": {
+    "_id": {
+      "bsonType": "string"
+    },
+    "name": {
+      "bsonType": "string"
+    },
+    "userId": {
+      "bsonType": "string",
+      "minLength": 1
+    },
+    "active": {
+      "bsonType": "bool"
+    },
+    "revision": {
+      "bsonType": "long",
+      "minimum": 0
+    },
+    "hours": {
+      "bsonType": "array",
+      "items": {
+        "bsonType": "object",
+        "required": [
+          "weekday",
+          "startMinute",
+          "endMinute"
+        ],
+        "properties": {
+          "weekday": {
+            "bsonType": "int",
+            "minimum": 1,
+            "maximum": 7
+          },
+          "startMinute": {
+            "bsonType": "int",
+            "minimum": 0,
+            "maximum": 1439
+          },
+          "endMinute": {
+            "bsonType": "int",
+            "minimum": 1,
+            "maximum": 1440
+          }
+        }
+      }
+    }
+  }
+}

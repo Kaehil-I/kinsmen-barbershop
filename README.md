@@ -5,9 +5,24 @@ Built by **Kaehil, Kyra, Zario, and Gregory** — BCA3, IIE Emeris.
 
 ## What this is
 
-A front-end prototype of a booking system for Kinsmen Barbers, covering the customer booking flow,
-a shop, barber/team profiles, and role-based previews for Barber and Admin staff views. It's a single
-self-contained HTML file — no build step, no server, no install.
+The repository contains the Part 1 HTML prototype and an initial Part 2 booking backend.
+The prototype is a self-contained HTML file covering customer booking, shop and staff previews.
+The backend is an ASP.NET Core/.NET 10 API with MongoDB persistence, booking rules and automated tests.
+The prototype and backend are not connected yet; production authentication and hosting are still group integration work.
+
+## Start the Part 2 backend
+
+- [Local setup and commands](docs/backend/GETTING-STARTED.md)
+- [API contract and integration examples](docs/backend/API-CONTRACT.md)
+- [Importable OpenAPI definition](docs/backend/openapi.json)
+- [Architecture, data model and booking state diagrams](docs/backend/ARCHITECTURE.md)
+- [Team handoff and remaining responsibilities](docs/backend/TEAM-HANDOFF.md)
+- [Validation record](docs/backend/VALIDATION.md)
+
+The backend requires the .NET 10 SDK and a MongoDB replica set or sharded cluster.
+Build with `dotnet build Kinsmen.slnx` and run tests with `dotnet test Kinsmen.slnx`.
+Set `KINSMEN_TEST_MONGO` to a dedicated test replica set to include real database integration tests;
+otherwise those tests are explicitly skipped. Read the setup guide before running the API.
 
 ## Viewing the prototype
 
@@ -31,6 +46,12 @@ This same guide also appears as a dismissible panel at the top of the prototype 
 ```
 kinsmen-barbershop/
 ├── kinsmen_prototype.html   # the prototype — single file, open directly in a browser
+├── Kinsmen.slnx             # .NET 10 backend and tests
+├── src/Kinsmen.Api/         # HTTP endpoints, booking rules and MongoDB persistence
+├── tests/Kinsmen.Api.Tests/ # domain, HTTP/auth and real MongoDB tests
+├── docs/backend/           # contracts, JSON schemas, diagrams and handoff
+├── scripts/Smoke-Test.ps1  # running-API booking lifecycle check
+├── compose.mongo.yaml      # optional local development replica set
 ├── Documentation/
 │   ├── WIL Task 1 Documentation.docx        # main Task 1 submission document
 │   ├── Kinsmen-WBS-ERD-DevOps.docx          # WBS, ERD, and DevOps sections
@@ -39,25 +60,27 @@ kinsmen-barbershop/
 └── Kinsmen Barbershop — Website & Booking System_ Client Requirements Questionnaire.csv.zip
 ```
 
-## Tech stack (planned implementation)
+## Tech stack and migration status
 
-- **Frontend:** ASP.NET Core MVC, plain IDE-built Razor views
-- **Backend:** ASP.NET Core, Entity Framework Core
-- **Database:** Microsoft SQL Server (Azure SQL Database in production)
-- **Hosting:** Azure App Service
-- **CI/CD:** GitHub Actions (build → test → deploy on merge to `main`)
+- **Frontend:** existing HTML/CSS/JavaScript prototype; final MVC/views integration pending.
+- **Backend:** ASP.NET Core/.NET 10 HTTP API with separated booking rules and repository interfaces.
+- **Database:** MongoDB with the official C# driver, schema validation, indexes and transactions.
+- **Hosting:** undecided between Render/Vercel; no Azure dependency in the backend.
+- **Authentication:** JWT validation boundary; production account/login integration pending. Local demo tokens are development-only.
+- **CI/CD:** tests are runnable locally; GitHub automation and hosted deployment remain Kaehil's integration work.
 
-Full justification for each of these is in `Documentation/WIL Task 1 Documentation.docx`, Sections 6–9.
+The original Word report still describes SQL Server/Azure. Use `docs/backend/ARCHITECTURE.md` as
+the booking-backend replacement material when updating its Sections 6–9; the Word report has not
+yet been edited. MongoDB replaces the database layer, not the application host.
 
 ## Design patterns
 
-Repository, Unit of Work, Factory, Strategy, and Observer — see Section 7.1 of the main documentation
-for the reasoning behind each.
+The backend currently uses dependency injection, repository abstraction and a transaction/unit-of-work boundary.
+Factory, Strategy and Observer were proposed in Part 1; this contribution does not claim to implement them.
 
 ## Known gaps between this prototype and the current documentation
 
-This prototype is ahead of the written documentation in some areas and behind it in others — worth
-reading both before Task 1 submission rather than assuming they already match:
+The prototype, backend and written scope still need to be aligned for Task 2:
 
 - **Loyalty feature:** the prototype includes a working Loyalty screen, but Section 11.4 of the main
   documentation currently lists loyalty as an explicitly *excluded* future enhancement. One of these
@@ -69,13 +92,14 @@ reading both before Task 1 submission rather than assuming they already match:
 - **Shop cart & checkout:** the domain model and ERD (Sections 4 & 6) describe a customer-facing
   Cart/Checkout flow. The prototype's Shop is browse-only for customers — the only checkout that
   exists is staff-side, in the Barber POS.
-- **Customer self-service booking management:** the user stories (Section 2.2) call for customers to
-  view, reschedule, and cancel their own bookings, and to leave reviews. Not yet in the prototype.
-- **Barber time-blocking:** user stories call for barbers to block off their own time (breaks, days
-  off). Not yet in the prototype.
+- **Customer self-service booking management:** the prototype contains customer booking-management
+  rendering code. The new backend implements viewing, rescheduling and cancellation; UI integration
+  remains pending. Customer reviews are separate work.
+- **Barber time-blocking:** implemented in the new backend; staff UI integration remains pending.
 - **Admin scope:** the prototype's Admin role manages retail Shop products and staff/customer
   accounts. The documentation additionally expects Admin to manage the barbershop *services* (haircut/
-  beard trim pricing) and barber profiles — neither is built yet.
+  beard trim pricing) and barber profiles. Service-editing prototype code exists, but persistent admin
+  catalogue/profile management is not included in this backend slice.
 - **Individual barber profile pages:** the documented journey map describes a dedicated Barber Profile
   screen per barber; the prototype has a single Team page listing all barbers instead.
 - **Booking status vocabulary:** aligned in the prototype to match the documented state diagram
