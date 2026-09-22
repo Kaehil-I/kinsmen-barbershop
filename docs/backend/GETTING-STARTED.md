@@ -29,7 +29,7 @@ For a shared Atlas development database, run the helper below from the repositor
 ./scripts/Initialize-Atlas-Development.ps1
 ```
 
-Copy the `mongodb+srv://` URI from Atlas, replace `<db_password>` locally, and paste it only at the prompt. The script creates the required validators and indexes and safely adds any missing synthetic demo services and barbers. It deliberately does not retain the URI after the command ends.
+Copy the `mongodb+srv://` URI from Atlas without editing it and paste it only at the first prompt. At the second prompt, enter the database-user password. The script URL-encodes the password safely, creates the required validators and indexes, and adds any missing synthetic demo services and barbers. It deliberately does not retain the URI after the command ends.
 
 To run the API after initialization, set the same `Mongo__ConnectionString` and `Mongo__Database` values in the terminal that starts the API. Use the commands below for a fully manual setup.
 

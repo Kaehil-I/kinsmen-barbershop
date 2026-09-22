@@ -5,22 +5,32 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# The Atlas URI is held only for this PowerShell process. Do not put it in source
-# control, appsettings.json, screenshots, or a shared chat.
-$secureUri = Read-Host 'Paste the Atlas connection string (with the database-user password inserted)' -AsSecureString
-$uriPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureUri)
-try {
-    $atlasUri = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($uriPointer)
-}
-finally {
-    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($uriPointer)
+function ConvertFrom-SecureInput([Security.SecureString]$InputValue) {
+    $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($InputValue)
+    try {
+        return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
+    }
+    finally {
+        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
+    }
 }
 
+# The Atlas URI and password are held only for this PowerShell process. Do not put
+# either value in source control, appsettings.json, screenshots, or a shared chat.
+$secureUri = Read-Host 'Paste the Atlas connection string exactly as copied from Atlas' -AsSecureString
+$atlasUri = ConvertFrom-SecureInput $secureUri
 if ([string]::IsNullOrWhiteSpace($atlasUri) -or -not $atlasUri.StartsWith('mongodb+srv://')) {
     throw 'Use the mongodb+srv:// connection string copied from Atlas.'
 }
 if ($atlasUri.Contains('<db_password>')) {
-    throw 'Replace <db_password> with the database-user password before continuing.'
+    $securePassword = Read-Host 'Enter the database-user password' -AsSecureString
+    $databasePassword = ConvertFrom-SecureInput $securePassword
+    try {
+        $atlasUri = $atlasUri.Replace('<db_password>', [Uri]::EscapeDataString($databasePassword))
+    }
+    finally {
+        $databasePassword = $null
+    }
 }
 
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
