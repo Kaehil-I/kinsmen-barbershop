@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Kinsmen Barbers</title>
+    @* Design system (fonts, palette, shared CSS) lands here in the next commit —
+       kept minimal for now so this one just proves the project runs. *@
+</head>
+<body>
+    <main>
+        @RenderBody()
+    </main>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
