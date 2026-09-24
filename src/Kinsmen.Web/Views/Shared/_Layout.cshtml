@@ -17,9 +17,8 @@
                 Kinsman
             </a>
             <nav class="nav-links" id="nav-links">
-                @* Book a Chair/Location stay placeholders until the booking flow (step 5)
-                   and a location page exist. *@
-                <a href="#">Book a Chair</a>
+                @* Location stays a placeholder — no location page yet. *@
+                <a asp-controller="Booking" asp-action="Index">Book a Chair</a>
                 <a asp-controller="Services" asp-action="Index">Services</a>
                 <a asp-controller="Team" asp-action="Index">Team</a>
                 <a href="#">Location</a>
@@ -33,7 +32,7 @@
             </button>
         </div>
         <div class="mobile-menu" id="mobile-menu">
-            <a href="#">Book a Chair</a>
+            <a asp-controller="Booking" asp-action="Index">Book a Chair</a>
             <a asp-controller="Services" asp-action="Index">Services</a>
             <a asp-controller="Team" asp-action="Index">Team</a>
             <a href="#">Location</a>
