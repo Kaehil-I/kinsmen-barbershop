@@ -17,10 +17,12 @@
                 Kinsman
             </a>
             <nav class="nav-links" id="nav-links">
-                @* Location stays a placeholder — no location page yet. *@
+                @* Location stays a placeholder — no location page yet. My Bookings has
+                   no real login to gate it on yet, so it's just a plain link for now. *@
                 <a asp-controller="Booking" asp-action="Index">Book a Chair</a>
                 <a asp-controller="Services" asp-action="Index">Services</a>
                 <a asp-controller="Team" asp-action="Index">Team</a>
+                <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
                 <a href="#">Location</a>
             </nav>
             <div class="nav-auth" id="nav-auth">
@@ -35,6 +37,7 @@
             <a asp-controller="Booking" asp-action="Index">Book a Chair</a>
             <a asp-controller="Services" asp-action="Index">Services</a>
             <a asp-controller="Team" asp-action="Index">Team</a>
+            <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
             <a href="#">Location</a>
             <hr />
             <a href="#">Log In</a>

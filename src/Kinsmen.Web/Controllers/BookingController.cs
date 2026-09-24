@@ -1,4 +1,5 @@
 using Kinsmen.Web.ApiClient;
+using Kinsmen.Web.Helpers;
 using Kinsmen.Web.Models.Api;
 using Kinsmen.Web.Models.ViewModels;
 using Microsoft.AspNetCore.Mvc;
@@ -13,9 +14,7 @@ namespace Kinsmen.Web.Controllers;
 /// server-side via the same IKinsmenApiClient every other controller uses.</summary>
 public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
 {
-    // Africa/Johannesburg has no DST, so this offset is always correct — but resolve
-    // it properly rather than hardcoding, in case that ever changes.
-    private static readonly TimeZoneInfo ShopTimeZone = ResolveShopTimeZone();
+    private static readonly TimeZoneInfo ShopTimeZone = ShopTimeZoneProvider.Instance;
 
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
@@ -130,18 +129,6 @@ public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
         catch (HttpRequestException)
         {
             return StatusCode(503, new { message = "Couldn't reach the booking service." });
-        }
-    }
-
-    private static TimeZoneInfo ResolveShopTimeZone()
-    {
-        try
-        {
-            return TimeZoneInfo.FindSystemTimeZoneById("Africa/Johannesburg");
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            return TimeZoneInfo.CreateCustomTimeZone("SAST", TimeSpan.FromHours(2), "SAST", "SAST");
         }
     }
 }
