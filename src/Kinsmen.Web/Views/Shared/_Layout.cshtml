@@ -17,11 +17,11 @@
                 Kinsman
             </a>
             <nav class="nav-links" id="nav-links">
-                @* Real destinations get wired in as each page is built (steps 4+ of the
-                   frontend plan) — for now these are placeholders so the header matches
-                   the prototype's layout without dead-ending on pages that don't exist yet. *@
+                @* Book a Chair/Location stay placeholders until the booking flow (step 5)
+                   and a location page exist. *@
                 <a href="#">Book a Chair</a>
-                <a href="#">Services</a>
+                <a asp-controller="Services" asp-action="Index">Services</a>
+                <a asp-controller="Team" asp-action="Index">Team</a>
                 <a href="#">Location</a>
             </nav>
             <div class="nav-auth" id="nav-auth">
@@ -34,7 +34,8 @@
         </div>
         <div class="mobile-menu" id="mobile-menu">
             <a href="#">Book a Chair</a>
-            <a href="#">Services</a>
+            <a asp-controller="Services" asp-action="Index">Services</a>
+            <a asp-controller="Team" asp-action="Index">Team</a>
             <a href="#">Location</a>
             <hr />
             <a href="#">Log In</a>

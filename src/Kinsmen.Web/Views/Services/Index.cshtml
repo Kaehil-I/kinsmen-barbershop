@@ -1,0 +1,47 @@
+@model List<Service>
+@{
+    ViewData["Title"] = "Services & Pricing";
+    var apiUnavailable = ViewData["ApiUnavailable"] is true;
+}
+
+<section class="page-intro">
+    <div class="wrap">
+        <div class="tag">Durban North &middot; Classic Barbershop</div>
+        <h1>Services &amp; Pricing</h1>
+        <p>
+            Straightforward pricing, no upsell. Every cut, fade and shave is done
+            with proper tools and no rush &mdash; walk through what's on offer below,
+            then book your chair.
+        </p>
+    </div>
+</section>
+
+<section>
+    <div class="wrap">
+        @if (apiUnavailable)
+        {
+            <p class="price-note">Couldn't reach the booking service just now &mdash; make sure the API is running (see docs/backend/GETTING-STARTED.md) and refresh.</p>
+        }
+        else if (Model.Count == 0)
+        {
+            <p class="price-note">No services are available right now.</p>
+        }
+        else
+        {
+            <p class="price-note">Prices shown are current live data from the booking API.</p>
+        }
+
+        <div class="service-list" style="padding-bottom: 80px;">
+            @foreach (var service in Model)
+            {
+                <div class="panel neo-raised service-row">
+                    <div>
+                        <div class="name">@service.Name</div>
+                    </div>
+                    <div class="price">@PriceFormatter.FormatZarCents(service.PriceCents)</div>
+                    <a href="#" class="book-link neo-pill-raised">Book</a>
+                </div>
+            }
+        </div>
+    </div>
+</section>
