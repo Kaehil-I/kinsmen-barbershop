@@ -3,15 +3,57 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
     <title>@ViewData["Title"] - Kinsmen Barbers</title>
-    @* Design system (fonts, palette, shared CSS) lands here in the next commit —
-       kept minimal for now so this one just proves the project runs. *@
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/kinsmen.css" asp-append-version="true" />
 </head>
 <body>
+    <header>
+        <div class="nav wrap">
+            <a asp-controller="Home" asp-action="Index" class="wordmark">
+                <img src="~/img/kinsmen-logo.png" alt="Kinsman Barbers logo" class="logo-badge" />
+                Kinsman
+            </a>
+            <nav class="nav-links" id="nav-links">
+                @* Real destinations get wired in as each page is built (steps 4+ of the
+                   frontend plan) — for now these are placeholders so the header matches
+                   the prototype's layout without dead-ending on pages that don't exist yet. *@
+                <a href="#">Book a Chair</a>
+                <a href="#">Services</a>
+                <a href="#">Location</a>
+            </nav>
+            <div class="nav-auth" id="nav-auth">
+                <a href="#" class="link-btn">Log In</a>
+                <a href="#" class="btn-account neo-pill-raised">Create Account</a>
+            </div>
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+        <div class="mobile-menu" id="mobile-menu">
+            <a href="#">Book a Chair</a>
+            <a href="#">Services</a>
+            <a href="#">Location</a>
+            <hr />
+            <a href="#">Log In</a>
+            <a href="#" class="mobile-account">Create Account</a>
+        </div>
+    </header>
+
     <main>
         @RenderBody()
     </main>
 
+    <footer>
+        <div class="wrap foot-row">
+            <span>Kinsman Barbers — Shop 5, 8 Mackeurtan Ave, Durban North</span>
+            <span>+27 67 230 7952 · kinsmenbarbers@gmail.com</span>
+        </div>
+    </footer>
+
+    <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
