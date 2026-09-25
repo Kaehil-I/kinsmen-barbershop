@@ -1,0 +1,20 @@
+**/bin/
+**/obj/
+**/TestResults/
+.git/
+.github/
+.vs/
+.vscode/
+Documentation/
+docs/
+scripts/
+tests/
+*.zip
+*.html
+*.md
+compose.mongo.yaml
+
+# Local-only configuration: development tokens and settings must never ship in an image.
+**/appsettings.Development.json
+**/appsettings.*.local.json
+**/secrets.json
