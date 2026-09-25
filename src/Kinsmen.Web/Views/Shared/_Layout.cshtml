@@ -17,16 +17,16 @@
                 Kinsman
             </a>
             <nav class="nav-links" id="nav-links">
-                @* Location stays a placeholder — no location page yet. My Bookings and
-                   My Schedule have no real login/role to gate them on yet (Kyra's auth
-                   work), so they're just plain links for now — a real customer nav
-                   shouldn't show "My Schedule" and vice versa once that lands. *@
+                @* My Bookings and My Schedule have no real login/role to gate them on yet
+                   (Kyra's auth work), so they're just plain links for now — a real
+                   customer nav shouldn't show "My Schedule" and vice versa once that
+                   lands. *@
                 <a asp-controller="Booking" asp-action="Index">Book a Chair</a>
                 <a asp-controller="Services" asp-action="Index">Services</a>
                 <a asp-controller="Team" asp-action="Index">Team</a>
                 <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
                 <a asp-controller="BarberSchedule" asp-action="Index">My Schedule</a>
-                <a href="#">Location</a>
+                <a asp-controller="Location" asp-action="Index">Location</a>
             </nav>
             <div class="nav-auth" id="nav-auth">
                 <a href="#" class="link-btn">Log In</a>
@@ -42,7 +42,7 @@
             <a asp-controller="Team" asp-action="Index">Team</a>
             <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
             <a asp-controller="BarberSchedule" asp-action="Index">My Schedule</a>
-            <a href="#">Location</a>
+            <a asp-controller="Location" asp-action="Index">Location</a>
             <hr />
             <a href="#">Log In</a>
             <a href="#" class="mobile-account">Create Account</a>
