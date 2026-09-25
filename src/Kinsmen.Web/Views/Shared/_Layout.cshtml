@@ -26,8 +26,18 @@
                 <a href="#">Location</a>
             </nav>
             <div class="nav-auth" id="nav-auth">
-                <a href="#" class="link-btn">Log In</a>
-                <a href="#" class="btn-account neo-pill-raised">Create Account</a>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <span class="nav-user">@User.Identity.Name</span>
+                    <form asp-controller="Account" asp-action="Logout" method="post" class="inline-form">
+                        <button type="submit" class="link-btn">Log Out</button>
+                    </form>
+                }
+                else
+                {
+                    <a asp-controller="Account" asp-action="Login" class="link-btn">Log In</a>
+                    <a asp-controller="Account" asp-action="Register" class="btn-account neo-pill-raised">Create Account</a>
+                }
             </div>
             <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu" aria-expanded="false">
                 <span></span><span></span><span></span>
@@ -42,6 +52,17 @@
             <hr />
             <a href="#">Log In</a>
             <a href="#" class="mobile-account">Create Account</a>
+            <hr />
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <span class="nav-user">@User.Identity.Name</span>
+                <form asp-controller="Account" asp-action="Logout" method="post"><button type="submit">Log Out</button></form>
+            }
+            else
+            {
+                <a asp-controller="Account" asp-action="Login">Log In</a>
+                <a asp-controller="Account" asp-action="Register" class="mobile-account">Create Account</a>
+            }
         </div>
     </header>
 
