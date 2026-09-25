@@ -45,10 +45,13 @@ public sealed class BarberScheduleController(IKinsmenApiClient apiClient) : Cont
                 MyBarberId = myBarberId
             });
         }
-        catch (Exception ex) when (ex is KinsmenApiException or HttpRequestException)
+        catch (KinsmenApiException ex)
         {
-            // See ServicesController - same reasoning, full handling in step 8.
-            return View(new BarberSchedulePageViewModel { ApiUnavailable = true });
+            return View(new BarberSchedulePageViewModel { ErrorMessage = ApiErrorMessages.For(ex) });
+        }
+        catch (HttpRequestException)
+        {
+            return View(new BarberSchedulePageViewModel { ErrorMessage = ApiErrorMessages.ForConnectionFailure() });
         }
     }
 
@@ -69,11 +72,11 @@ public sealed class BarberScheduleController(IKinsmenApiClient apiClient) : Cont
         }
         catch (KinsmenApiException ex)
         {
-            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ex.Message });
+            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ApiErrorMessages.For(ex) });
         }
         catch (HttpRequestException)
         {
-            return StatusCode(503, new { message = "Couldn't reach the booking service." });
+            return StatusCode(503, new { message = ApiErrorMessages.ForConnectionFailure() });
         }
     }
 
@@ -126,11 +129,11 @@ public sealed class BarberScheduleController(IKinsmenApiClient apiClient) : Cont
         }
         catch (KinsmenApiException ex)
         {
-            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ex.Message });
+            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ApiErrorMessages.For(ex) });
         }
         catch (HttpRequestException)
         {
-            return StatusCode(503, new { message = "Couldn't reach the booking service." });
+            return StatusCode(503, new { message = ApiErrorMessages.ForConnectionFailure() });
         }
     }
 
@@ -155,11 +158,11 @@ public sealed class BarberScheduleController(IKinsmenApiClient apiClient) : Cont
         }
         catch (KinsmenApiException ex)
         {
-            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ex.Message });
+            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ApiErrorMessages.For(ex) });
         }
         catch (HttpRequestException)
         {
-            return StatusCode(503, new { message = "Couldn't reach the booking service." });
+            return StatusCode(503, new { message = ApiErrorMessages.ForConnectionFailure() });
         }
     }
 
@@ -173,11 +176,11 @@ public sealed class BarberScheduleController(IKinsmenApiClient apiClient) : Cont
         }
         catch (KinsmenApiException ex)
         {
-            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ex.Message });
+            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ApiErrorMessages.For(ex) });
         }
         catch (HttpRequestException)
         {
-            return StatusCode(503, new { message = "Couldn't reach the booking service." });
+            return StatusCode(503, new { message = ApiErrorMessages.ForConnectionFailure() });
         }
     }
 

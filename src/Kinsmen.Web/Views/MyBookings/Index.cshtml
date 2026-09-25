@@ -39,9 +39,9 @@
 
 <section>
     <div class="wrap" style="padding-bottom: 80px;">
-        @if (Model.ApiUnavailable)
+        @if (Model.ErrorMessage is not null)
         {
-            <p class="price-note">Couldn't reach the booking service just now &mdash; make sure the API is running (see docs/backend/GETTING-STARTED.md) and refresh.</p>
+            <p class="price-note">@Model.ErrorMessage</p>
         }
         else if (Model.Bookings.Count == 0)
         {

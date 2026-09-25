@@ -1,4 +1,5 @@
 using Kinsmen.Web.ApiClient;
+using Kinsmen.Web.Helpers;
 using Kinsmen.Web.Models.Api;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,12 +15,14 @@ public sealed class ServicesController(IKinsmenApiClient apiClient) : Controller
         {
             services = await apiClient.GetServicesAsync(cancellationToken);
         }
-        catch (Exception ex) when (ex is KinsmenApiException or HttpRequestException)
+        catch (KinsmenApiException ex)
         {
-            // Full per-status-code handling lands in the cross-cutting error pass
-            // (step 8) — for now, fail gracefully rather than show a raw exception
-            // page while Zario's API may not be running locally.
-            ViewData["ApiUnavailable"] = true;
+            ViewData["ErrorMessage"] = ApiErrorMessages.For(ex);
+            return View(new List<Service>());
+        }
+        catch (HttpRequestException)
+        {
+            ViewData["ErrorMessage"] = ApiErrorMessages.ForConnectionFailure();
             return View(new List<Service>());
         }
 

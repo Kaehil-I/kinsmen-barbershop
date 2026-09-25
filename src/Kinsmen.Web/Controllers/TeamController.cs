@@ -1,4 +1,5 @@
 using Kinsmen.Web.ApiClient;
+using Kinsmen.Web.Helpers;
 using Kinsmen.Web.Models.Api;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,10 +15,14 @@ public sealed class TeamController(IKinsmenApiClient apiClient) : Controller
         {
             barbers = await apiClient.GetBarbersAsync(cancellationToken);
         }
-        catch (Exception ex) when (ex is KinsmenApiException or HttpRequestException)
+        catch (KinsmenApiException ex)
         {
-            // See ServicesController — same reasoning, full handling in step 8.
-            ViewData["ApiUnavailable"] = true;
+            ViewData["ErrorMessage"] = ApiErrorMessages.For(ex);
+            return View(new List<Barber>());
+        }
+        catch (HttpRequestException)
+        {
+            ViewData["ErrorMessage"] = ApiErrorMessages.ForConnectionFailure();
             return View(new List<Barber>());
         }
 

@@ -645,6 +645,8 @@
     font-family:var(--display); font-weight:600; font-size:12.5px; padding:10px 16px; border-radius:12px; color:var(--text);
   }
   .my-booking-actions .danger{ color:var(--accent); }
+  .my-booking-actions .not-yet-eligible{ opacity:0.45; }
+  .my-booking-actions .not-yet-eligible:hover{ box-shadow:none; }
   .badge-grey{ background:rgba(114,108,94,0.16); color:var(--text-dim); }
   .star-picker{ display:flex; gap:6px; margin:10px 0; }
   .star-picker button{ font-size:22px; color:var(--sh-dark); background:none; border:none; cursor:pointer; padding:2px; }

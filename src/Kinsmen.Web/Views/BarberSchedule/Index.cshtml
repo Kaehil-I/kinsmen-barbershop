@@ -47,9 +47,9 @@
 
 <section>
     <div class="wrap" style="padding-bottom: 80px;">
-        @if (Model.ApiUnavailable)
+        @if (Model.ErrorMessage is not null)
         {
-            <p class="price-note">Couldn't reach the booking service just now &mdash; make sure the API is running (see docs/backend/GETTING-STARTED.md) and refresh.</p>
+            <p class="price-note">@Model.ErrorMessage</p>
         }
         else
         {
@@ -79,6 +79,11 @@
                             <div class="panel neo-raised booking-row"
                                  data-booking-id="@booking.Id"
                                  data-version="@booking.Version"
+                                 data-status="@booking.Status"
+                                 data-start-utc="@booking.StartUtc.ToString("O")"
+                                 data-end-utc="@booking.EndUtc.ToString("O")"
+                                 data-start-time="@LocalTime(booking.StartUtc)"
+                                 data-end-time="@LocalTime(booking.EndUtc)"
                                  style="margin-bottom:12px;">
                                 <div class="btop">
                                     <div class="bname">@string.Join(", ", booking.Services.Select(s => s.Name))</div>
@@ -88,6 +93,10 @@
                                     Customer @booking.CustomerId &middot; @LocalTime(booking.StartUtc)&ndash;@LocalTime(booking.EndUtc)
                                     &middot; <span class="bprice">@PriceFormatter.FormatZarCents(booking.TotalCents)</span>
                                 </div>
+                                @if (!string.IsNullOrWhiteSpace(booking.Notes))
+                                {
+                                    <div class="bmeta" style="margin-top:2px; font-style:italic;">&ldquo;@booking.Notes&rdquo;</div>
+                                }
                                 <div class="my-booking-actions status-actions" style="margin-top:12px;">
                                     @if (booking.Status == BookingStatus.Pending)
                                     {

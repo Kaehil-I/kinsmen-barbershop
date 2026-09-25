@@ -13,5 +13,5 @@ public sealed class BarberSchedulePageViewModel
     public List<Booking> Bookings { get; set; } = [];
     public List<TimeBlock> Blocks { get; set; } = [];
     public string? MyBarberId { get; set; }
-    public bool ApiUnavailable { get; set; }
+    public string? ErrorMessage { get; set; }
 }

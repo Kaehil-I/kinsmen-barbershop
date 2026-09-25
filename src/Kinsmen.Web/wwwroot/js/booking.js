@@ -24,11 +24,17 @@ document.addEventListener('DOMContentLoaded', function () {
     var successCard = document.getElementById('success-card');
     var successText = document.getElementById('success-text');
     var bookAnotherLink = document.getElementById('book-another');
+    var notesInput = document.getElementById('booking-notes');
 
     if (!calGrid) return; // API was unavailable / nothing to book — view didn't render the form.
 
     var today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    var preselectedServiceId = window.kinsmenBooking.preselectedServiceId;
+    var initialServiceId = (preselectedServiceId && servicesById[preselectedServiceId])
+        ? preselectedServiceId
+        : (window.kinsmenBooking.services[0] ? window.kinsmenBooking.services[0].id : null);
 
     var state = {
         viewYear: today.getFullYear(),
@@ -36,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function () {
         selectedDate: null,      // Date, local calendar date only
         selectedTime: null,      // "HH:mm" shop-local, for display
         selectedStartUtc: null,  // ISO string from the availability slot, for submission
-        selectedServiceIds: (window.kinsmenBooking.services[0] ? [window.kinsmenBooking.services[0].id] : []),
+        selectedServiceIds: (initialServiceId ? [initialServiceId] : []),
         idempotencyKey: null,
         idempotencyKeySignature: null
     };
@@ -281,7 +287,8 @@ document.addEventListener('DOMContentLoaded', function () {
             body: JSON.stringify({
                 barberId: barberSelect.value || null,
                 serviceIds: state.selectedServiceIds,
-                startUtc: state.selectedStartUtc
+                startUtc: state.selectedStartUtc,
+                notes: notesInput.value.trim() || null
             })
         })
             .then(function (response) {
@@ -328,6 +335,7 @@ document.addEventListener('DOMContentLoaded', function () {
         state.selectedStartUtc = null;
         state.idempotencyKey = null;
         state.idempotencyKeySignature = null;
+        notesInput.value = '';
 
         successCard.classList.remove('show');
         summaryPanel.style.display = '';
@@ -341,4 +349,10 @@ document.addEventListener('DOMContentLoaded', function () {
     renderCalendar();
     fetchAndRenderTimes();
     updateSummary();
+
+    // If we arrived with a barber preselected (server-rendered <option selected>), make
+    // sure the note text and the rest of the UI reflect that on first paint too.
+    if (barberSelect.value) {
+        barberNote.textContent = 'Booking specifically with ' + (barbersById[barberSelect.value] ? barbersById[barberSelect.value].name : '') + '.';
+    }
 });

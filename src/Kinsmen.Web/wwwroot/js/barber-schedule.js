@@ -45,12 +45,66 @@ document.addEventListener('DOMContentLoaded', function () {
         return '';
     }
 
+    // A status button being the right shape for the booking's current state (handled
+    // by actionsHtmlFor) isn't the same as it being the right *time* yet - the API
+    // itself enforces: Confirm only before the appointment starts, Complete only at/
+    // after it ends, No-Show only at/after it starts (API-CONTRACT.md, "Manage a
+    // booking"). This mirrors that client-side - but deliberately WITHOUT the native
+    // disabled attribute, since a disabled button gives zero feedback on click. Instead
+    // the button stays clickable, visually dimmed, and carries its reason in a data
+    // attribute so the click handler can show it as an actual notification.
+    function updateActionAvailability() {
+        var now = new Date();
+
+        scheduleList.querySelectorAll('.booking-row').forEach(function (row) {
+            var actionsDiv = row.querySelector('.status-actions');
+            if (!actionsDiv) return;
+
+            var start = new Date(row.dataset.startUtc);
+            var end = new Date(row.dataset.endUtc);
+
+            actionsDiv.querySelectorAll('.status-btn').forEach(function (btn) {
+                var eligible = true;
+                var reason = '';
+
+                if (btn.dataset.status === 'Confirmed') {
+                    eligible = now < start;
+                    reason = "This appointment's start time has passed \u2014 confirming is no longer available.";
+                } else if (btn.dataset.status === 'Completed') {
+                    eligible = now >= end;
+                    reason = 'Complete becomes available at ' + row.dataset.endTime + ', once the appointment has ended.';
+                } else if (btn.dataset.status === 'NoShow') {
+                    eligible = now >= start;
+                    reason = 'No-Show becomes available at ' + row.dataset.startTime + ', once the appointment has started.';
+                }
+
+                btn.classList.toggle('not-yet-eligible', !eligible);
+                btn.dataset.timingReason = eligible ? '' : reason;
+            });
+        });
+    }
+
+    function showStatusMessage(row, text, isTimingNotice) {
+        var el = row.querySelector('.status-error');
+        el.textContent = text;
+        el.style.color = isTimingNotice ? 'var(--ochre)' : 'var(--accent)';
+        el.style.display = 'block';
+    }
+
     scheduleList.addEventListener('click', function (e) {
         var btn = e.target.closest('.status-btn');
         if (!btn) return;
 
         var row = btn.closest('.booking-row');
         var errorText = row.querySelector('.status-error');
+
+        // Not yet eligible: tell the barber why, and stop here - no point hitting the
+        // API when we already know it'll reject this.
+        if (btn.classList.contains('not-yet-eligible')) {
+            showStatusMessage(row, btn.dataset.timingReason, true);
+            return;
+        }
+
         var actionsDiv = row.querySelector('.status-actions');
         var newStatus = btn.dataset.status;
 
@@ -71,28 +125,35 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             })
             .then(function (result) {
+                actionsDiv.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
+
                 if (!result.ok) {
                     var message = result.status === 409 && result.body.errorCode === 'stale_version'
                         ? 'This booking changed elsewhere - refresh the page and try again.'
                         : (result.body.message || 'Something went wrong - please try again.');
-                    errorText.textContent = message;
-                    errorText.style.display = 'block';
-                    actionsDiv.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
+                    showStatusMessage(row, message, false);
                     return;
                 }
 
                 row.dataset.version = result.body.version;
+                row.dataset.status = result.body.status;
                 var badge = row.querySelector('.status-badge');
                 badge.className = 'badge-pill ' + badgeClassFor(result.body.status) + ' status-badge';
                 badge.textContent = result.body.status === 'NoShow' ? 'No-Show' : result.body.status;
                 actionsDiv.innerHTML = actionsHtmlFor(result.body.status);
+                updateActionAvailability();
             })
             .catch(function () {
-                errorText.textContent = "Couldn't reach the booking service - please try again.";
-                errorText.style.display = 'block';
                 actionsDiv.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
+                showStatusMessage(row, "Couldn't reach the booking service - please try again.", false);
             });
     });
+
+    // Re-check periodically rather than only on load/after an action, so a barber who
+    // leaves the page open sees buttons become available as the actual time arrives,
+    // without needing to refresh.
+    updateActionAvailability();
+    setInterval(updateActionAvailability, 30000);
 
     // --- Time blocks -------------------------------------------------------------
 
