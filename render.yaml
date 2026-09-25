@@ -1,0 +1,55 @@
+# Render Blueprint: the booking API and the MVC front end as two Docker web services.
+# Values marked `sync: false` are secrets or per-deployment URLs. Render asks for them when the
+# Blueprint is first applied and they are stored only in the Render dashboard, never in Git.
+#
+# Staging deploys from integration-part2. Switch `branch` to main for the submission build.
+
+services:
+  - type: web
+    name: kinsmen-api
+    runtime: docker
+    plan: free
+    region: frankfurt # Keep in the same region as (or nearest to) the Atlas cluster.
+    branch: integration-part2
+    dockerContext: .
+    dockerfilePath: ./src/Kinsmen.Api/Dockerfile
+    autoDeployTrigger: checksPass # Only deploy commits whose GitHub checks passed.
+    healthCheckPath: /health/ready # Also verifies the MongoDB connection.
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      # Render terminates TLS; trust its X-Forwarded-* headers so client IPs and HTTPS are seen correctly.
+      - key: ASPNETCORE_FORWARDEDHEADERS_ENABLED
+        value: "true"
+      - key: Mongo__ConnectionString
+        sync: false
+      - key: Mongo__Database
+        value: kinsmen_dev
+      # HTTPS identity provider that issues access tokens. The API will not start in Production without it.
+      - key: Auth__Authority
+        sync: false
+      - key: Auth__Audience
+        value: kinsmen-api
+
+  - type: web
+    name: kinsmen-web
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: integration-part2
+    dockerContext: .
+    dockerfilePath: ./src/Kinsmen.Web/Dockerfile
+    autoDeployTrigger: checksPass
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_FORWARDEDHEADERS_ENABLED
+        value: "true"
+      # Public URL of kinsmen-api, e.g. https://kinsmen-api.onrender.com (free services cannot receive private-network traffic).
+      - key: Api__BaseUrl
+        sync: false
