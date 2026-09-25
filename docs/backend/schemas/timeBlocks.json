@@ -1,0 +1,29 @@
+{
+  "bsonType": "object",
+  "required": [
+    "_id",
+    "barberId",
+    "startUtc",
+    "endUtc",
+    "reason"
+  ],
+  "properties": {
+    "_id": {
+      "bsonType": "string"
+    },
+    "barberId": {
+      "bsonType": "string"
+    },
+    "startUtc": {
+      "bsonType": "date"
+    },
+    "endUtc": {
+      "bsonType": "date"
+    },
+    "reason": {
+      "bsonType": "string",
+      "minLength": 1,
+      "maxLength": 200
+    }
+  }
+}
