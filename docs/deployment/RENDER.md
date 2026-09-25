@@ -22,7 +22,7 @@ Secrets live only in the Render dashboard. Do not commit connection strings, pas
 
 ## Authentication
 
-In Production the API refuses to start without `Auth:Authority`, and development tokens are disabled by design. The hosted booking flow therefore depends on the real authentication work: the API needs the identity provider's HTTPS URL, and `kinsmen-web` needs to replace `DevelopmentTokenProvider` with a provider that uses the signed-in user's token.
+Login uses Auth0; follow [`docs/auth/AUTH0-SETUP.md`](../auth/AUTH0-SETUP.md). In Production the API refuses to start without `Auth:Authority`, and development tokens are disabled by design, so the Auth0 tenant must exist before the Blueprint is applied. Render asks for `Auth__Authority` on the API and `Auth0__Domain`, `Auth0__ClientId` and `Auth0__ClientSecret` on the web app.
 
 ## Free-tier behaviour
 

@@ -53,3 +53,12 @@ services:
       # Public URL of kinsmen-api, e.g. https://kinsmen-api.onrender.com (free services cannot receive private-network traffic).
       - key: Api__BaseUrl
         sync: false
+      # Auth0 login (docs/auth/AUTH0-SETUP.md). The client secret stays in the Render dashboard.
+      - key: Auth0__Domain
+        sync: false
+      - key: Auth0__ClientId
+        sync: false
+      - key: Auth0__ClientSecret
+        sync: false
+      - key: Auth0__Audience
+        value: kinsmen-api
