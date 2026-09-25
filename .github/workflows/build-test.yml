@@ -1,0 +1,83 @@
+name: Build and test
+
+on:
+  pull_request:
+    branches: [integration-part2, main]
+  push:
+    branches: [integration-part2, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      # Enables the real MongoDB tests (transactions, races, rollback) against the throwaway replica set below.
+      KINSMEN_TEST_MONGO: mongodb://127.0.0.1:27017/?replicaSet=rs0
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # Until the booking backend is merged there is no .NET solution to build; pass instead of failing.
+      # This check can be removed once Kinsmen.slnx is on integration-part2.
+      - name: Detect solution
+        id: detect
+        run: |
+          if [ -f Kinsmen.slnx ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No Kinsmen.slnx on this ref yet; skipping build and tests."
+          fi
+
+      - uses: actions/setup-dotnet@v5
+        if: steps.detect.outputs.present == 'true'
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+
+      # Booking writes use MongoDB transactions, which need a replica set rather than a standalone mongod.
+      - name: Start MongoDB replica set
+        if: steps.detect.outputs.present == 'true'
+        run: |
+          docker run -d --name mongo -p 127.0.0.1:27017:27017 mongo:8.0.15 --replSet rs0 --bind_ip_all
+          for i in $(seq 1 40); do
+            if docker exec mongo mongosh --quiet --eval "try { rs.status(); quit(db.hello().isWritablePrimary ? 0 : 1); } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}); quit(1); }"; then
+              echo "MongoDB replica set is ready."
+              exit 0
+            fi
+            sleep 3
+          done
+          docker logs mongo
+          echo "::error::MongoDB replica set did not become ready."
+          exit 1
+
+      - name: Restore
+        if: steps.detect.outputs.present == 'true'
+        run: dotnet restore Kinsmen.slnx --locked-mode
+
+      - name: Build
+        if: steps.detect.outputs.present == 'true'
+        run: dotnet build Kinsmen.slnx --no-restore -c Release
+
+      - name: Test
+        if: steps.detect.outputs.present == 'true'
+        run: dotnet test Kinsmen.slnx --no-build -c Release --logger trx --results-directory TestResults
+
+      - name: Upload test results
+        if: always() && steps.detect.outputs.present == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/*.trx
+          if-no-files-found: ignore
