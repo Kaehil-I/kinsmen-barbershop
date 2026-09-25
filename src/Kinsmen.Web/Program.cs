@@ -1,10 +1,19 @@
 using Kinsmen.Web.ApiClient;
 using Kinsmen.Web.Auth;
 using Microsoft.Extensions.Options;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews()
+    // Lets the browser's own JS (e.g. barber-schedule.js posting {"status":"Confirmed"})
+    // bind straight to the BookingStatus enum on incoming requests to this app's own
+    // controllers. Deliberately separate from KinsmenApiClient's JsonOptions, which
+    // convert to/from Zario's API and use camelCase to match its contract — these two
+    // JSON boundaries don't need to agree on casing, since nothing outside this app
+    // ever sees the incoming side.
+    .AddJsonOptions(options =>
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.Configure<ApiClientOptions>(builder.Configuration.GetSection("Api"));
 builder.Services.Configure<DevTokenOptions>(builder.Configuration.GetSection("DevTokens"));

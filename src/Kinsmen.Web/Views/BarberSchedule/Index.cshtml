@@ -1,0 +1,166 @@
+@model BarberSchedulePageViewModel
+@{
+    ViewData["Title"] = "My Schedule";
+
+    string LocalDateKey(DateTimeOffset utc) =>
+        TimeZoneInfo.ConvertTime(utc, ShopTimeZoneProvider.Instance).ToString("yyyy-MM-dd");
+    string LocalTime(DateTimeOffset utc) =>
+        TimeZoneInfo.ConvertTime(utc, ShopTimeZoneProvider.Instance).ToString("HH:mm");
+
+    string StatusLabel(BookingStatus status) => status switch
+    {
+        BookingStatus.NoShow => "No-Show",
+        _ => status.ToString()
+    };
+    string StatusBadgeClass(BookingStatus status) => status switch
+    {
+        BookingStatus.Pending => "badge-ochre",
+        BookingStatus.Confirmed => "badge-teal",
+        BookingStatus.NoShow => "badge-brick",
+        _ => "badge-grey"
+    };
+
+    var todayKey = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, ShopTimeZoneProvider.Instance).ToString("yyyy-MM-dd");
+
+    // Grouped chronologically under date headers rather than paged one day at a time —
+    // a barber can see their whole upcoming week/month at a glance instead of clicking
+    // through empty days to find the next booking.
+    var groups = Model.Bookings
+        .GroupBy(b => LocalDateKey(b.StartUtc))
+        .OrderBy(g => g.Key)
+        .ToList();
+
+    // Scroll target on load: today's section if it has bookings, otherwise the nearest
+    // future date that does — so the page opens showing what's actually relevant
+    // instead of leaving the barber to hunt for it.
+    var jumpTarget = groups.FirstOrDefault(g => g.Key == todayKey)?.Key
+        ?? groups.FirstOrDefault(g => string.Compare(g.Key, todayKey, StringComparison.Ordinal) > 0)?.Key;
+}
+
+<section class="page-intro">
+    <div class="wrap">
+        <div class="tag">Staff</div>
+        <h1>My Schedule</h1>
+        <p>Your bookings for the next 31 days &mdash; the furthest ahead the booking system can list in one go right now.</p>
+    </div>
+</section>
+
+<section>
+    <div class="wrap" style="padding-bottom: 80px;">
+        @if (Model.ApiUnavailable)
+        {
+            <p class="price-note">Couldn't reach the booking service just now &mdash; make sure the API is running (see docs/backend/GETTING-STARTED.md) and refresh.</p>
+        }
+        else
+        {
+            <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+                <button id="jump-today-btn" class="neo-pill-raised" type="button" style="font-family:var(--mono); font-size:12px; padding:10px 18px;" data-target="@jumpTarget">
+                    Jump to today
+                </button>
+            </div>
+
+            <div id="schedule-list">
+                @if (groups.Count == 0)
+                {
+                    <p class="no-date-msg">No bookings in the next 31 days.</p>
+                }
+                @foreach (var group in groups)
+                {
+                    var groupDate = DateOnly.ParseExact(group.Key, "yyyy-MM-dd");
+                    var isToday = group.Key == todayKey;
+
+                    <div id="day-@group.Key" style="margin-bottom:28px; scroll-margin-top:20px;">
+                        <div class="month-label" style="margin-bottom:12px; @(isToday ? "color:var(--teal);" : "")">
+                            @groupDate.ToString("dddd d MMMM")@(isToday ? " \u2014 Today" : "")
+                        </div>
+
+                        @foreach (var booking in group)
+                        {
+                            <div class="panel neo-raised booking-row"
+                                 data-booking-id="@booking.Id"
+                                 data-version="@booking.Version"
+                                 style="margin-bottom:12px;">
+                                <div class="btop">
+                                    <div class="bname">@string.Join(", ", booking.Services.Select(s => s.Name))</div>
+                                    <span class="badge-pill @StatusBadgeClass(booking.Status) status-badge">@StatusLabel(booking.Status)</span>
+                                </div>
+                                <div class="bmeta">
+                                    Customer @booking.CustomerId &middot; @LocalTime(booking.StartUtc)&ndash;@LocalTime(booking.EndUtc)
+                                    &middot; <span class="bprice">@PriceFormatter.FormatZarCents(booking.TotalCents)</span>
+                                </div>
+                                <div class="my-booking-actions status-actions" style="margin-top:12px;">
+                                    @if (booking.Status == BookingStatus.Pending)
+                                    {
+                                        <button class="neo-pill-raised status-btn" data-status="Confirmed" type="button">Confirm</button>
+                                    }
+                                    else if (booking.Status == BookingStatus.Confirmed)
+                                    {
+                                        <button class="neo-pill-raised status-btn" data-status="Completed" type="button">Complete</button>
+                                        <button class="neo-pill-raised danger status-btn" data-status="NoShow" type="button">No-Show</button>
+                                    }
+                                </div>
+                                <p class="status-error" style="display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-top:8px;"></p>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <hr style="border:none; border-top:1px solid var(--sh-dark-soft); margin:44px 0;" />
+
+            <h2 style="font-family:var(--display); font-weight:600; font-size:20px; color:var(--heading); margin-bottom:16px;">Time Blocks</h2>
+
+            @if (Model.MyBarberId is null)
+            {
+                <p class="price-note">Can't manage time blocks yet &mdash; no upcoming bookings to identify your barber profile from (the API has no direct "who am I" lookup yet). Once you have a booking in the next 31 days this section will work, or worth raising with the team as a small backend addition.</p>
+            }
+            else
+            {
+                <div class="panel neo-raised" style="padding: 24px; margin-bottom: 24px;" id="add-block-panel" data-barber-id="@Model.MyBarberId">
+                    <div class="field-row">
+                        <div class="form-field">
+                            <label>Date</label>
+                            <div class="input-shell neo-pressed"><input type="date" id="block-date" min="@todayKey" /></div>
+                        </div>
+                        <div class="form-field">
+                            <label>Reason</label>
+                            <div class="input-shell neo-pressed"><input type="text" id="block-reason" maxlength="200" placeholder="Lunch break" /></div>
+                        </div>
+                    </div>
+
+                    <label class="accent-teal" style="margin-top:4px;">Start time</label>
+                    <div id="block-start-grid" class="time-grid">
+                        <span class="no-date-msg">Pick a date to see open times.</span>
+                    </div>
+
+                    <label class="accent-ochre" style="margin-top:18px;">End time</label>
+                    <div id="block-end-grid" class="time-grid">
+                        <span class="no-date-msg">Pick a start time first.</span>
+                    </div>
+
+                    <button class="btn-confirm neo-pill-raised" id="add-block-btn" disabled type="button" style="margin-top:18px;">Add Time Block</button>
+                    <p id="block-error" style="display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-top:10px;"></p>
+                </div>
+
+                <div id="blocks-list">
+                    @if (Model.Blocks.Count == 0)
+                    {
+                        <p class="no-date-msg">No time blocks in the next 31 days.</p>
+                    }
+                    @foreach (var block in Model.Blocks)
+                    {
+                        <div class="admin-row" data-block-id="@block.Id">
+                            <div>
+                                <div class="aname">@LocalDateKey(block.StartUtc)</div>
+                                <div class="adesc">@LocalTime(block.StartUtc)&ndash;@LocalTime(block.EndUtc) &middot; @block.Reason</div>
+                            </div>
+                            <button class="row-link brick delete-block-btn" type="button">Remove</button>
+                        </div>
+                    }
+                </div>
+            }
+        }
+    </div>
+</section>
+
+<script src="~/js/barber-schedule.js" asp-append-version="true"></script>
