@@ -1,0 +1,110 @@
+@model MyBookingsPageViewModel
+@{
+    ViewData["Title"] = "My Bookings";
+
+    string StatusLabel(BookingStatus status) => status switch
+    {
+        BookingStatus.NoShow => "No-Show",
+        _ => status.ToString()
+    };
+
+    string StatusBadgeClass(BookingStatus status) => status switch
+    {
+        BookingStatus.Pending => "badge-ochre",
+        BookingStatus.Confirmed => "badge-teal",
+        BookingStatus.NoShow => "badge-brick",
+        _ => "badge-grey"
+    };
+
+    string FilterGroup(BookingStatus status) => status switch
+    {
+        BookingStatus.Pending or BookingStatus.Confirmed => "upcoming",
+        BookingStatus.Completed => "completed",
+        _ => "cancelled"
+    };
+
+    string LocalDate(DateTimeOffset utc) =>
+        TimeZoneInfo.ConvertTime(utc, ShopTimeZoneProvider.Instance).ToString("ddd d MMM");
+    string LocalTime(DateTimeOffset utc) =>
+        TimeZoneInfo.ConvertTime(utc, ShopTimeZoneProvider.Instance).ToString("HH:mm");
+}
+
+<section class="page-intro">
+    <div class="wrap">
+        <div class="tag">Your Appointments</div>
+        <h1>My Bookings</h1>
+        <p>Showing the next 31 days &mdash; the furthest ahead the booking system can list in one go right now.</p>
+    </div>
+</section>
+
+<section>
+    <div class="wrap" style="padding-bottom: 80px;">
+        @if (Model.ApiUnavailable)
+        {
+            <p class="price-note">Couldn't reach the booking service just now &mdash; make sure the API is running (see docs/backend/GETTING-STARTED.md) and refresh.</p>
+        }
+        else if (Model.Bookings.Count == 0)
+        {
+            <p class="price-note">No bookings in the next 31 days. <a asp-controller="Booking" asp-action="Index" style="color:var(--teal);">Book a chair</a>?</p>
+        }
+        else
+        {
+            <div class="filter-tabs">
+                <button class="filter-tab active" data-filter="upcoming" type="button">Upcoming</button>
+                <button class="filter-tab" data-filter="completed" type="button">Completed</button>
+                <button class="filter-tab" data-filter="cancelled" type="button">Cancelled / No-Show</button>
+            </div>
+
+            <div id="bookings-list">
+                @foreach (var booking in Model.Bookings)
+                {
+                    var barberName = Model.BarberNamesById.TryGetValue(booking.BarberId, out var name) ? name : "your barber";
+                    var canManage = booking.Status is BookingStatus.Pending or BookingStatus.Confirmed;
+
+                    <div class="panel neo-raised my-booking-row"
+                         data-filter-group="@FilterGroup(booking.Status)"
+                         data-booking-id="@booking.Id"
+                         data-version="@booking.Version"
+                         data-barber-id="@booking.BarberId"
+                         data-service-ids="@string.Join(",", booking.Services.Select(s => s.ServiceId))">
+                        <div class="mtop">
+                            <div class="mname">@string.Join(", ", booking.Services.Select(s => s.Name))</div>
+                            <span class="badge-pill @StatusBadgeClass(booking.Status)">@StatusLabel(booking.Status)</span>
+                        </div>
+                        <div class="mmeta">
+                            with @barberName &middot; <span class="booking-date">@LocalDate(booking.StartUtc)</span> at <span class="booking-time">@LocalTime(booking.StartUtc)</span> &middot; @PriceFormatter.FormatZarCents(booking.TotalCents)
+                        </div>
+
+                        @if (canManage)
+                        {
+                            <div class="my-booking-actions">
+                                <button class="neo-pill-raised reschedule-toggle" type="button">Reschedule</button>
+                                <button class="neo-pill-raised danger cancel-btn" type="button">Cancel</button>
+                            </div>
+                            <div class="reschedule-panel" style="display:none; margin-top:16px;">
+                                <div class="cal-head">
+                                    <span class="month-label reschedule-month-label">Month Year</span>
+                                    <div class="cal-nav">
+                                        <button class="neo-pill-raised reschedule-cal-prev" aria-label="Previous month" type="button">&lsaquo;</button>
+                                        <button class="neo-pill-raised reschedule-cal-next" aria-label="Next month" type="button">&rsaquo;</button>
+                                    </div>
+                                </div>
+                                <div class="cal-grid reschedule-cal-grid"></div>
+                                <div class="time-grid reschedule-time-grid" style="margin-top:14px;">
+                                    <span class="no-date-msg">Pick a date to see open times.</span>
+                                </div>
+                                <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:14px; flex-wrap:wrap;">
+                                    <span class="reschedule-summary" style="font-family:var(--mono); font-size:13px; color:var(--text-dim);">Pick a new date and time.</span>
+                                    <button class="btn-confirm neo-pill-raised reschedule-confirm-btn" disabled type="button">Confirm New Time</button>
+                                </div>
+                                <p class="reschedule-error" style="display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-top:10px;"></p>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<script src="~/js/my-bookings.js" asp-append-version="true"></script>
