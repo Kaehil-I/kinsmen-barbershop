@@ -22,4 +22,8 @@ public interface IBookingSession
     Task SaveService(ServiceItem service, bool insert = false);
     // Inserts start at revision 0; updates increment the revision so concurrent schedule transactions conflict and retry.
     Task SaveBarber(Barber barber, bool insert = false);
+
+    Task<Review?> ReviewByBookingId(string bookingId);
+    Task<List<Review>> ReviewsForBarber(string barberId);
+    Task SaveReview(Review review);
 }

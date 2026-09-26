@@ -5,5 +5,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Kinsmen.Api.Tests/Kinsmen.Api.Tests.csproj" />
+    <Project Path="tests/Kinsmen.Web.Tests/Kinsmen.Web.Tests.csproj" Id="1068896d-3342-4ac2-a3af-52cce9282457" />
   </Folder>
 </Solution>
