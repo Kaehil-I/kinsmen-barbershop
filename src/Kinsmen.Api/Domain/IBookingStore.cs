@@ -19,4 +19,8 @@ public interface IBookingSession
     Task SaveBooking(Booking booking, bool insert = false);
     Task SaveBlock(TimeBlock block);
     Task DeleteBlock(string id);
+
+    Task<Review?> ReviewByBookingId(string bookingId);
+    Task<List<Review>> ReviewsForBarber(string barberId);
+    Task SaveReview(Review review);
 }

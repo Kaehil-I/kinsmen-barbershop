@@ -41,6 +41,6 @@ public sealed class AccountControllerTests
         => Assert.Equal("/", MakeController().SafeReturnUrl(""));
 
     [Fact]
-    public void SameHostAbsoluteUrlIsAllowed()
-        => Assert.Equal("https://localhost:7090/MyBookings", MakeController().SafeReturnUrl("https://localhost:7090/MyBookings"));
+    public void SameHostAbsoluteUrlIsRejected()
+     => Assert.Equal("/", MakeController().SafeReturnUrl("https://localhost:7090/MyBookings"));
 }
