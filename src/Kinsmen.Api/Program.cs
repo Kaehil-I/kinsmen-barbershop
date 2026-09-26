@@ -44,6 +44,7 @@ builder.Services.AddSingleton(_ => new MongoBookingStore(
     builder.Configuration["Mongo:Database"] ?? "kinsmen_dev"));
 builder.Services.AddSingleton<IBookingStore>(s => s.GetRequiredService<MongoBookingStore>());
 builder.Services.AddSingleton<BookingService>();
+builder.Services.AddSingleton<CatalogueService>();
 
 var authority = builder.Configuration["Auth:Authority"];
 var localKey = builder.Configuration["Auth:DevelopmentSigningKey"];
@@ -187,6 +188,25 @@ secure.MapDelete("/blocks/{id}", async (string id, HttpContext ctx, BookingServi
     await service.RemoveBlock(CurrentActor(ctx), id, ct);
     return Results.NoContent();
 });
+
+// Admin catalogue: CatalogueService enforces the Admin role and returns 403 for everyone else.
+var admin = app.MapGroup("/api/admin").RequireAuthorization();
+admin.MapGet("/services", (HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => catalogue.AllServices(CurrentActor(ctx), ct));
+admin.MapPost("/services", async (ServiceRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => Results.Json(await catalogue.CreateService(CurrentActor(ctx), input, ct), statusCode: 201));
+admin.MapPut("/services/{id}", (string id, ServiceRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => catalogue.UpdateService(CurrentActor(ctx), id, input, ct));
+admin.MapPatch("/services/{id}/active", (string id, ActiveRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => catalogue.SetServiceActive(CurrentActor(ctx), id, input.Active, ct));
+admin.MapGet("/barbers", (HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => catalogue.AllBarbers(CurrentActor(ctx), ct));
+admin.MapPost("/barbers", async (BarberRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => Results.Json(await catalogue.CreateBarber(CurrentActor(ctx), input, ct), statusCode: 201));
+admin.MapPut("/barbers/{id}", (string id, BarberRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => catalogue.UpdateBarber(CurrentActor(ctx), id, input, ct));
+admin.MapPatch("/barbers/{id}/active", (string id, ActiveRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => catalogue.SetBarberActive(CurrentActor(ctx), id, input.Active, ct));
 app.Run();
 
 static Actor CurrentActor(HttpContext context)

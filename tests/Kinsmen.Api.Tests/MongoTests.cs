@@ -102,6 +102,46 @@ public sealed class MongoTests : IAsyncLifetime
         Assert.Single(statuses, s => s == 201); Assert.Single(statuses, s => s == 409);
         Assert.Single(await Service.List(Customer, BookingTests.Start, BookingTests.Start.AddDays(1), null));
     }
+    private static readonly Actor Admin = new("admin-a", "Admin");
+    private static readonly WorkingPeriod[] Hours = Enumerable.Range(1, 6).Select(d => new WorkingPeriod(d, 540, 1020)).ToArray();
+    [MongoFact] public async Task ConcurrentAdminsCannotLinkOneAccountToTwoBarbers()
+    {
+        async Task<int> Create(string name)
+        {
+            var catalogue = new CatalogueService(new MongoBookingStore(connection, database), new TestClock(), new());
+            try { await catalogue.CreateBarber(Admin, new(name, "auth0|shared", Hours)); return 201; }
+            catch (DomainError e) { Assert.Equal("duplicate_user", e.Code); return e.Status; }
+        }
+        var statuses = await Task.WhenAll(Create("First"), Create("Second"));
+        Assert.Single(statuses, s => s == 201); Assert.Single(statuses, s => s == 409);
+    }
+    [MongoFact] public async Task DeactivationRacingABookingCannotBothSucceed()
+    {
+        async Task<int> Book()
+        {
+            try { await new BookingService(new MongoBookingStore(connection, database), new TestClock(), new()).Create(Customer, Request); return 201; }
+            catch (DomainError e) { return e.Status; }
+        }
+        async Task<int> Deactivate()
+        {
+            try { await new CatalogueService(new MongoBookingStore(connection, database), new TestClock(), new()).SetBarberActive(Admin, "barber-a", false); return 200; }
+            catch (DomainError e) { return e.Status; }
+        }
+        var outcomes = await Task.WhenAll(Book(), Deactivate());
+        // Either the booking lands first and deactivation is refused, or deactivation wins and the booking finds no barber.
+        Assert.True(outcomes is [201, 409] or [400, 200], $"Unexpected outcomes {string.Join(",", outcomes)}");
+    }
+    [MongoFact] public async Task CatalogueEditsPersistAndKeepScheduleRevisionIncreasing()
+    {
+        var catalogue = new CatalogueService(store, new TestClock(), new());
+        var service = await catalogue.CreateService(Admin, new("Skin fade", 25000, 45));
+        await catalogue.UpdateService(Admin, service.Id, new("Skin fade", 27500, 45));
+        await catalogue.UpdateBarber(Admin, "barber-b", new("Renamed", "staff-b", Hours));
+        var fresh = new MongoBookingStore(connection, database);
+        Assert.Equal(27500, (await fresh.Read(s => s.Services())).Single(s => s.Id == service.Id).PriceCents);
+        var barber = (await fresh.Read(s => s.Barbers())).Single(b => b.Id == "barber-b");
+        Assert.Equal("Renamed", barber.Name); Assert.True(barber.Revision > 0);
+    }
     [MongoFact] public async Task FreshConnectionCanReplayACommittedRequest()
     {
         var b = await Service.Create(Customer, Request, idempotencyKey: "same-request-key-003");

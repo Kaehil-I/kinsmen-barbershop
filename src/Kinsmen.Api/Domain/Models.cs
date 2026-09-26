@@ -24,6 +24,12 @@ public sealed record VersionRequest(long Version);
 public sealed record StatusRequest(BookingStatus Status, long Version);
 public sealed record BlockRequest(DateTimeOffset Start, DateTimeOffset End, string Reason);
 public sealed record AvailableSlot(string BarberId, DateTime StartUtc, DateTime EndUtc);
+// Admin catalogue management. Records are deactivated, never deleted, so booking history stays intact.
+public sealed record ServiceRequest(string Name, int PriceCents, int DurationMinutes);
+public sealed record BarberRequest(string Name, string UserId, WorkingPeriod[] Hours);
+public sealed record ActiveRequest(bool Active);
+// Admin view of a barber: includes the linked identity and active flag, but not the internal revision counter.
+public sealed record BarberProfile(string Id, string Name, string UserId, WorkingPeriod[] Hours, bool Active);
 public sealed record BookingPolicy(int MinimumNoticeMinutes = 60, int CancellationNoticeMinutes = 60,
     int HorizonDays = 30, int SlotMinutes = 15);
 
@@ -39,3 +45,5 @@ public sealed class DomainError(int status, string code, string message) : Excep
 
 // Repository signal handled by Create when concurrent idempotent requests race.
 public sealed class DuplicateBookingIdException : Exception;
+// Repository signal for the unique barbers.userId index: one barber profile per staff identity.
+public sealed class DuplicateBarberUserException : Exception;

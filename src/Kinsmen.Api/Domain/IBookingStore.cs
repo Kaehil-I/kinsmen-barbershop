@@ -19,4 +19,7 @@ public interface IBookingSession
     Task SaveBooking(Booking booking, bool insert = false);
     Task SaveBlock(TimeBlock block);
     Task DeleteBlock(string id);
+    Task SaveService(ServiceItem service, bool insert = false);
+    // Inserts start at revision 0; updates increment the revision so concurrent schedule transactions conflict and retry.
+    Task SaveBarber(Barber barber, bool insert = false);
 }
