@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace Kinsmen.Api.Domain;
 
-public sealed class BookingService(IBookingStore store, TimeProvider clock, BookingPolicy policy)
+public sealed class BookingService(IBookingStore store, TimeProvider clock, BookingPolicy policy, IEmailSender? email = null)
 {
     // Kinsmen's shop timezone is explicit, independent of the host machine timezone.
     private static readonly TimeZoneInfo ShopZone = TimeZoneInfo.FindSystemTimeZoneById("Africa/Johannesburg");
@@ -108,9 +108,11 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
                 {
                     if (!await Free(s, barber, start, end)) continue;
                     var booking = new Booking(bookingId, customer, barber.Id, start, end,
-                        services, services.Sum(x => x.PriceCents), BookingStatus.Pending, Now,
-                        Notes: notes, CreationFingerprint: fingerprint);
+     services, services.Sum(x => x.PriceCents), BookingStatus.Pending, Now,
+     Notes: notes, CreationFingerprint: fingerprint, CustomerEmail: actor.Email);
                     await s.SaveBooking(booking, true);
+                    await SendBookingEmail(booking, "We've received your booking request",
+                        $"<p>Thanks for booking with Kinsmen! We've received your request for {Now:d MMMM} and will confirm it shortly.</p>");
                     return booking;
                 }
                 throw DomainError.Conflict("That time is no longer available. Choose another slot.");
