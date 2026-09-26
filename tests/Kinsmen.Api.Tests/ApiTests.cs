@@ -129,6 +129,42 @@ public sealed class ApiTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/api/bookings/{id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await factory.Client("other-customer").GetAsync($"/api/bookings/{id}")).StatusCode);
     }
+    [Fact] public async Task AdminCatalogueRequiresAnAdminToken()
+    {
+        Assert.Equal(HttpStatusCode.Unauthorized, (await factory.Client().GetAsync("/api/admin/services")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await factory.Client("customer-a").GetAsync("/api/admin/services")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await factory.Client("staff-a", "Barber").PostAsJsonAsync("/api/admin/barbers",
+            new { name = "X", userId = "x", hours = Array.Empty<object>() })).StatusCode);
+    }
+    [Fact] public async Task AdminCanCreateServiceThatAppearsInPublicCatalogue()
+    {
+        var admin = factory.Client("admin-a", "Admin");
+        var created = await admin.PostAsJsonAsync("/api/admin/services", new { name = "Skin fade", priceCents = 25000, durationMinutes = 45 });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var body = await created.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.True(body.GetProperty("active").GetBoolean());
+        var id = body.GetProperty("id").GetString();
+        Assert.Contains(id!, await factory.Client().GetStringAsync("/api/services"));
+        var hidden = await admin.PatchAsJsonAsync($"/api/admin/services/{id}/active", new { active = false });
+        Assert.Equal(HttpStatusCode.OK, hidden.StatusCode);
+        Assert.DoesNotContain(id!, await factory.Client().GetStringAsync("/api/services"));
+    }
+    [Fact] public async Task AdminBarberViewShowsLinkedAccountWithoutInternalRevision()
+    {
+        var json = await factory.Client("admin-a", "Admin").GetStringAsync("/api/admin/barbers");
+        Assert.Contains("\"userId\":\"staff-a\"", json);
+        Assert.Contains("\"active\":true", json);
+        Assert.DoesNotContain("revision", json);
+    }
+    [Fact] public async Task AdminCatalogueRejectsUnknownFieldsAndInvalidValues()
+    {
+        var admin = factory.Client("admin-a", "Admin");
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync("/api/admin/services",
+            new { name = "Fade", priceCents = 100, durationMinutes = 30, active = false })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/admin/barbers/barber-a",
+            new { name = "A", userId = "staff-a", hours = new[] { new { weekday = 9, startMinute = 0, endMinute = 60 } } })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.PatchAsJsonAsync("/api/admin/barbers/missing/active", new { active = true })).StatusCode);
+    }
     [Fact] public async Task InvalidIdempotencyHeaderReturnsBadRequest()
     {
         var client = factory.Client("customer-a"); client.DefaultRequestHeaders.Add("Idempotency-Key", "short");

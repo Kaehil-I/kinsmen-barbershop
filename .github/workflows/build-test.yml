@@ -1,0 +1,108 @@
+name: Build and test
+
+on:
+  pull_request:
+    branches: [integration-part2, main]
+  push:
+    branches: [integration-part2, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      # Enables the real MongoDB tests (transactions, races, rollback) against the throwaway replica set below.
+      KINSMEN_TEST_MONGO: mongodb://127.0.0.1:27017/?replicaSet=rs0
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+
+      # Booking writes use MongoDB transactions, which need a replica set rather than a standalone mongod.
+      - name: Start MongoDB replica set
+        run: |
+          docker run -d --name mongo -p 127.0.0.1:27017:27017 mongo:8.0.15 --replSet rs0 --bind_ip_all
+          for i in $(seq 1 40); do
+            if docker exec mongo mongosh --quiet --eval "try { rs.status(); quit(db.hello().isWritablePrimary ? 0 : 1); } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}); quit(1); }"; then
+              echo "MongoDB replica set is ready."
+              exit 0
+            fi
+            sleep 3
+          done
+          docker logs mongo
+          echo "::error::MongoDB replica set did not become ready."
+          exit 1
+
+      - name: Restore
+        run: dotnet restore Kinsmen.slnx --locked-mode
+
+      - name: Build
+        run: dotnet build Kinsmen.slnx --no-restore -c Release
+
+      - name: Test
+        run: dotnet test Kinsmen.slnx --no-build -c Release --logger trx --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/*.trx
+          if-no-files-found: ignore
+
+  container:
+    name: Container images
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # The same Dockerfiles Render builds from, so a broken image fails here before it reaches a deploy.
+      - name: Build images
+        run: |
+          docker build -f src/Kinsmen.Api/Dockerfile -t kinsmen-api .
+          docker build -f src/Kinsmen.Web/Dockerfile -t kinsmen-web .
+
+      # Start each image with production settings and wait for an HTTP 200. The API's identity
+      # provider is only contacted when a token is validated, so a placeholder authority is enough to boot.
+      - name: Smoke test images
+        run: |
+          docker run -d --name api -p 127.0.0.1:8081:8080 \
+            -e ASPNETCORE_ENVIRONMENT=Production \
+            -e Mongo__ConnectionString=mongodb://127.0.0.1:1/ \
+            -e Auth__Authority=https://identity.example.invalid/ \
+            kinsmen-api
+          docker run -d --name web -p 127.0.0.1:8082:8080 \
+            -e ASPNETCORE_ENVIRONMENT=Production \
+            -e Api__BaseUrl=http://127.0.0.1:1/ \
+            kinsmen-web
+          check() {
+            for i in $(seq 1 30); do
+              if curl -fsS -o /dev/null "$1"; then echo "$1 is up."; return 0; fi
+              sleep 2
+            done
+            echo "::error::$1 did not respond with 200."
+            return 1
+          }
+          status=0
+          check http://127.0.0.1:8081/health/live || status=1
+          check http://127.0.0.1:8082/ || status=1
+          if [ "$status" -ne 0 ]; then docker logs api; docker logs web; fi
+          exit $status
