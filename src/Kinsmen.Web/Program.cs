@@ -1,6 +1,7 @@
 using Auth0.AspNetCore.Authentication;
 using Kinsmen.Web.ApiClient;
 using Kinsmen.Web.Auth;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using System.Text.Json.Serialization;
 
@@ -36,6 +37,41 @@ builder.Services
 // here needs to change.
 builder.Services.AddScoped<ITokenProvider, Auth0TokenProvider>();
 builder.Services.AddTransient<BearerTokenHandler>();
+
+// Maps Auth0's plain "role" claim to the standard role claim type, so
+// [Authorize(Roles = "...")] and User.IsInRole(...) work normally — see
+// RoleClaimsTransformation for why this is needed at all.
+builder.Services.AddTransient<IClaimsTransformation, RoleClaimsTransformation>();
+
+// fetch() calls from our own JS silently follow an auth redirect and hand back the
+// login page's HTML as if it were the JSON response they expected. Requests carrying
+// the X-Requested-With header (every protected fetch() call sends it — see
+// wwwroot/js/auth-fetch.js) get a plain 401/403 instead, so the JS can redirect the
+// browser itself rather than mishandling HTML as data.
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    var redirectToLogin = options.Events.OnRedirectToLogin;
+    options.Events.OnRedirectToLogin = context =>
+    {
+        if (context.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
+        }
+        return redirectToLogin(context);
+    };
+
+    var redirectToAccessDenied = options.Events.OnRedirectToAccessDenied;
+    options.Events.OnRedirectToAccessDenied = context =>
+    {
+        if (context.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        }
+        return redirectToAccessDenied(context);
+    };
+});
 
 builder.Services.AddHttpClient<IKinsmenApiClient, KinsmenApiClient>((serviceProvider, client) =>
 {

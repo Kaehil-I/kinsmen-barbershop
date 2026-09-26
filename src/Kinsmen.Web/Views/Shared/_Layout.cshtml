@@ -17,15 +17,18 @@
                 Kinsman
             </a>
             <nav class="nav-links" id="nav-links">
-                @* My Bookings and My Schedule have no real login/role to gate them on yet
-                   (Kyra's auth work), so they're just plain links for now — a real
-                   customer nav shouldn't show "My Schedule" and vice versa once that
-                   lands. *@
+                @* Location stays a placeholder — no location page yet. *@
                 <a asp-controller="Booking" asp-action="Index">Book a Chair</a>
                 <a asp-controller="Services" asp-action="Index">Services</a>
                 <a asp-controller="Team" asp-action="Index">Team</a>
-                <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
-                <a asp-controller="BarberSchedule" asp-action="Index">My Schedule</a>
+                @if (!User.IsInRole("Barber") && !User.IsInRole("Admin"))
+                {
+                    <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
+                }
+                @if (User.IsInRole("Barber") || User.IsInRole("Admin"))
+                {
+                    <a asp-controller="BarberSchedule" asp-action="Index">My Schedule</a>
+                }
                 <a asp-controller="Location" asp-action="Index">Location</a>
             </nav>
             <div class="nav-auth" id="nav-auth">
@@ -50,11 +53,15 @@
             <a asp-controller="Booking" asp-action="Index">Book a Chair</a>
             <a asp-controller="Services" asp-action="Index">Services</a>
             <a asp-controller="Team" asp-action="Index">Team</a>
-            <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
-            <a asp-controller="BarberSchedule" asp-action="Index">My Schedule</a>
+            @if (!User.IsInRole("Barber") && !User.IsInRole("Admin"))
+            {
+                <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
+            }
+            @if (User.IsInRole("Barber") || User.IsInRole("Admin"))
+            {
+                <a asp-controller="BarberSchedule" asp-action="Index">My Schedule</a>
+            }
             <a asp-controller="Location" asp-action="Index">Location</a>
-            <hr />
-            
             <hr />
             @if (User.Identity?.IsAuthenticated == true)
             {

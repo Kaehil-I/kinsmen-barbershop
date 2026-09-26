@@ -2,13 +2,18 @@ using Kinsmen.Web.ApiClient;
 using Kinsmen.Web.Helpers;
 using Kinsmen.Web.Models.Api;
 using Kinsmen.Web.Models.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kinsmen.Web.Controllers;
 
 /// <summary>Serves the barber's own-schedule page plus its AJAX actions
 /// (UpdateStatus, CreateBlock, DeleteBlock, BlockAvailability). Same server-proxy
-/// reasoning as BookingController/MyBookingsController throughout.</summary>
+/// reasoning as BookingController/MyBookingsController throughout. [Authorize(Roles)]
+/// here is the actual enforcement — hiding the "My Schedule" nav link for non-staff
+/// is just a convenience on top, not the real protection (the API itself is the final
+/// backstop regardless, per API-CONTRACT.md's own ownership rules).</summary>
+[Authorize(Roles = "Barber,Admin")]
 public sealed class BarberScheduleController(IKinsmenApiClient apiClient) : Controller
 {
     private static readonly TimeZoneInfo ShopTimeZone = ShopTimeZoneProvider.Instance;
