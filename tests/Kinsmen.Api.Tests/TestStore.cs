@@ -11,6 +11,7 @@ public sealed class TestStore : IBookingStore, IBookingSession
     public List<Barber> Staff { get; } = [.. DemoData.Barbers];
     public List<Booking> Saved { get; private set; } = [];
     public List<TimeBlock> Blocked { get; private set; } = [];
+    public List<Review> Reviews { get; private set; } = [];
     public async Task<T> Read<T>(Func<IBookingSession, Task<T>> action, CancellationToken ct = default)
     {
         await gate.WaitAsync(ct);
@@ -19,11 +20,11 @@ public sealed class TestStore : IBookingStore, IBookingSession
     public async Task<T> Write<T>(Func<IBookingSession, Task<T>> action, CancellationToken ct = default)
     {
         await gate.WaitAsync(ct);
-        var saved = Saved.ToList(); var blocks = Blocked.ToList(); var catalog = Catalog.ToList(); var staff = Staff.ToList();
+        var saved = Saved.ToList(); var blocks = Blocked.ToList(); var catalog = Catalog.ToList(); var staff = Staff.ToList(); var reviews = Reviews.ToList();
         try { return await action(this); }
         catch
         {
-            Saved = saved; Blocked = blocks;
+            Saved = saved; Blocked = blocks; Reviews = reviews;
             Catalog.Clear(); Catalog.AddRange(catalog); Staff.Clear(); Staff.AddRange(staff);
             throw;
         }
@@ -62,6 +63,15 @@ public sealed class TestStore : IBookingStore, IBookingSession
         if (insert) Staff.Add(barber with { Revision = 0 });
         else if (index < 0) throw DomainError.Missing();
         else Staff[index] = barber with { Revision = Staff[index].Revision + 1 };
+        return Task.CompletedTask;
+    }
+    public Task<Review?> ReviewByBookingId(string bookingId) => Task.FromResult(Reviews.SingleOrDefault(r => r.BookingId == bookingId));
+    public Task<List<Review>> ReviewsForBarber(string barberId) => Task.FromResult(Reviews.Where(r => r.BarberId == barberId).ToList());
+    public Task SaveReview(Review review)
+    {
+        // Mirrors the unique reviews.bookingId index.
+        if (Reviews.Any(r => r.BookingId == review.BookingId)) throw new DuplicateReviewException();
+        Reviews.Add(review);
         return Task.CompletedTask;
     }
 }
