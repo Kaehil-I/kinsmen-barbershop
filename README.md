@@ -1,113 +1,186 @@
 # Kinsmen Barbershop — Website & Booking System
 
-INSY7315 Work Integrated Learning project for Kinsmen Barbers, a barbershop in Durban North.
-Built by **Kaehil, Kyra, Zario, and Gregory** — BCA3, IIE Emeris.
+INSY7315 Work Integrated Learning project for **Kinsmen Barbers**, Shop 5, 8 Mackeurtan Ave, Durban North.
+Built by **Kaehil, Kyra, Zario and Gregory** — BCA3, IIE Emeris.
 
-## What this is
+Customers browse services and barbers, book a chair online and manage their own bookings. Barbers see
+their schedule, confirm appointments and block off time. Admins manage the service catalogue and barber
+profiles.
 
-The repository contains the Part 1 HTML prototype and an initial Part 2 booking backend.
-The prototype is a self-contained HTML file covering customer booking, shop and staff previews.
-The backend is an ASP.NET Core/.NET 10 API with MongoDB persistence, booking rules and automated tests.
-The prototype and backend are not connected yet; production authentication and hosting are still group integration work.
+| | Link |
+|---|---|
+| **Live system** | *Deployment in progress (Render). The link will be added here once the hosted services are live.* |
+| **Part 1 prototype** | https://kaehil-i.github.io/kinsmen-barbershop/kinsmen_prototype.html |
 
-## Start the Part 2 backend
+## How it works
 
-- [Local setup and commands](docs/backend/GETTING-STARTED.md)
-- [API contract and integration examples](docs/backend/API-CONTRACT.md)
-- [Importable OpenAPI definition](docs/backend/openapi.json)
-- [Architecture, data model and booking state diagrams](docs/backend/ARCHITECTURE.md)
-- [Team handoff and remaining responsibilities](docs/backend/TEAM-HANDOFF.md)
-- [Validation record](docs/backend/VALIDATION.md)
+```
+Browser ──> Kinsmen.Web (ASP.NET Core MVC) ──server-to-server, bearer token──> Kinsmen.Api (ASP.NET Core)
+                 │                                                                    │
+                 └── login via Auth0 (Universal Login)                                └──> MongoDB Atlas
+```
 
-The backend requires the .NET 10 SDK and a MongoDB replica set or sharded cluster.
-Build with `dotnet build Kinsmen.slnx` and run tests with `dotnet test Kinsmen.slnx`.
-Set `KINSMEN_TEST_MONGO` to a dedicated test replica set to include real database integration tests;
-otherwise those tests are explicitly skipped. Read the setup guide before running the API.
+- **Kinsmen.Web** renders every page and calls the API from the server, so the browser never talks to
+  the API directly and access tokens stay server-side.
+- **Kinsmen.Api** owns all booking rules: availability, pricing from the catalogue, double-booking
+  prevention (MongoDB transactions), ownership and role checks, and status transitions
+  (Pending → Confirmed → Completed / Cancelled / No-Show).
+- **Auth0** handles registration, login, password reset and email verification; the API trusts only
+  tokens signed by our Auth0 tenant with audience `kinsmen-api` and a `role` of Customer, Barber or Admin.
 
-## Viewing the prototype
+More detail: [architecture and data model](docs/backend/ARCHITECTURE.md) ·
+[API contract](docs/backend/API-CONTRACT.md) · [OpenAPI definition](docs/backend/openapi.json).
 
-Open `kinsmen_prototype.html` directly in a browser, or visit the hosted version:
+## Tech stack
 
-**Live link:** https://kaehil-i.github.io/kinsmen-barbershop/kinsmen_prototype.html
+| Layer | Choice |
+|---|---|
+| Front end | ASP.NET Core MVC (.NET 10), Razor views, plain CSS/JS (neomorphic design from the Part 1 prototype) |
+| Back end | ASP.NET Core minimal API (.NET 10) |
+| Database | MongoDB Atlas (`kinsmen_dev` on the `kinsmen-dev` cluster): schema validators, indexes, multi-document transactions |
+| Authentication | Auth0 (free plan): OpenID Connect login in the web app, JWT bearer validation in the API |
+| Hosting | Render (two Docker web services, defined in [`render.yaml`](render.yaml)) |
+| CI | GitHub Actions: build, full test suite against a real MongoDB replica set, Docker image build and smoke test |
 
-No login is required for any part of the prototype. Use the role switcher pinned to the bottom of the
-screen to preview the Customer, Barber, and Admin experiences.
+The Part 1 report proposed SQL Server, Entity Framework Core and Azure. The team replaced these with
+MongoDB, Auth0 and Render: the data design is in [`docs/backend/ARCHITECTURE.md`](docs/backend/ARCHITECTURE.md),
+login in [`docs/auth/AUTH0-SETUP.md`](docs/auth/AUTH0-SETUP.md) and hosting in
+[`docs/deployment/RENDER.md`](docs/deployment/RENDER.md). The Word report in `Documentation/` has not yet
+been updated to match.
 
-### Suggested walkthrough order
+## Running locally
 
-1. **Customer** (default) — Home → Book a Chair → Services → Team → Gallery → About → Loyalty → Location → Log In / Create Account
-2. **Barber** — My Bookings → click a booking to open the checkout (POS)
-3. **Admin** — Bookings → Products → Accounts → Analytics
+### Prerequisites
 
-This same guide also appears as a dismissible panel at the top of the prototype itself.
+- [.NET 10 SDK](https://dotnet.microsoft.com/download) (`dotnet --version` should print 10.0.x)
+- A MongoDB **replica set** (transactions do not work on a standalone server). Either:
+  - Docker Desktop, using the included `compose.mongo.yaml`, or
+  - the team's Atlas development cluster (ask Kaehil for a connection string; never commit it)
+- For login: access to the Auth0 tenant (see [Auth0 setup](docs/auth/AUTH0-SETUP.md))
+
+### 1. Start and initialise the database
+
+```powershell
+docker compose -f compose.mongo.yaml up -d --wait
+
+dotnet build Kinsmen.slnx
+$env:ASPNETCORE_ENVIRONMENT = 'Development'
+$env:Mongo__ConnectionString = 'mongodb://127.0.0.1:27017/?replicaSet=rs0'
+$env:Mongo__Database = 'kinsmen_dev'
+dotnet run --project src/Kinsmen.Api --no-build -- --initialize --seed-demo
+```
+
+This creates the collections, validators and indexes, and adds synthetic demo services and barbers. It is
+safe to run again. For Atlas, use `./scripts/Initialize-Atlas-Development.ps1` instead, which prompts for
+the connection string without saving it.
+
+### 2. Run the API
+
+In the same terminal:
+
+```powershell
+dotnet run --project src/Kinsmen.Api --no-build -- --urls http://127.0.0.1:5080
+```
+
+Check it with `Invoke-RestMethod http://127.0.0.1:5080/health/ready` and
+`Invoke-RestMethod http://127.0.0.1:5080/api/services`.
+
+- **With Auth0:** also set `$env:Auth__Authority = 'https://<tenant>.eu.auth0.com/'` before starting.
+- **Without Auth0 (API-only testing):** set a local signing key and generate short-lived test tokens, as
+  described in [`docs/backend/GETTING-STARTED.md`](docs/backend/GETTING-STARTED.md). These tokens only
+  work in Development and expire after 30 minutes.
+
+### 3. Run the web app
+
+In a second terminal:
+
+```powershell
+dotnet run --project src/Kinsmen.Web
+```
+
+The site opens at `http://127.0.0.1:5090` and calls the API at `Api:BaseUrl` (set in
+`src/Kinsmen.Web/appsettings.Development.json`). Public pages work straight away. Pages that need a
+signed-in user need Auth0 configured as in [Auth0 setup, Part 4](docs/auth/AUTH0-SETUP.md#part-4-web-app-changes-code),
+including the HTTPS launch profile, because browsers reject the login cookies over plain HTTP.
+
+> Login is being merged from Kyra's branch. Until it lands on `integration-part2`, the web app sends
+> development tokens from `appsettings.Development.json` instead of a signed-in user's token.
+
+## Tests
+
+```powershell
+dotnet test Kinsmen.slnx
+```
+
+Tests that need external services are skipped unless configured:
+
+| Tests | Enable with | Notes |
+|---|---|---|
+| Real MongoDB (transactions, races, rollback) | `$env:KINSMEN_TEST_MONGO = 'mongodb://127.0.0.1:27017/?replicaSet=rs0'` | Each test creates and drops its own `kinsmen_test_<guid>` database. Never point this at a shared or production database. |
+
+Every pull request runs the whole suite in CI, including the MongoDB tests against a throwaway replica
+set.
+
+## Deployment
+
+The system deploys to Render as two Docker web services (`kinsmen-api`, `kinsmen-web`) from
+[`render.yaml`](render.yaml). Staging deploys from `integration-part2`, and only after a commit's GitHub
+checks pass; the submission build deploys from `main`.
+
+Secrets (the MongoDB connection string and the Auth0 client secret) are entered in the Render dashboard
+and never committed. Setup steps, Atlas network access and free-tier behaviour are in
+[`docs/deployment/RENDER.md`](docs/deployment/RENDER.md).
+
+## Working on the code
+
+1. Branch from `integration-part2` (`feature/<name>-<topic>`).
+2. Open a pull request back into `integration-part2`. The **Build and test** and **Container images**
+   checks must pass, and a teammate reviews before merging.
+3. `integration-part2` is merged into `main` for submission.
+
+Never commit connection strings, passwords, client secrets or tokens. Use `dotnet user-secrets` or
+environment variables locally.
 
 ## Repository structure
 
 ```
 kinsmen-barbershop/
-├── kinsmen_prototype.html   # the prototype — single file, open directly in a browser
-├── Kinsmen.slnx             # .NET 10 backend and tests
-├── src/Kinsmen.Api/         # HTTP endpoints, booking rules and MongoDB persistence
-├── tests/Kinsmen.Api.Tests/ # domain, HTTP/auth and real MongoDB tests
-├── docs/backend/           # contracts, JSON schemas, diagrams and handoff
-├── scripts/Smoke-Test.ps1  # running-API booking lifecycle check
-├── compose.mongo.yaml      # optional local development replica set
-├── Documentation/
-│   ├── WIL Task 1 Documentation.docx        # main Task 1 submission document
-│   ├── Kinsmen-WBS-ERD-DevOps.docx          # WBS, ERD, and DevOps sections
-│   ├── Kinsmen Barbershop Requirements Questionnaire.docx/.pdf
-│   └── Meeting Minutes/                     # dated team + client meeting records
-└── Kinsmen Barbershop — Website & Booking System_ Client Requirements Questionnaire.csv.zip
+├── src/
+│   ├── Kinsmen.Api/            # booking API: endpoints, domain rules, MongoDB store, Dockerfile
+│   └── Kinsmen.Web/            # MVC front end: controllers, Razor views, API client, Dockerfile
+├── tests/
+│   └── Kinsmen.Api.Tests/      # rule, HTTP/auth and real-MongoDB tests
+├── docs/
+│   ├── backend/                # API contract, OpenAPI, architecture, schemas, validation record
+│   ├── auth/AUTH0-SETUP.md     # Auth0 tenant, roles and web app integration
+│   └── deployment/RENDER.md    # hosting setup
+├── scripts/                    # Atlas initialisation and booking smoke tests
+├── .github/workflows/          # CI
+├── render.yaml                 # Render Blueprint
+├── compose.mongo.yaml          # local MongoDB replica set
+├── Kinsmen.slnx                # .NET solution
+├── kinsmen_prototype.html      # Part 1 prototype (single file)
+└── Documentation/              # Task 1 report, WBS/ERD/DevOps, questionnaire, meeting minutes
 ```
 
-## Tech stack and migration status
+## Team
 
-- **Frontend:** existing HTML/CSS/JavaScript prototype; final MVC/views integration pending.
-- **Backend:** ASP.NET Core/.NET 10 HTTP API with separated booking rules and repository interfaces.
-- **Database:** MongoDB with the official C# driver, schema validation, indexes and transactions.
-- **Hosting:** undecided between Render/Vercel; no Azure dependency in the backend.
-- **Authentication:** JWT validation boundary; production account/login integration pending. Local demo tokens are development-only.
-- **CI/CD:** tests are runnable locally; GitHub automation and hosted deployment remain Kaehil's integration work.
+| Member | Area |
+|---|---|
+| Kaehil | Group leader; GitHub workflow, CI, hosting and deployment; admin catalogue |
+| Zario | Booking API, MongoDB data design and booking rules |
+| Gregory | Front end and user experience |
+| Kyra | Authentication, security and testing |
 
-The original Word report still describes SQL Server/Azure. Use `docs/backend/ARCHITECTURE.md` as
-the booking-backend replacement material when updating its Sections 6–9; the Word report has not
-yet been edited. MongoDB replaces the database layer, not the application host.
+## Known gaps
 
-## Design patterns
+Tracked so the documentation, prototype and system can be aligned before submission:
 
-The backend currently uses dependency injection, repository abstraction and a transaction/unit-of-work boundary.
-Factory, Strategy and Observer were proposed in Part 1; this contribution does not claim to implement them.
-
-## Known gaps between this prototype and the current documentation
-
-The prototype, backend and written scope still need to be aligned for Task 2:
-
-- **Loyalty feature:** the prototype includes a working Loyalty screen, but Section 11.4 of the main
-  documentation currently lists loyalty as an explicitly *excluded* future enhancement. One of these
-  needs to change before submission — either update the documentation to bring loyalty into scope, or
-  remove/relabel the prototype screen as a concept preview.
-- **Guest vs. Customer role:** the documentation defines Guest and Customer as two distinct roles;
-  the prototype's role switcher only offers Customer/Barber/Admin (guest checkout exists within the
-  booking flow itself, but isn't a separate top-level role).
-- **Shop cart & checkout:** the domain model and ERD (Sections 4 & 6) describe a customer-facing
-  Cart/Checkout flow. The prototype's Shop is browse-only for customers — the only checkout that
-  exists is staff-side, in the Barber POS.
-- **Customer self-service booking management:** the prototype contains customer booking-management
-  rendering code. The new backend implements viewing, rescheduling and cancellation; UI integration
-  remains pending. Customer reviews are separate work.
-- **Barber time-blocking:** implemented in the new backend; staff UI integration remains pending.
-- **Admin scope:** the prototype's Admin role manages retail Shop products and staff/customer
-  accounts. The documentation additionally expects Admin to manage the barbershop *services* (haircut/
-  beard trim pricing) and barber profiles. Service-editing prototype code exists, but persistent admin
-  catalogue/profile management is not included in this backend slice.
-- **Individual barber profile pages:** the documented journey map describes a dedicated Barber Profile
-  screen per barber; the prototype has a single Team page listing all barbers instead.
-- **Booking status vocabulary:** aligned in the prototype to match the documented state diagram
-  (Pending → Confirmed → Completed / Cancelled / No-Show) as of this update.
-- **Multi-service selection:** aligned in the prototype as of this update — a booking can now include
-  more than one service, matching the Factory pattern write-up and the team's 30 July / 4 August
-  meeting decisions.
-
-## Client
-
-Kinsmen Barbers, Shop 5, 8 Mackeurtan Ave, Durban North.
+- **Loyalty:** shown in the prototype, but listed as out of scope in the Task 1 report. Not built.
+- **Guest booking:** the report describes a Guest role; the system currently requires an account to book.
+- **Shop and checkout:** the report's cart/checkout flow and the prototype's Barber POS are not built.
+- **Reviews and confirmation emails:** planned (Kyra); not yet built.
+- **Admin screens:** the admin catalogue API is in review; the web screens follow once login is merged.
+- **Barber profile pages:** the report describes one page per barber; the site has a single Team page.
+- **Client rules:** prices, durations, opening hours, notice periods, booking horizon and pending-booking
+  expiry still use demo values and need client confirmation.
