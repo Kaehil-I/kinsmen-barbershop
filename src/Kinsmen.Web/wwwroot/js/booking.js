@@ -278,7 +278,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var barberLabel = barbersById[barberSelect.value] ? barbersById[barberSelect.value].name : 'your barber';
         var dateStr = state.selectedDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 
-        fetch('/Booking/Create', {
+        authFetch('/Booking/Create', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

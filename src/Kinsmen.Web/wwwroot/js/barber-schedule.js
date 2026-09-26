@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', function () {
         actionsDiv.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
         errorText.style.display = 'none';
 
-        fetch('/BarberSchedule/UpdateStatus/' + row.dataset.bookingId, {
+        authFetch('/BarberSchedule/UpdateStatus/' + row.dataset.bookingId, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -278,7 +278,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             var params = new URLSearchParams({ barberId: barberId, date: dateInput.value });
 
-            fetch('/BarberSchedule/BlockAvailability?' + params.toString())
+            authFetch('/BarberSchedule/BlockAvailability?' + params.toString())
                 .then(function (response) {
                     return response.json().then(function (body) { return { ok: response.ok, body: body }; });
                 })
@@ -318,7 +318,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             addBlockBtn.disabled = true;
 
-            fetch('/BarberSchedule/CreateBlock?barberId=' + encodeURIComponent(barberId), {
+            authFetch('/BarberSchedule/CreateBlock?barberId=' + encodeURIComponent(barberId), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ start: startIso, end: endIso, reason: reason })
@@ -370,7 +370,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var row = btn.closest('.admin-row');
             btn.disabled = true;
 
-            fetch('/BarberSchedule/DeleteBlock/' + row.dataset.blockId, { method: 'POST' })
+            authFetch('/BarberSchedule/DeleteBlock/' + row.dataset.blockId, { method: 'POST' })
                 .then(function (response) {
                     if (!response.ok) throw new Error('delete_failed');
                     row.remove();
