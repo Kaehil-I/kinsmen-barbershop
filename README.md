@@ -76,35 +76,42 @@ the connection string without saving it.
 
 ### 2. Run the API
 
-In the same terminal:
+In the same terminal, point the API at Auth0 so it accepts signed-in users' tokens, then start it:
 
 ```powershell
-dotnet run --project src/Kinsmen.Api --no-build -- --urls http://127.0.0.1:5080
+$env:Auth__Authority = 'https://kinsmen.eu.auth0.com/'
+dotnet run --project src/Kinsmen.Api --no-build
 ```
 
-Check it with `Invoke-RestMethod http://127.0.0.1:5080/health/ready` and
-`Invoke-RestMethod http://127.0.0.1:5080/api/services`.
+The API listens on `http://localhost:54427` (and `https://localhost:54426`), which is where the web app
+expects it. Check it with `Invoke-RestMethod http://localhost:54427/health/ready` and
+`Invoke-RestMethod http://localhost:54427/api/services`.
 
-- **With Auth0:** also set `$env:Auth__Authority = 'https://<tenant>.eu.auth0.com/'` before starting.
-- **Without Auth0 (API-only testing):** set a local signing key and generate short-lived test tokens, as
-  described in [`docs/backend/GETTING-STARTED.md`](docs/backend/GETTING-STARTED.md). These tokens only
-  work in Development and expire after 30 minutes.
+For API-only testing without Auth0, leave `Auth__Authority` unset and use a local signing key with
+short-lived test tokens instead, as described in
+[`docs/backend/GETTING-STARTED.md`](docs/backend/GETTING-STARTED.md). These tokens only work in
+Development and expire after 30 minutes. (That guide runs the API on port 5080; pass `--urls` to match.)
 
 ### 3. Run the web app
 
-In a second terminal:
+The web app will not start without the Auth0 client secret. Get it from Kyra privately and store it once,
+outside the repository:
 
 ```powershell
-dotnet run --project src/Kinsmen.Web
+dotnet user-secrets set "Auth0:ClientSecret" "<client secret>" --project src/Kinsmen.Web
+dotnet dev-certs https --trust
 ```
 
-The site opens at `http://127.0.0.1:5090` and calls the API at `Api:BaseUrl` (set in
-`src/Kinsmen.Web/appsettings.Development.json`). Public pages work straight away. Pages that need a
-signed-in user need Auth0 configured as in [Auth0 setup, Part 4](docs/auth/AUTH0-SETUP.md#part-4-web-app-changes-code),
-including the HTTPS launch profile, because browsers reject the login cookies over plain HTTP.
+Then, in a second terminal:
 
-> Login is being merged from Kyra's branch. Until it lands on `integration-part2`, the web app sends
-> development tokens from `appsettings.Development.json` instead of a signed-in user's token.
+```powershell
+dotnet run --project src/Kinsmen.Web --launch-profile https
+```
+
+The site opens at `https://localhost:7090`. Use the HTTPS profile: browsers reject the login cookies over
+plain HTTP. The Auth0 domain and client ID are in `src/Kinsmen.Web/appsettings.json`, and the API address
+(`Api:BaseUrl`) is in `src/Kinsmen.Web/appsettings.Development.json`. See
+[Auth0 setup](docs/auth/AUTH0-SETUP.md) for roles and for linking a barber account.
 
 ## Tests
 
@@ -117,9 +124,10 @@ Tests that need external services are skipped unless configured:
 | Tests | Enable with | Notes |
 |---|---|---|
 | Real MongoDB (transactions, races, rollback) | `$env:KINSMEN_TEST_MONGO = 'mongodb://127.0.0.1:27017/?replicaSet=rs0'` | Each test creates and drops its own `kinsmen_test_<guid>` database. Never point this at a shared or production database. |
+| Live Auth0 round trip (web app) | `$env:KINSMEN_TEST_AUTH0 = '1'` | Needs internet access to the Auth0 tenant; no secret required. |
 
 Every pull request runs the whole suite in CI, including the MongoDB tests against a throwaway replica
-set.
+set. The live Auth0 tests are skipped there.
 
 ## Deployment
 
@@ -149,7 +157,8 @@ kinsmen-barbershop/
 │   ├── Kinsmen.Api/            # booking API: endpoints, domain rules, MongoDB store, Dockerfile
 │   └── Kinsmen.Web/            # MVC front end: controllers, Razor views, API client, Dockerfile
 ├── tests/
-│   └── Kinsmen.Api.Tests/      # rule, HTTP/auth and real-MongoDB tests
+│   ├── Kinsmen.Api.Tests/      # rule, HTTP/auth and real-MongoDB tests
+│   └── Kinsmen.Web.Tests/      # login redirect safety and authorization tests
 ├── docs/
 │   ├── backend/                # API contract, OpenAPI, architecture, schemas, validation record
 │   ├── auth/AUTH0-SETUP.md     # Auth0 tenant, roles and web app integration

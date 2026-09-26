@@ -80,8 +80,9 @@ jobs:
           docker build -f src/Kinsmen.Api/Dockerfile -t kinsmen-api .
           docker build -f src/Kinsmen.Web/Dockerfile -t kinsmen-web .
 
-      # Start each image with production settings and wait for an HTTP 200. The API's identity
-      # provider is only contacted when a token is validated, so a placeholder authority is enough to boot.
+      # Start each image with production settings and wait for an HTTP 200. Identity providers are only
+      # contacted when a token is validated or a user logs in, so placeholder Auth0 values are enough to boot
+      # (the web app refuses to start without a client secret, as it should in production).
       - name: Smoke test images
         run: |
           docker run -d --name api -p 127.0.0.1:8081:8080 \
@@ -92,6 +93,9 @@ jobs:
           docker run -d --name web -p 127.0.0.1:8082:8080 \
             -e ASPNETCORE_ENVIRONMENT=Production \
             -e Api__BaseUrl=http://127.0.0.1:1/ \
+            -e Auth0__Domain=identity.example.invalid \
+            -e Auth0__ClientId=ci-placeholder \
+            -e Auth0__ClientSecret=ci-placeholder-not-a-secret \
             kinsmen-web
           check() {
             for i in $(seq 1 30); do
