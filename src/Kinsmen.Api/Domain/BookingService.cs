@@ -52,7 +52,7 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
             throw DomainError.Invalid($"Start must align to a {policy.SlotMinutes}-minute slot.");
     }
 
-    private static bool WithinHours(Barber barber, DateTime start, DateTime end)
+    internal static bool WithinHours(Barber barber, DateTime start, DateTime end)
     {
         var a = TimeZoneInfo.ConvertTimeFromUtc(start, ShopZone);
         var b = TimeZoneInfo.ConvertTimeFromUtc(end, ShopZone);

@@ -154,6 +154,28 @@ internal sealed class MongoSession(IMongoDatabase db, IClientSessionHandle? sess
     }
     public Task SaveBlock(TimeBlock block) => db.GetCollection<TimeBlock>("timeBlocks").InsertOneAsync(WriteSession, block, cancellationToken: ct);
     public async Task DeleteBlock(string id) => await db.GetCollection<TimeBlock>("timeBlocks").DeleteOneAsync(WriteSession, x => x.Id == id, cancellationToken: ct);
+    public async Task SaveService(ServiceItem service, bool insert = false)
+    {
+        var collection = db.GetCollection<ServiceItem>("services");
+        if (insert) { await collection.InsertOneAsync(WriteSession, service, cancellationToken: ct); return; }
+        var result = await collection.ReplaceOneAsync(WriteSession, x => x.Id == service.Id, service, cancellationToken: ct);
+        if (result.MatchedCount != 1) throw DomainError.Missing();
+    }
+    public async Task SaveBarber(Barber barber, bool insert = false)
+    {
+        var collection = db.GetCollection<Barber>("barbers");
+        try
+        {
+            if (insert) { await collection.InsertOneAsync(WriteSession, barber with { Revision = 0 }, cancellationToken: ct); return; }
+            // Update profile fields only; the revision is incremented, never overwritten, to keep schedule locking intact.
+            var result = await collection.UpdateOneAsync(WriteSession, x => x.Id == barber.Id, Builders<Barber>.Update
+                .Set(x => x.Name, barber.Name).Set(x => x.UserId, barber.UserId).Set(x => x.Hours, barber.Hours)
+                .Set(x => x.Active, barber.Active).Inc(x => x.Revision, 1), cancellationToken: ct);
+            if (result.MatchedCount != 1) throw DomainError.Missing();
+        }
+        catch (MongoWriteException e) when (e.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        { throw new DuplicateBarberUserException(); }
+    }
 }
 
 public static class DemoData

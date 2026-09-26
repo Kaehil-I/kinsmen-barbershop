@@ -19,9 +19,14 @@ public sealed class TestStore : IBookingStore, IBookingSession
     public async Task<T> Write<T>(Func<IBookingSession, Task<T>> action, CancellationToken ct = default)
     {
         await gate.WaitAsync(ct);
-        var saved = Saved.ToList(); var blocks = Blocked.ToList();
+        var saved = Saved.ToList(); var blocks = Blocked.ToList(); var catalog = Catalog.ToList(); var staff = Staff.ToList();
         try { return await action(this); }
-        catch { Saved = saved; Blocked = blocks; throw; }
+        catch
+        {
+            Saved = saved; Blocked = blocks;
+            Catalog.Clear(); Catalog.AddRange(catalog); Staff.Clear(); Staff.AddRange(staff);
+            throw;
+        }
         finally { gate.Release(); }
     }
     public Task<List<ServiceItem>> Services() => Task.FromResult(Catalog.ToList());
@@ -41,6 +46,24 @@ public sealed class TestStore : IBookingStore, IBookingSession
     }
     public Task SaveBlock(TimeBlock b) { Blocked.Add(b); return Task.CompletedTask; }
     public Task DeleteBlock(string id) { Blocked.RemoveAll(x => x.Id == id); return Task.CompletedTask; }
+    public Task SaveService(ServiceItem service, bool insert = false)
+    {
+        var index = Catalog.FindIndex(x => x.Id == service.Id);
+        if (insert) Catalog.Add(service);
+        else if (index < 0) throw DomainError.Missing();
+        else Catalog[index] = service;
+        return Task.CompletedTask;
+    }
+    public Task SaveBarber(Barber barber, bool insert = false)
+    {
+        // Mirrors the unique barbers.userId index.
+        if (Staff.Any(x => x.Id != barber.Id && x.UserId == barber.UserId)) throw new DuplicateBarberUserException();
+        var index = Staff.FindIndex(x => x.Id == barber.Id);
+        if (insert) Staff.Add(barber with { Revision = 0 });
+        else if (index < 0) throw DomainError.Missing();
+        else Staff[index] = barber with { Revision = Staff[index].Revision + 1 };
+        return Task.CompletedTask;
+    }
 }
 public sealed class TestClock : TimeProvider
 {
