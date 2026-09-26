@@ -36,7 +36,7 @@ public sealed class MongoBookingStore : IBookingStore
     public async Task Initialize(CancellationToken ct = default)
     {
         // Pre-create collections outside transactions, with server-side JSON-schema validation.
-        foreach (var name in new[] { "services", "barbers", "bookings", "timeBlocks" })
+        foreach (var name in new[] { "services", "barbers", "bookings", "timeBlocks", "reviews" })
         {
             var names = await (await db.ListCollectionNamesAsync(cancellationToken: ct)).ToListAsync(ct);
             if (!names.Contains(name))
@@ -69,6 +69,8 @@ public sealed class MongoBookingStore : IBookingStore
             Builders<TimeBlock>.IndexKeys.Ascending(x => x.BarberId).Ascending(x => x.StartUtc).Ascending(x => x.EndUtc)), cancellationToken: ct);
         await db.GetCollection<Barber>("barbers").Indexes.CreateOneAsync(new CreateIndexModel<Barber>(
             Builders<Barber>.IndexKeys.Ascending(x => x.UserId), new CreateIndexOptions { Unique = true }), cancellationToken: ct);
+        await db.GetCollection<Review>("reviews").Indexes.CreateOneAsync(new CreateIndexModel<Review>(
+    Builders<Review>.IndexKeys.Ascending(x => x.BookingId), new CreateIndexOptions { Unique = true }), cancellationToken: ct);
     }
 
     public async Task SeedDemo(CancellationToken ct = default)
@@ -95,7 +97,7 @@ public sealed class MongoBookingStore : IBookingStore
         if (!hello.Contains("setName") && hello.GetValue("msg", "").AsString != "isdbgrid")
             throw new DomainError(503, "database_not_ready", "MongoDB must support transactions (replica set or sharded cluster).");
         var names = await (await db.ListCollectionNamesAsync(cancellationToken: ct)).ToListAsync(ct);
-        if (new[] { "services", "barbers", "bookings", "timeBlocks" }.Any(n => !names.Contains(n)))
+        if (new[] { "services", "barbers", "bookings", "timeBlocks", "reviews" }.Any(n => !names.Contains(n)))
             throw new DomainError(503, "database_not_ready", "Initialize the application database before accepting bookings.");
     }
 }
@@ -175,6 +177,15 @@ internal sealed class MongoSession(IMongoDatabase db, IClientSessionHandle? sess
         }
         catch (MongoWriteException e) when (e.WriteError.Category == ServerErrorCategory.DuplicateKey)
         { throw new DuplicateBarberUserException(); }
+    }
+
+    public async Task<Review?> ReviewByBookingId(string bookingId) => (await Find("reviews", Builders<Review>.Filter.Eq(x => x.BookingId, bookingId))).SingleOrDefault();
+    public Task<List<Review>> ReviewsForBarber(string barberId) => Find("reviews", Builders<Review>.Filter.Eq(x => x.BarberId, barberId));
+    public async Task SaveReview(Review review)
+    {
+        try { await db.GetCollection<Review>("reviews").InsertOneAsync(WriteSession, review, cancellationToken: ct); }
+        catch (MongoWriteException e) when (e.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        { throw new DuplicateReviewException(); }
     }
 }
 

@@ -2,6 +2,7 @@ using Kinsmen.Web.ApiClient;
 using Kinsmen.Web.Helpers;
 using Kinsmen.Web.Models.Api;
 using Kinsmen.Web.Models.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kinsmen.Web.Controllers;
@@ -97,6 +98,7 @@ public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
     /// Expects an Idempotency-Key header - see API-CONTRACT.md "Safe retries" and
     /// wwwroot/js/booking.js for how the key's lifetime is managed client-side.</summary>
     [HttpPost]
+    [Authorize]
     public async Task<IActionResult> Create(
         [FromBody] CreateBookingAjaxRequest request, CancellationToken cancellationToken)
     {

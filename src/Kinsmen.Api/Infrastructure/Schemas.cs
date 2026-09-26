@@ -37,6 +37,15 @@ public static class Schemas
           "_id":{"bsonType":"string"},"barberId":{"bsonType":"string"},"startUtc":{"bsonType":"date"},"endUtc":{"bsonType":"date"},
           "reason":{"bsonType":"string","minLength":1,"maxLength":200}}}
         """,
+        "reviews" => """
+        {"bsonType":"object","required":["_id","bookingId","customerId","barberId","rating","createdUtc"],"properties":{
+          "_id":{"bsonType":"string"},"bookingId":{"bsonType":"string","minLength":1},
+          "customerId":{"bsonType":"string","minLength":1},"barberId":{"bsonType":"string","minLength":1},
+          "rating":{"bsonType":"int","minimum":1,"maximum":5},
+          "comment":{"bsonType":["string","null"],"maxLength":1000},
+          "createdUtc":{"bsonType":"date"}}}
+        """,
+
         _ => throw new ArgumentOutOfRangeException(nameof(name))
     };
 }

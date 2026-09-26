@@ -2,6 +2,7 @@ using Kinsmen.Web.ApiClient;
 using Kinsmen.Web.Helpers;
 using Kinsmen.Web.Models.Api;
 using Kinsmen.Web.Models.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kinsmen.Web.Controllers;
@@ -10,6 +11,8 @@ namespace Kinsmen.Web.Controllers;
 /// (RescheduleAvailability, Reschedule, Cancel). Same reasoning as BookingController
 /// for why this proxies through the server rather than the page's JS calling
 /// src/Kinsmen.Api directly (CORS, keeping the bearer token server-side).</summary>
+
+[Authorize]
 public sealed class MyBookingsController(IKinsmenApiClient apiClient) : Controller
 {
     private static readonly TimeZoneInfo ShopTimeZone = ShopTimeZoneProvider.Instance;

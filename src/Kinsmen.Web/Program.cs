@@ -1,3 +1,4 @@
+using Auth0.AspNetCore.Authentication;
 using Kinsmen.Web.ApiClient;
 using Kinsmen.Web.Auth;
 using Microsoft.Extensions.Options;
@@ -14,24 +15,36 @@ builder.Services.AddControllersWithViews()
     // ever sees the incoming side.
     .AddJsonOptions(options =>
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.Configure<ApiClientOptions>(builder.Configuration.GetSection("Api"));
-builder.Services.Configure<DevTokenOptions>(builder.Configuration.GetSection("DevTokens"));
 
-// Swappable seam: DevelopmentTokenProvider reads Zario's short-lived dev tokens from
-// config for now. Replace with a session/claims-based provider once Kyra's real login
-// exists — nothing else here needs to change (see Auth/ITokenProvider.cs).
-builder.Services.AddScoped<ITokenProvider, DevelopmentTokenProvider>();
+builder.Services
+    .AddAuth0WebAppAuthentication(options =>
+    {
+        options.Domain = builder.Configuration["Auth0:Domain"]!;
+        options.ClientId = builder.Configuration["Auth0:ClientId"]!;
+        options.ClientSecret = builder.Configuration["Auth0:ClientSecret"];
+    })
+    .WithAccessToken(options =>
+    {
+        options.Audience = builder.Configuration["Auth0:Audience"];
+        options.UseRefreshTokens = true;
+    });
+
+// Auth0TokenProvider is the seam DevelopmentTokenProvider used to fill — nothing else
+// here needs to change.
+builder.Services.AddScoped<ITokenProvider, Auth0TokenProvider>();
 builder.Services.AddTransient<BearerTokenHandler>();
 
 builder.Services.AddHttpClient<IKinsmenApiClient, KinsmenApiClient>((serviceProvider, client) =>
+{
+    var apiOptions = serviceProvider.GetRequiredService<IOptions<ApiClientOptions>>().Value;
+    if (!string.IsNullOrWhiteSpace(apiOptions.BaseUrl))
     {
-        var apiOptions = serviceProvider.GetRequiredService<IOptions<ApiClientOptions>>().Value;
-        if (!string.IsNullOrWhiteSpace(apiOptions.BaseUrl))
-        {
-            client.BaseAddress = new Uri(apiOptions.BaseUrl);
-        }
-    })
+        client.BaseAddress = new Uri(apiOptions.BaseUrl);
+    }
+})
     .AddHttpMessageHandler<BearerTokenHandler>();
 
 var app = builder.Build();
@@ -46,6 +59,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(
@@ -53,3 +67,5 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
+
+public partial class Program;
