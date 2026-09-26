@@ -7,19 +7,19 @@
     };
 }
 
-<section class="book-head" style="padding: 56px 0 0;">
+<section class="page-intro">
     <div class="wrap">
         <div class="tag">Book a Chair</div>
-        <h2>Choose your barber, day and time</h2>
+        <h1>Choose your barber, day and time</h1>
         <p>Availability shown below is live from the booking system &mdash; pick a barber (or leave it open), your service(s), then a date and time.</p>
     </div>
 </section>
 
-@if (Model.ApiUnavailable)
+@if (Model.ErrorMessage is not null)
 {
     <section>
         <div class="wrap" style="padding-bottom: 80px;">
-            <p class="price-note">Couldn't reach the booking service just now &mdash; make sure the API is running (see docs/backend/GETTING-STARTED.md) and refresh.</p>
+            <p class="price-note">@Model.ErrorMessage</p>
         </div>
     </section>
 }
@@ -45,7 +45,7 @@ else
                                 <option value="">Any available barber</option>
                                 @foreach (var barber in Model.Barbers)
                                 {
-                                    <option value="@barber.Id">@barber.Name</option>
+                                    <option value="@barber.Id" selected="@(barber.Id == Model.PreselectedBarberId)">@barber.Name</option>
                                 }
                             </select>
                         </div>
@@ -58,8 +58,11 @@ else
                             @for (var i = 0; i < Model.Services.Count; i++)
                             {
                                 var service = Model.Services[i];
+                                var isActive = Model.PreselectedServiceId is not null
+                                    ? service.Id == Model.PreselectedServiceId
+                                    : i == 0;
                                 <button type="button"
-                                        class="service-chip @(i == 0 ? "neo-pill-pressed active" : "neo-pill-raised")"
+                                        class="service-chip @(isActive ? "neo-pill-pressed active" : "neo-pill-raised")"
                                         data-service-id="@service.Id">@service.Name</button>
                             }
                         </div>
@@ -88,6 +91,13 @@ else
                     </div>
                 </div>
 
+                <div class="panel neo-raised">
+                    <label class="accent-teal">Note for your barber <span style="text-transform:none; letter-spacing:0;">&mdash; optional</span></label>
+                    <div class="input-shell neo-pressed review-box">
+                        <textarea id="booking-notes" maxlength="500" placeholder="e.g. a style reference, or anything they should know"></textarea>
+                    </div>
+                </div>
+
                 <div class="panel neo-raised booking-summary" id="summary-panel">
                     <div class="summary-text" id="summary-text">
                         Select a barber, date and time to continue.
@@ -112,8 +122,10 @@ else
     <script>
         window.kinsmenBooking = {
             services: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Services, jsonOptions)),
-            barbers: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Barbers, jsonOptions))
+            barbers: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Barbers, jsonOptions)),
+            preselectedServiceId: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PreselectedServiceId, jsonOptions))
         };
     </script>
+    <script src="~/js/auth-fetch.js" asp-append-version="true"></script>
     <script src="~/js/booking.js" asp-append-version="true"></script>
 }
