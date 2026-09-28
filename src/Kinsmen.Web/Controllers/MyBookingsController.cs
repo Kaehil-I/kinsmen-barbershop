@@ -33,10 +33,13 @@ public sealed class MyBookingsController(IKinsmenApiClient apiClient) : Controll
                 BarberNamesById = barbers.ToDictionary(b => b.Id, b => b.Name)
             });
         }
-        catch (Exception ex) when (ex is KinsmenApiException or HttpRequestException)
+        catch (KinsmenApiException ex)
         {
-            // See ServicesController - same reasoning, full handling in step 8.
-            return View(new MyBookingsPageViewModel { ApiUnavailable = true });
+            return View(new MyBookingsPageViewModel { ErrorMessage = ApiErrorMessages.For(ex) });
+        }
+        catch (HttpRequestException)
+        {
+            return View(new MyBookingsPageViewModel { ErrorMessage = ApiErrorMessages.ForConnectionFailure() });
         }
     }
 
@@ -68,11 +71,11 @@ public sealed class MyBookingsController(IKinsmenApiClient apiClient) : Controll
         }
         catch (KinsmenApiException ex)
         {
-            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ex.Message });
+            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ApiErrorMessages.For(ex) });
         }
         catch (HttpRequestException)
         {
-            return StatusCode(503, new { message = "Couldn't reach the booking service." });
+            return StatusCode(503, new { message = ApiErrorMessages.ForConnectionFailure() });
         }
     }
 
@@ -87,13 +90,14 @@ public sealed class MyBookingsController(IKinsmenApiClient apiClient) : Controll
         }
         catch (KinsmenApiException ex)
         {
-            // 409 stale_version is the one this step is specifically about - the
-            // message already says to refresh, which the client-side handler acts on.
-            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ex.Message });
+            // 409 stale_version gets its own message in my-bookings.js (result.body
+            // still carries this one as a fallback for any other status code that
+            // reaches this same catch).
+            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ApiErrorMessages.For(ex) });
         }
         catch (HttpRequestException)
         {
-            return StatusCode(503, new { message = "Couldn't reach the booking service." });
+            return StatusCode(503, new { message = ApiErrorMessages.ForConnectionFailure() });
         }
     }
 
@@ -108,11 +112,11 @@ public sealed class MyBookingsController(IKinsmenApiClient apiClient) : Controll
         }
         catch (KinsmenApiException ex)
         {
-            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ex.Message });
+            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ApiErrorMessages.For(ex) });
         }
         catch (HttpRequestException)
         {
-            return StatusCode(503, new { message = "Couldn't reach the booking service." });
+            return StatusCode(503, new { message = ApiErrorMessages.ForConnectionFailure() });
         }
     }
 

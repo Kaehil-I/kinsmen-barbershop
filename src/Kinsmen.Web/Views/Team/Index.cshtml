@@ -1,7 +1,7 @@
 @model List<Barber>
 @{
     ViewData["Title"] = "Your Barber";
-    var apiUnavailable = ViewData["ApiUnavailable"] is true;
+    var errorMessage = ViewData["ErrorMessage"] as string;
 }
 
 <section class="page-intro">
@@ -14,9 +14,9 @@
 
 <section>
     <div class="wrap">
-        @if (apiUnavailable)
+        @if (errorMessage is not null)
         {
-            <p class="price-note">Couldn't reach the booking service just now &mdash; make sure the API is running (see docs/backend/GETTING-STARTED.md) and refresh.</p>
+            <p class="price-note">@errorMessage</p>
         }
         else if (Model.Count == 0)
         {
@@ -30,7 +30,7 @@
                     <div class="avatar"></div>
                     <div class="tname">@barber.Name</div>
                     <div class="tspec">@WorkingHoursFormatter.Format(barber.Hours)</div>
-                    <a href="#" class="book-link neo-pill-raised">Book with @barber.Name</a>
+                    <a asp-controller="Booking" asp-action="Index" asp-route-barberId="@barber.Id" class="book-link neo-pill-raised">Book with @barber.Name</a>
                 </div>
             }
         </div>

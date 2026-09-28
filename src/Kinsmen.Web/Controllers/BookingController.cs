@@ -11,30 +11,44 @@ namespace Kinsmen.Web.Controllers;
 /// (Availability, Create). Runs server-side rather than having the page's JS call
 /// src/Kinsmen.Api directly, for two reasons: the API's CORS isn't opened to arbitrary
 /// origins (API-CONTRACT.md, "Error handling for Greg"), and this keeps the bearer
-/// token out of browser-visible code entirely — BearerTokenHandler attaches it
+/// token out of browser-visible code entirely - BearerTokenHandler attaches it
 /// server-side via the same IKinsmenApiClient every other controller uses.</summary>
 public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
 {
     private static readonly TimeZoneInfo ShopTimeZone = ShopTimeZoneProvider.Instance;
 
-    public async Task<IActionResult> Index(CancellationToken cancellationToken)
+    public async Task<IActionResult> Index(
+        [FromQuery] string? serviceId, [FromQuery] string? barberId, CancellationToken cancellationToken)
     {
         try
         {
             var services = await apiClient.GetServicesAsync(cancellationToken);
             var barbers = await apiClient.GetBarbersAsync(cancellationToken);
-            return View(new BookingPageViewModel { Services = services, Barbers = barbers });
+
+            return View(new BookingPageViewModel
+            {
+                Services = services,
+                Barbers = barbers,
+                // Only honour these if they actually match something real - an old or
+                // tampered-with link shouldn't silently point at a service/barber that
+                // no longer exists.
+                PreselectedServiceId = services.Any(s => s.Id == serviceId) ? serviceId : null,
+                PreselectedBarberId = barbers.Any(b => b.Id == barberId) ? barberId : null
+            });
         }
-        catch (Exception ex) when (ex is KinsmenApiException or HttpRequestException)
+        catch (KinsmenApiException ex)
         {
-            // See ServicesController — same reasoning, full handling in step 8.
-            return View(new BookingPageViewModel { ApiUnavailable = true });
+            return View(new BookingPageViewModel { ErrorMessage = ApiErrorMessages.For(ex) });
+        }
+        catch (HttpRequestException)
+        {
+            return View(new BookingPageViewModel { ErrorMessage = ApiErrorMessages.ForConnectionFailure() });
         }
     }
 
     /// <summary>JSON endpoint the booking page's JS calls whenever the customer's
     /// barber/services/date selection changes. Returns shop-local time strings so the
-    /// page never has to do timezone math itself — just startUtc to echo back on submit.</summary>
+    /// page never has to do timezone math itself - just startUtc to echo back on submit.</summary>
     [HttpGet]
     public async Task<IActionResult> Availability(
         [FromQuery] DateOnly date,
@@ -56,15 +70,15 @@ public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
         }
         catch (KinsmenApiException ex)
         {
-            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ex.Message });
+            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ApiErrorMessages.For(ex) });
         }
         catch (HttpRequestException)
         {
-            return StatusCode(503, new { message = "Couldn't reach the booking service." });
+            return StatusCode(503, new { message = ApiErrorMessages.ForConnectionFailure() });
         }
 
         // With "any available barber" selected, different barbers can open up the same
-        // start time — the customer only cares that a slot exists, not which barber's
+        // start time - the customer only cares that a slot exists, not which barber's
         // calendar it came from (the create call still passes barberId through as
         // whatever the customer chose, so the API resolves that assignment itself).
         var distinctSlots = slots
@@ -81,7 +95,7 @@ public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
     }
 
     /// <summary>JSON endpoint the booking page's JS posts to when the customer confirms.
-    /// Expects an Idempotency-Key header — see API-CONTRACT.md "Safe retries" and
+    /// Expects an Idempotency-Key header - see API-CONTRACT.md "Safe retries" and
     /// wwwroot/js/booking.js for how the key's lifetime is managed client-side.</summary>
     [HttpPost]
     [Authorize]
@@ -105,7 +119,8 @@ public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
         {
             BarberId = string.IsNullOrEmpty(request.BarberId) ? null : request.BarberId,
             ServiceIds = request.ServiceIds,
-            Start = start
+            Start = start,
+            Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes
         };
 
         try
@@ -122,15 +137,15 @@ public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
         }
         catch (KinsmenApiException ex)
         {
-            // 409 booking_conflict is the one this step is specifically about — surface
-            // it plainly so the page can tell the customer to pick another slot. Every
-            // other code still comes through with its message; the full per-code UI
-            // treatment across all screens is step 8.
-            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ex.Message });
+            // 409 booking_conflict gets its own message in booking.js (result.body
+            // still carries this one as a fallback for any other status code that
+            // reaches this same catch). Every other code now maps through
+            // ApiErrorMessages for consistent wording with the rest of the app.
+            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ApiErrorMessages.For(ex) });
         }
         catch (HttpRequestException)
         {
-            return StatusCode(503, new { message = "Couldn't reach the booking service." });
+            return StatusCode(503, new { message = ApiErrorMessages.ForConnectionFailure() });
         }
     }
 }

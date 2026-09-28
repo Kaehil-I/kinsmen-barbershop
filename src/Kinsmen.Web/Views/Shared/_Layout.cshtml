@@ -17,13 +17,19 @@
                 Kinsman
             </a>
             <nav class="nav-links" id="nav-links">
-                @* Location stays a placeholder — no location page yet. My Bookings has
-                   no real login to gate it on yet, so it's just a plain link for now. *@
+                @* Location stays a placeholder — no location page yet. *@
                 <a asp-controller="Booking" asp-action="Index">Book a Chair</a>
                 <a asp-controller="Services" asp-action="Index">Services</a>
                 <a asp-controller="Team" asp-action="Index">Team</a>
-                <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
-                <a href="#">Location</a>
+                @if (!User.IsInRole("Barber") && !User.IsInRole("Admin"))
+                {
+                    <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
+                }
+                @if (User.IsInRole("Barber") || User.IsInRole("Admin"))
+                {
+                    <a asp-controller="BarberSchedule" asp-action="Index">My Schedule</a>
+                }
+                <a asp-controller="Location" asp-action="Index">Location</a>
             </nav>
             <div class="nav-auth" id="nav-auth">
                 @if (User.Identity?.IsAuthenticated == true)
@@ -47,10 +53,15 @@
             <a asp-controller="Booking" asp-action="Index">Book a Chair</a>
             <a asp-controller="Services" asp-action="Index">Services</a>
             <a asp-controller="Team" asp-action="Index">Team</a>
-            <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
-            <a href="#">Location</a>
-            <hr />
-            
+            @if (!User.IsInRole("Barber") && !User.IsInRole("Admin"))
+            {
+                <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
+            }
+            @if (User.IsInRole("Barber") || User.IsInRole("Admin"))
+            {
+                <a asp-controller="BarberSchedule" asp-action="Index">My Schedule</a>
+            }
+            <a asp-controller="Location" asp-action="Index">Location</a>
             <hr />
             @if (User.Identity?.IsAuthenticated == true)
             {

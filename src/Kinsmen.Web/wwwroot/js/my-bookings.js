@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', function () {
             params.set('id', row.dataset.bookingId);
             params.set('date', localDateKey(state.selectedDate));
 
-            fetch('/MyBookings/RescheduleAvailability?' + params.toString())
+            authFetch('/MyBookings/RescheduleAvailability?' + params.toString())
                 .then(function (response) {
                     if (!response.ok) throw new Error('availability_failed');
                     return response.json();
@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function () {
             confirmBtn.disabled = true;
             errorText.style.display = 'none';
 
-            fetch('/MyBookings/Reschedule/' + row.dataset.bookingId, {
+            authFetch('/MyBookings/Reschedule/' + row.dataset.bookingId, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -264,7 +264,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var cancelBtn = row.querySelector('.cancel-btn');
         cancelBtn.disabled = true;
 
-        fetch('/MyBookings/Cancel/' + row.dataset.bookingId, {
+        authFetch('/MyBookings/Cancel/' + row.dataset.bookingId, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ version: parseInt(row.dataset.version, 10) })
