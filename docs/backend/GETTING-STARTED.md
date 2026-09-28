@@ -19,6 +19,8 @@ docker compose -f compose.mongo.yaml up -d --wait
 
 The database binds only to `127.0.0.1:27017`, uses replica-set name `rs0`, and stores data in a named local Docker volume. This unauthenticated database setup is for development only. Use authenticated connections and appropriate network restrictions for a hosted database. `docker compose -f compose.mongo.yaml down` stops the service and retains its data.
 
+If MongoDB is also installed on your machine as a Windows service, it already occupies port 27017 and the command above fails with "ports are not available". Use the alternative in the [README](../../README.md#1-start-and-initialise-the-database) (a container on port 27018) instead of stopping your own service.
+
 If using another development replica set, set `Mongo__ConnectionString` accordingly. Use a dedicated development database, never a client's production database for seed or smoke tests.
 
 ## Build, initialize and run
@@ -47,7 +49,10 @@ dotnet build --no-restore
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
 $env:Mongo__ConnectionString = 'mongodb://127.0.0.1:27017/?replicaSet=rs0'
 $env:Mongo__Database = 'kinsmen_dev'
-$env:Auth__DevelopmentSigningKey = [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+# Works in both Windows PowerShell 5.1 and PowerShell 7 (the static GetBytes(32) overload is PowerShell 7 only).
+$keyBytes = New-Object byte[] 32
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($keyBytes)
+$env:Auth__DevelopmentSigningKey = [Convert]::ToBase64String($keyBytes)
 dotnet run --project src/Kinsmen.Api --no-build -- --initialize --seed-demo
 ```
 
