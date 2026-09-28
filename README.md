@@ -83,14 +83,14 @@ $env:Auth__Authority = 'https://kinsmen.eu.auth0.com/'
 dotnet run --project src/Kinsmen.Api --no-build
 ```
 
-The API listens on `http://localhost:54427` (and `https://localhost:54426`), which is where the web app
-expects it. Check it with `Invoke-RestMethod http://localhost:54427/health/ready` and
-`Invoke-RestMethod http://localhost:54427/api/services`.
+The API listens on `http://127.0.0.1:5080`, which is where the web app expects it (`Api:BaseUrl`) and
+what the scripts and backend docs use. Check it with `Invoke-RestMethod http://127.0.0.1:5080/health/ready`
+and `Invoke-RestMethod http://127.0.0.1:5080/api/services`.
 
 For API-only testing without Auth0, leave `Auth__Authority` unset and use a local signing key with
 short-lived test tokens instead, as described in
 [`docs/backend/GETTING-STARTED.md`](docs/backend/GETTING-STARTED.md). These tokens only work in
-Development and expire after 30 minutes. (That guide runs the API on port 5080; pass `--urls` to match.)
+Development and expire after 30 minutes.
 
 ### 3. Run the web app
 
