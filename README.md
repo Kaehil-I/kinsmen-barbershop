@@ -74,6 +74,22 @@ This creates the collections, validators and indexes, and adds synthetic demo se
 safe to run again. For Atlas, use `./scripts/Initialize-Atlas-Development.ps1` instead, which prompts for
 the connection string without saving it.
 
+**Already have MongoDB installed?** A local MongoDB Windows service occupies port 27017, so the compose
+command fails with "ports are not available" (and a standalone server can't run the booking transactions
+anyway). Leave your service alone and run the replica set on port 27018 instead:
+
+```powershell
+docker run -d --name kinsmen-mongo -p 127.0.0.1:27018:27017 mongo:8.0.15 --replSet rs0 --bind_ip_all
+Start-Sleep 5
+docker exec kinsmen-mongo mongosh --quiet --eval "rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]})"
+Start-Sleep 3   # give the replica set a moment to elect itself primary
+$env:Mongo__ConnectionString = 'mongodb://127.0.0.1:27018/?directConnection=true'
+```
+
+Then continue with the `dotnet run ... --initialize --seed-demo` line above. `directConnection=true` matters:
+inside the container the replica set calls itself `localhost:27017`, which on your machine is the other
+MongoDB. Use the same connection string for `KINSMEN_TEST_MONGO` when running the database tests.
+
 ### 2. Run the API
 
 In the same terminal, point the API at Auth0 so it accepts signed-in users' tokens, then start it:
@@ -105,11 +121,13 @@ dotnet dev-certs https --trust
 Then, in a second terminal:
 
 ```powershell
-dotnet run --project src/Kinsmen.Web --launch-profile https
+dotnet run --project src/Kinsmen.Web
 ```
 
-The site opens at `https://localhost:7090`. Use the HTTPS profile: browsers reject the login cookies over
-plain HTTP. The Auth0 domain and client ID are in `src/Kinsmen.Web/appsettings.json`, and the API address
+The site opens at `https://localhost:7090` (the default HTTPS profile). Log in over HTTPS only: Auth0 only
+accepts the `https://localhost:7090/callback` address, and browsers reject the login cookies over plain
+HTTP. The `http` profile (`--launch-profile http`, `http://127.0.0.1:5090`) is fine for browsing public
+pages, but logging in from it fails at Auth0. The Auth0 domain and client ID are in `src/Kinsmen.Web/appsettings.json`, and the API address
 (`Api:BaseUrl`) is in `src/Kinsmen.Web/appsettings.Development.json`. See
 [Auth0 setup](docs/auth/AUTH0-SETUP.md) for roles and for linking a barber account.
 
