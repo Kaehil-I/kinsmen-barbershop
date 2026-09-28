@@ -22,32 +22,62 @@ public sealed class BarberScheduleController(IKinsmenApiClient apiClient) : Cont
     {
         try
         {
-            var from = DateTimeOffset.UtcNow;
-            var to = from.AddDays(31);
+            var now = DateTimeOffset.UtcNow;
+            var bookingWindow = ScheduleWindow.ForBookings(now);
+            var blockWindow = ScheduleWindow.ForBlocks(now);
+            var isAdmin = User.IsInRole("Admin");
 
-            // GET /api/bookings auto-scopes to "own schedule" for a Barber token
-            // (API-CONTRACT.md), so no barberId filter is passed here.
-            var bookings = await apiClient.GetBookingsAsync(from, to, barberId: null, cancellationToken);
-            var ordered = bookings.OrderBy(b => b.StartUtc).ToList();
+            // GET /api/bookings scopes itself to the caller: a barber gets their own
+            // bookings, an admin gets everyone's. A barber whose login isn't linked to any
+            // barber profile gets a 403 (handled below), not an empty list.
+            var bookings = await apiClient.GetBookingsAsync(
+                bookingWindow.From, bookingWindow.To, barberId: null, cancellationToken);
 
-            // The API has no endpoint that maps a staff token straight to its public
-            // barberId (only the internal, undocumented "staff subject -> barber.userId"
-            // mapping Zario's own docs mention) - so this infers it from an existing
-            // booking. If the barber has none in the next 31 days, time-block management
-            // can't be shown; the view explains this rather than silently doing nothing.
-            var myBarberId = ordered.FirstOrDefault()?.BarberId;
-
+            // Which barber is this? Not needed for an admin (they own no profile), and
+            // the resolver's probe would be meaningless for one - see its comments.
+            Barber? me = null;
             List<TimeBlock> blocks = [];
-            if (myBarberId is not null)
+            var barberNames = new Dictionary<string, string>();
+
+            if (isAdmin)
             {
-                blocks = await apiClient.GetBarberBlocksAsync(myBarberId, from, to, cancellationToken);
+                // An admin sees every barber's bookings, so each card has to say whose it
+                // is. The admin list rather than the public one: it includes deactivated
+                // barbers, so an old booking with one still shows a name.
+                var allBarbers = await apiClient.GetAdminBarbersAsync(cancellationToken);
+                barberNames = allBarbers.ToDictionary(b => b.Id, b => b.Name);
+            }
+            else
+            {
+                var barbers = await apiClient.GetBarbersAsync(cancellationToken);
+                me = await BarberIdentityResolver.FindOwnBarberAsync(
+                    apiClient, barbers, blockWindow.From, blockWindow.From.AddDays(1), cancellationToken);
+
+                if (me is not null)
+                {
+                    blocks = await apiClient.GetBarberBlocksAsync(
+                        me.Id, blockWindow.From, blockWindow.To, cancellationToken);
+                }
             }
 
             return View(new BarberSchedulePageViewModel
             {
-                Bookings = ordered,
+                Bookings = [.. bookings.OrderBy(b => b.StartUtc)],
                 Blocks = [.. blocks.OrderBy(b => b.StartUtc)],
-                MyBarberId = myBarberId
+                MyBarberId = me?.Id,
+                MyBarberName = me?.Name,
+                IsAdmin = isAdmin,
+                BarberNamesById = barberNames
+            });
+        }
+        catch (KinsmenApiException ex) when (ex.StatusCode == 403)
+        {
+            // Role is Barber but the API found no barber profile linked to this login.
+            return View(new BarberSchedulePageViewModel
+            {
+                ErrorMessage = "Your account has the Barber role but isn't linked to a barber " +
+                               "profile yet. An admin needs to link it (Admin > Barbers) before " +
+                               "your schedule can load."
             });
         }
         catch (KinsmenApiException ex)
