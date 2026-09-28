@@ -1,3 +1,14 @@
+@{
+    // Which navigation to show. The rules, by account:
+    //   - Staff (barbers and admins) don't book appointments, so Book a Chair and
+    //     My Bookings are left out, and the public Location page isn't offered either.
+    //   - Barbers also don't need the Team page. Admins keep it.
+    // This is only about what's offered: the real protection is [Authorize] on each
+    // controller and the API's own rules, not whether a link is visible.
+    var isAdmin = User.IsInRole("Admin");
+    var isBarber = User.IsInRole("Barber");
+    var isStaff = User.IsStaff();
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -17,19 +28,28 @@
                 Kinsman
             </a>
             <nav class="nav-links" id="nav-links">
-                @* Location stays a placeholder — no location page yet. *@
-                <a asp-controller="Booking" asp-action="Index">Book a Chair</a>
-                <a asp-controller="Services" asp-action="Index">Services</a>
-                <a asp-controller="Team" asp-action="Index">Team</a>
-                @if (!User.IsInRole("Barber") && !User.IsInRole("Admin"))
+                @if (isAdmin)
                 {
-                    <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
+                    <a asp-controller="Admin" asp-action="Index">Admin</a>
                 }
-                @if (User.IsInRole("Barber") || User.IsInRole("Admin"))
+                @if (isStaff)
                 {
                     <a asp-controller="BarberSchedule" asp-action="Index">My Schedule</a>
                 }
-                <a asp-controller="Location" asp-action="Index">Location</a>
+                else
+                {
+                    <a asp-controller="Booking" asp-action="Index">Book a Chair</a>
+                }
+                <a asp-controller="Services" asp-action="Index">Services</a>
+                @if (!isBarber)
+                {
+                    <a asp-controller="Team" asp-action="Index">Team</a>
+                }
+                @if (!isStaff)
+                {
+                    <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
+                    <a asp-controller="Location" asp-action="Index">Location</a>
+                }
             </nav>
             <div class="nav-auth" id="nav-auth">
                 @if (User.Identity?.IsAuthenticated == true)
@@ -50,18 +70,28 @@
             </button>
         </div>
         <div class="mobile-menu" id="mobile-menu">
-            <a asp-controller="Booking" asp-action="Index">Book a Chair</a>
-            <a asp-controller="Services" asp-action="Index">Services</a>
-            <a asp-controller="Team" asp-action="Index">Team</a>
-            @if (!User.IsInRole("Barber") && !User.IsInRole("Admin"))
+            @if (isAdmin)
             {
-                <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
+                <a asp-controller="Admin" asp-action="Index">Admin</a>
             }
-            @if (User.IsInRole("Barber") || User.IsInRole("Admin"))
+            @if (isStaff)
             {
                 <a asp-controller="BarberSchedule" asp-action="Index">My Schedule</a>
             }
-            <a asp-controller="Location" asp-action="Index">Location</a>
+            else
+            {
+                <a asp-controller="Booking" asp-action="Index">Book a Chair</a>
+            }
+            <a asp-controller="Services" asp-action="Index">Services</a>
+            @if (!isBarber)
+            {
+                <a asp-controller="Team" asp-action="Index">Team</a>
+            }
+            @if (!isStaff)
+            {
+                <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
+                <a asp-controller="Location" asp-action="Index">Location</a>
+            }
             <hr />
             @if (User.Identity?.IsAuthenticated == true)
             {

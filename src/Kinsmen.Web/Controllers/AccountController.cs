@@ -37,5 +37,14 @@ public class AccountController : Controller
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
     }
 
+    // Where a signed-in visitor lands when [Authorize(Roles = ...)] turns them away (the
+    // cookie handler's default AccessDeniedPath) - without this action they got a 404.
+    [HttpGet]
+    public IActionResult AccessDenied()
+    {
+        Response.StatusCode = StatusCodes.Status403Forbidden;
+        return View();
+    }
+
     internal string SafeReturnUrl(string returnUrl) => Url.IsLocalUrl(returnUrl) ? returnUrl : "/";
 }

@@ -23,6 +23,38 @@ document.addEventListener('DOMContentLoaded', function () {
         jumpToTarget();
     }
 
+    // --- Cancelled bookings (hidden by default) -----------------------------------
+
+    // Cancelled appointments are clutter for someone working through their day, so the
+    // page renders them hidden; this toggle brings them back (and any date that only
+    // has cancelled bookings on it).
+    var cancelledBtn = document.getElementById('toggle-cancelled-btn');
+
+    if (cancelledBtn) {
+        var showingCancelled = false;
+        var cancelledCount = cancelledBtn.dataset.count;
+
+        cancelledBtn.addEventListener('click', function () {
+            showingCancelled = !showingCancelled;
+
+            scheduleList.querySelectorAll('.booking-row').forEach(function (row) {
+                if (row.dataset.status === 'Cancelled') {
+                    row.style.display = showingCancelled ? '' : 'none';
+                }
+            });
+            scheduleList.querySelectorAll('div[id^=day-]').forEach(function (dayGroup) {
+                if (dayGroup.dataset.allCancelled === 'true') {
+                    dayGroup.style.display = showingCancelled ? '' : 'none';
+                }
+            });
+
+            cancelledBtn.classList.toggle('active', showingCancelled);
+            cancelledBtn.textContent = showingCancelled
+                ? 'Hide cancelled'
+                : 'Show cancelled (' + cancelledCount + ')';
+        });
+    }
+
     // --- Booking status transitions ---------------------------------------------
 
     function badgeClassFor(status) {

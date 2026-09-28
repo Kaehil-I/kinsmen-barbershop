@@ -20,6 +20,10 @@ public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
     public async Task<IActionResult> Index(
         [FromQuery] string? serviceId, [FromQuery] string? barberId, CancellationToken cancellationToken)
     {
+        // Staff don't book appointments (a barber's booking attempt is refused outright, and
+        // an admin has no customer to book for), so this page is no use to them.
+        if (User.IsStaff()) return RedirectToAction("Index", "BarberSchedule");
+
         try
         {
             var services = await apiClient.GetServicesAsync(cancellationToken);

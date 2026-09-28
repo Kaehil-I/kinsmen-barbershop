@@ -30,7 +30,10 @@
                     <div class="avatar"></div>
                     <div class="tname">@barber.Name</div>
                     <div class="tspec">@WorkingHoursFormatter.Format(barber.Hours)</div>
-                    <a asp-controller="Booking" asp-action="Index" asp-route-barberId="@barber.Id" class="book-link neo-pill-raised">Book with @barber.Name</a>
+                    @if (!User.IsStaff())
+                    {
+                        <a asp-controller="Booking" asp-action="Index" asp-route-barberId="@barber.Id" class="book-link neo-pill-raised">Book with @barber.Name</a>
+                    }
                 </div>
             }
         </div>
