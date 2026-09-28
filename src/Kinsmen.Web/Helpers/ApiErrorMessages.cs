@@ -10,12 +10,10 @@ public static class ApiErrorMessages
 {
     public static string For(KinsmenApiException ex) => ex.StatusCode switch
     {
-        // Dev-token specific wording, since that's the actual cause every time this
-        // has come up in this project so far - there's no real login yet.
-        401 => "Your access token wasn't accepted - it may have expired (dev tokens " +
-               "last 30 minutes) or was generated against a different signing key than " +
-               "the one the API is currently running with. Generate a fresh token and " +
-               "update DevTokens in appsettings.Development.json.",
+        // Sign-in is Auth0 now (the old wording pointed at dev-token config that no
+        // longer exists). A 401 means the API rejected the access token this session
+        // carries - expired, or no longer valid - so logging in again is the fix.
+        401 => "Your session has expired or is no longer valid - please log in again.",
         403 => "You don't have permission to do that with the current account.",
         404 => "That couldn't be found.",
         429 => "Too many requests - wait a moment and try again.",
