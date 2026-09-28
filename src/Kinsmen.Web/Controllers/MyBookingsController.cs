@@ -19,6 +19,11 @@ public sealed class MyBookingsController(IKinsmenApiClient apiClient) : Controll
 
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
+        // My Bookings is a customer's own bookings. For a barber the API would hand back
+        // their whole schedule instead, dressed up with customer buttons that then fail -
+        // so staff are sent to the screen that is actually theirs.
+        if (User.IsStaff()) return RedirectToAction("Index", "BarberSchedule");
+
         try
         {
             var from = DateTimeOffset.UtcNow;

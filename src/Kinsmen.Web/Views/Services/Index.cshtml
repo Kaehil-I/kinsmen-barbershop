@@ -39,7 +39,10 @@
                         <div class="name">@service.Name</div>
                     </div>
                     <div class="price">@PriceFormatter.FormatZarCents(service.PriceCents)</div>
-                    <a asp-controller="Booking" asp-action="Index" asp-route-serviceId="@service.Id" class="book-link neo-pill-raised">Book</a>
+                    @if (!User.IsStaff())
+                    {
+                        <a asp-controller="Booking" asp-action="Index" asp-route-serviceId="@service.Id" class="book-link neo-pill-raised">Book</a>
+                    }
                 </div>
             }
         </div>
