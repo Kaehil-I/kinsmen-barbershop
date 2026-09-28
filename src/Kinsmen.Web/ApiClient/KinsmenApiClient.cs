@@ -162,6 +162,72 @@ public sealed class KinsmenApiClient(HttpClient httpClient) : IKinsmenApiClient
         await ThrowForFailureAsync(response, cancellationToken);
     }
 
+    // --- Admin catalogue ------------------------------------------------------
+
+    public async Task<List<Service>> GetAdminServicesAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync("/api/admin/services", cancellationToken);
+        return await ReadOrThrowAsync<List<Service>>(response, cancellationToken);
+    }
+
+    public async Task<Service> CreateAdminServiceAsync(
+        ServiceInput input, CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsJsonAsync(
+            "/api/admin/services", input, JsonOptions, cancellationToken);
+        return await ReadOrThrowAsync<Service>(response, cancellationToken);
+    }
+
+    public async Task<Service> UpdateAdminServiceAsync(
+        string id, ServiceInput input, CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PutAsJsonAsync(
+            $"/api/admin/services/{Uri.EscapeDataString(id)}", input, JsonOptions, cancellationToken);
+        return await ReadOrThrowAsync<Service>(response, cancellationToken);
+    }
+
+    public async Task<Service> SetAdminServiceActiveAsync(
+        string id, bool active, CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PatchAsync(
+            $"/api/admin/services/{Uri.EscapeDataString(id)}/active",
+            JsonContent.Create(new ActiveInput { Active = active }, options: JsonOptions),
+            cancellationToken);
+        return await ReadOrThrowAsync<Service>(response, cancellationToken);
+    }
+
+    public async Task<List<AdminBarber>> GetAdminBarbersAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync("/api/admin/barbers", cancellationToken);
+        return await ReadOrThrowAsync<List<AdminBarber>>(response, cancellationToken);
+    }
+
+    public async Task<AdminBarber> CreateAdminBarberAsync(
+        BarberInput input, CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsJsonAsync(
+            "/api/admin/barbers", input, JsonOptions, cancellationToken);
+        return await ReadOrThrowAsync<AdminBarber>(response, cancellationToken);
+    }
+
+    public async Task<AdminBarber> UpdateAdminBarberAsync(
+        string id, BarberInput input, CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PutAsJsonAsync(
+            $"/api/admin/barbers/{Uri.EscapeDataString(id)}", input, JsonOptions, cancellationToken);
+        return await ReadOrThrowAsync<AdminBarber>(response, cancellationToken);
+    }
+
+    public async Task<AdminBarber> SetAdminBarberActiveAsync(
+        string id, bool active, CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PatchAsync(
+            $"/api/admin/barbers/{Uri.EscapeDataString(id)}/active",
+            JsonContent.Create(new ActiveInput { Active = active }, options: JsonOptions),
+            cancellationToken);
+        return await ReadOrThrowAsync<AdminBarber>(response, cancellationToken);
+    }
+
     // --- Shared response handling ---------------------------------------------
 
     private static async Task<T> ReadOrThrowAsync<T>(
