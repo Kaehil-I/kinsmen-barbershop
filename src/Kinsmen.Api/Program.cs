@@ -43,8 +43,24 @@ builder.Services.AddSingleton(_ => new MongoBookingStore(
     builder.Configuration["Mongo:ConnectionString"] ?? throw new InvalidOperationException("Mongo connection required."),
     builder.Configuration["Mongo:Database"] ?? "kinsmen_dev"));
 builder.Services.AddSingleton<IBookingStore>(s => s.GetRequiredService<MongoBookingStore>());
-builder.Services.AddSingleton<BookingService>();
 
+
+// Booking emails. Without Email:BrevoApiKey the app uses a no-op sender, so nothing else needs configuring.
+var brevoKey = builder.Configuration["Email:BrevoApiKey"];
+if (string.IsNullOrWhiteSpace(brevoKey))
+{
+    builder.Services.AddSingleton<IEmailSender, NullEmailSender>();
+}
+else
+{
+    var fromAddress = builder.Configuration["Email:FromAddress"]
+        ?? throw new InvalidOperationException("Email:FromAddress is required when Email:BrevoApiKey is set.");
+    var fromName = builder.Configuration["Email:FromName"] ?? "Kinsmen";
+    builder.Services.AddHttpClient();
+    builder.Services.AddSingleton<IEmailSender>(sp => new BrevoEmailSender(
+        sp.GetRequiredService<IHttpClientFactory>().CreateClient(), brevoKey, fromAddress, fromName));
+}
+builder.Services.AddSingleton<BookingService>();
 var authority = builder.Configuration["Auth:Authority"];
 var localKey = builder.Configuration["Auth:DevelopmentSigningKey"];
 var audience = builder.Configuration["Auth:Audience"] ?? "kinsmen-api";
@@ -68,10 +84,16 @@ else if (builder.Environment.IsDevelopment() && !string.IsNullOrWhiteSpace(local
         o.MapInboundClaims = false;
         o.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true, ValidIssuer = issuer, ValidateAudience = true, ValidAudience = audience,
-            ValidateLifetime = true, ValidateIssuerSigningKey = true,
+            ValidateIssuer = true,
+            ValidIssuer = issuer,
+            ValidateAudience = true,
+            ValidAudience = audience,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(localKey)),
-            NameClaimType = "sub", RoleClaimType = "role", ClockSkew = TimeSpan.FromSeconds(15),
+            NameClaimType = "sub",
+            RoleClaimType = "role",
+            ClockSkew = TimeSpan.FromSeconds(15),
             ValidAlgorithms = [SecurityAlgorithms.HmacSha256]
         };
     });
@@ -155,6 +177,9 @@ app.MapGet("/api/barbers", async (BookingService service, CancellationToken ct) 
     (await service.Barbers(ct)).Select(b => new { b.Id, b.Name, b.Hours }));
 app.MapGet("/api/availability", (DateOnly date, string[] serviceIds, string? barberId, BookingService service, CancellationToken ct)
     => service.Availability(date, serviceIds, barberId, ct));
+// Public, like the barber list. Projected so a review never exposes who wrote it or which booking it was.
+app.MapGet("/api/barbers/{barberId}/reviews", async (string barberId, BookingService service, CancellationToken ct) =>
+    (await service.ReviewsForBarber(barberId, ct)).Select(r => new { r.Rating, r.Comment, r.CreatedUtc }));
 
 var secure = app.MapGroup("/api").RequireAuthorization();
 secure.MapPost("/bookings", async (CreateBookingRequest input, HttpContext ctx, BookingService service, CancellationToken ct) =>
@@ -178,6 +203,8 @@ secure.MapPost("/bookings/{id}/cancel", (string id, VersionRequest input, HttpCo
     => service.Cancel(CurrentActor(ctx), id, input.Version, ct));
 secure.MapPatch("/bookings/{id}/status", (string id, StatusRequest input, HttpContext ctx, BookingService service, CancellationToken ct)
     => service.ChangeStatus(CurrentActor(ctx), id, input, ct));
+secure.MapPost("/bookings/{id}/review", async (string id, SubmitReviewRequest input, HttpContext ctx, BookingService service, CancellationToken ct)
+    => Results.Json(await service.SubmitReview(CurrentActor(ctx), id, input, ct), statusCode: 201));
 secure.MapGet("/barbers/{barberId}/blocks", (string barberId, DateTimeOffset from, DateTimeOffset to, HttpContext ctx, BookingService service, CancellationToken ct)
     => service.ListBlocks(CurrentActor(ctx), barberId, from, to, ct));
 secure.MapPost("/barbers/{barberId}/blocks", async (string barberId, BlockRequest input, HttpContext ctx, BookingService service, CancellationToken ct)
@@ -194,7 +221,9 @@ static Actor CurrentActor(HttpContext context)
     var sub = context.User.FindFirstValue("sub"); var role = context.User.FindFirstValue("role");
     if (string.IsNullOrWhiteSpace(sub) || sub.Length > 128) throw new DomainError(401, "invalid_identity", "A subject claim is required.");
     if (role is not ("Customer" or "Barber" or "Admin")) throw DomainError.Forbidden();
-    return new Actor(sub, role);
+    // The Auth0 Action adds the email under a namespaced claim; plain "email" is the fallback.
+    var email = context.User.FindFirstValue("https://kinsmen.app/email") ?? context.User.FindFirstValue("email");
+    return new Actor(sub, role, string.IsNullOrWhiteSpace(email) || email.Length > 254 ? null : email);
 }
 
 public sealed class RejectAuthentication(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)

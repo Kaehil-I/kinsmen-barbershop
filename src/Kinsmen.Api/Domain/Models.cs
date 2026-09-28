@@ -10,9 +10,11 @@ public sealed record ServiceSnapshot(string ServiceId, string Name, int PriceCen
 public enum BookingStatus { Pending, Confirmed, Cancelled, Completed, NoShow }
 public sealed record Booking(string Id, string CustomerId, string BarberId, DateTime StartUtc, DateTime EndUtc,
     ServiceSnapshot[] Services, int TotalCents, BookingStatus Status, DateTime CreatedUtc, long Version = 1, string? Notes = null,
-    [property: JsonIgnore] string? CreationFingerprint = null, [property: JsonIgnore] string? CustomerEmail = null);
+    [property: JsonIgnore] string? CreationFingerprint = null,
+    // Captured once when the customer books, so a later staff action (confirm, complete) can still email them.
+    // Never serialised to API clients.
+    [property: JsonIgnore] string? CustomerEmail = null);
 public sealed record TimeBlock(string Id, string BarberId, DateTime StartUtc, DateTime EndUtc, string Reason);
-//Added email attributes to Actor
 public sealed record Actor(string UserId, string Role, string? Email = null)
 {
     public bool IsAdmin => Role == "Admin";
@@ -27,6 +29,8 @@ public sealed record BlockRequest(DateTimeOffset Start, DateTimeOffset End, stri
 public sealed record AvailableSlot(string BarberId, DateTime StartUtc, DateTime EndUtc);
 public sealed record BookingPolicy(int MinimumNoticeMinutes = 60, int CancellationNoticeMinutes = 60,
     int HorizonDays = 30, int SlotMinutes = 15);
+public sealed record Review(string Id, string BookingId, string CustomerId, string BarberId, int Rating, string? Comment, DateTime CreatedUtc);
+public sealed record SubmitReviewRequest(int Rating, string? Comment = null);
 
 public sealed class DomainError(int status, string code, string message) : Exception(message)
 {
@@ -37,9 +41,8 @@ public sealed class DomainError(int status, string code, string message) : Excep
     public static DomainError Forbidden() => new(403, "forbidden", "This action is not permitted for this account.");
     public static DomainError Conflict(string message) => new(409, "booking_conflict", message);
 }
-public sealed record Review(string Id, string BookingId, string CustomerId, string BarberId, int Rating, string? Comment, DateTime CreatedUtc);
-public sealed record SubmitReviewRequest(int Rating, string? Comment);
 
-public sealed class DuplicateReviewException : Exception;
 // Repository signal handled by Create when concurrent idempotent requests race.
 public sealed class DuplicateBookingIdException : Exception;
+// Repository signal handled by SubmitReview when the one-review-per-booking index rejects a second review.
+public sealed class DuplicateReviewException : Exception;

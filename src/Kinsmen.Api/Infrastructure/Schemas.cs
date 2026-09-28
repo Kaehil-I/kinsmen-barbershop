@@ -26,6 +26,7 @@ public static class Schemas
           "totalCents":{"bsonType":"int","minimum":0},"version":{"bsonType":"long","minimum":1},
           "notes":{"bsonType":["string","null"],"maxLength":500},
           "creationFingerprint":{"bsonType":["string","null"],"maxLength":64},
+          "customerEmail":{"bsonType":["string","null"],"maxLength":254},
           "status":{"enum":["Pending","Confirmed","Cancelled","Completed","NoShow"]},
           "services":{"bsonType":"array","minItems":1,"maxItems":10,"items":{"bsonType":"object",
             "required":["serviceId","name","priceCents","durationMinutes"],"properties":{
@@ -45,7 +46,6 @@ public static class Schemas
           "comment":{"bsonType":["string","null"],"maxLength":1000},
           "createdUtc":{"bsonType":"date"}}}
         """,
-
         _ => throw new ArgumentOutOfRangeException(nameof(name))
     };
 }
