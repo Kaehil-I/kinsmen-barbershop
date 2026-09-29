@@ -52,6 +52,10 @@ public interface IKinsmenApiClient
 
     // --- Barber time blocks (require a token) -------------------------------
 
+        /// <summary>Customer-only, and only once the booking's Status is Completed —
+    /// see API-CONTRACT.md. A second attempt on the same booking returns 409.</summary>
+    Task<Review> SubmitReviewAsync(
+        string bookingId, SubmitReviewRequest request, CancellationToken cancellationToken = default);
     Task<List<TimeBlock>> GetBarberBlocksAsync(
         string barberId, DateTimeOffset from, DateTimeOffset to,
         CancellationToken cancellationToken = default);

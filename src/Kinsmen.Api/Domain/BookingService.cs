@@ -201,7 +201,7 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
             return updated;
         }, ct);
 
-    public async Task<Booking> ChangeStatus(Actor actor, string id, StatusRequest input, CancellationToken ct = default)
+    public async Task<Booking> ChangeStatus(Actor actor, string id, StatusChangeRequest input, CancellationToken ct = default)
     {
         var updated = await store.Write(async s =>
         {

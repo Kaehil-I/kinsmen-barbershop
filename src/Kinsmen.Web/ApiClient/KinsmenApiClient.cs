@@ -125,7 +125,13 @@ public sealed class KinsmenApiClient(HttpClient httpClient) : IKinsmenApiClient
             cancellationToken);
         return await ReadOrThrowAsync<Booking>(response, cancellationToken);
     }
-
+    public async Task<Review> SubmitReviewAsync(
+    string bookingId, SubmitReviewRequest request, CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsJsonAsync(
+            $"/api/bookings/{Uri.EscapeDataString(bookingId)}/review", request, JsonOptions, cancellationToken);
+        return await ReadOrThrowAsync<Review>(response, cancellationToken);
+    }
     // --- Barber time blocks ---------------------------------------------------
 
     public async Task<List<TimeBlock>> GetBarberBlocksAsync(

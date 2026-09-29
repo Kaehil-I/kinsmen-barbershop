@@ -201,7 +201,7 @@ secure.MapPatch("/bookings/{id}/reschedule", (string id, RescheduleRequest input
     => service.Reschedule(CurrentActor(ctx), id, input, ct));
 secure.MapPost("/bookings/{id}/cancel", (string id, VersionRequest input, HttpContext ctx, BookingService service, CancellationToken ct)
     => service.Cancel(CurrentActor(ctx), id, input.Version, ct));
-secure.MapPatch("/bookings/{id}/status", (string id, StatusRequest input, HttpContext ctx, BookingService service, CancellationToken ct)
+secure.MapPatch("/bookings/{id}/status", (string id, StatusChangeRequest input, HttpContext ctx, BookingService service, CancellationToken ct)
     => service.ChangeStatus(CurrentActor(ctx), id, input, ct));
 secure.MapPost("/bookings/{id}/review", async (string id, SubmitReviewRequest input, HttpContext ctx, BookingService service, CancellationToken ct)
     => Results.Json(await service.SubmitReview(CurrentActor(ctx), id, input, ct), statusCode: 201));

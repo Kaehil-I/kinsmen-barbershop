@@ -33,7 +33,7 @@
     <div class="wrap">
         <div class="tag">Your Appointments</div>
         <h1>My Bookings</h1>
-        <p>Showing the next 31 days &mdash; the furthest ahead the booking system can list in one go right now.</p>
+        <p>Showing your next 31 days, plus visits completed in the last 30 days &mdash; the furthest the booking system can list in one go right now.</p>
     </div>
 </section>
 
@@ -100,6 +100,27 @@
                                 <p class="reschedule-error" style="display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-top:10px;"></p>
                             </div>
                         }
+
+                        @if (booking.Status == BookingStatus.Completed)
+                        {
+                            <div class="review-box" style="margin-top:16px;">
+                                <div class="review-form" style="display:flex; flex-direction:column; gap:10px; max-width:420px;">
+                                    <label style="font-family:var(--mono); font-size:13px;">
+                                        Rate your visit
+                                        <select class="review-rating">
+                                            <option value="5">5 - Excellent</option>
+                                            <option value="4">4 - Good</option>
+                                            <option value="3">3 - Okay</option>
+                                            <option value="2">2 - Poor</option>
+                                            <option value="1">1 - Terrible</option>
+                                        </select>
+                                    </label>
+                                    <textarea class="review-comment" rows="3" maxlength="1000" placeholder="Anything you'd like to add? (optional)"></textarea>
+                                    <button class="neo-pill-raised review-submit" type="button">Send review</button>
+                                </div>
+                                <p class="review-message" style="display:none; font-family:var(--mono); font-size:13px; margin-top:10px;"></p>
+                            </div>
+                        }
                     </div>
                 }
             </div>
@@ -108,3 +129,39 @@
 </section>
 
 <script src="~/js/my-bookings.js" asp-append-version="true"></script>
+<script>
+    // Review form: posts to MyBookings/SubmitReview and shows the server's message on failure
+    // (for example "already reviewed"). textContent, never innerHTML, so a message can't inject markup.
+    document.querySelectorAll('.review-submit').forEach(function (button) {
+        button.addEventListener('click', async function () {
+            var row = button.closest('.my-booking-row');
+            var box = button.closest('.review-box');
+            var message = box.querySelector('.review-message');
+            var comment = box.querySelector('.review-comment').value.trim();
+            button.disabled = true;
+            message.style.display = 'none';
+            try {
+                var response = await fetch('/MyBookings/SubmitReview/' + encodeURIComponent(row.dataset.bookingId), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        rating: parseInt(box.querySelector('.review-rating').value, 10),
+                        comment: comment || null
+                    })
+                });
+                var data = await response.json().catch(function () { return {}; });
+                if (response.ok) {
+                    box.querySelector('.review-form').style.display = 'none';
+                    message.textContent = 'Thanks for your review!';
+                } else {
+                    message.textContent = data.message || 'Could not save your review. Please try again.';
+                    button.disabled = false;
+                }
+            } catch (error) {
+                message.textContent = 'Could not reach the server. Please try again.';
+                button.disabled = false;
+            }
+            message.style.display = '';
+        });
+    });
+</script>

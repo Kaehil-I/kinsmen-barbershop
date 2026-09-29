@@ -24,7 +24,7 @@ public sealed record Actor(string UserId, string Role, string? Email = null)
 public sealed record CreateBookingRequest(string? BarberId, string[] ServiceIds, DateTimeOffset Start, string? CustomerId = null, string? Notes = null);
 public sealed record RescheduleRequest(DateTimeOffset Start, long Version);
 public sealed record VersionRequest(long Version);
-public sealed record StatusRequest(BookingStatus Status, long Version);
+public sealed record StatusChangeRequest(BookingStatus Status, long Version);
 public sealed record BlockRequest(DateTimeOffset Start, DateTimeOffset End, string Reason);
 public sealed record AvailableSlot(string BarberId, DateTime StartUtc, DateTime EndUtc);
 public sealed record BookingPolicy(int MinimumNoticeMinutes = 60, int CancellationNoticeMinutes = 60,
