@@ -11,6 +11,7 @@ public sealed class TestStore : IBookingStore, IBookingSession
     public List<Barber> Staff { get; } = [.. DemoData.Barbers];
     public List<Booking> Saved { get; private set; } = [];
     public List<TimeBlock> Blocked { get; private set; } = [];
+    public List<Review> Reviews { get; private set; } = [];
     public async Task<T> Read<T>(Func<IBookingSession, Task<T>> action, CancellationToken ct = default)
     {
         await gate.WaitAsync(ct);
@@ -19,9 +20,9 @@ public sealed class TestStore : IBookingStore, IBookingSession
     public async Task<T> Write<T>(Func<IBookingSession, Task<T>> action, CancellationToken ct = default)
     {
         await gate.WaitAsync(ct);
-        var saved = Saved.ToList(); var blocks = Blocked.ToList();
+        var saved = Saved.ToList(); var blocks = Blocked.ToList(); var reviews = Reviews.ToList();
         try { return await action(this); }
-        catch { Saved = saved; Blocked = blocks; throw; }
+        catch { Saved = saved; Blocked = blocks; Reviews = reviews; throw; }
         finally { gate.Release(); }
     }
     public Task<List<ServiceItem>> Services() => Task.FromResult(Catalog.ToList());
@@ -41,9 +42,28 @@ public sealed class TestStore : IBookingStore, IBookingSession
     }
     public Task SaveBlock(TimeBlock b) { Blocked.Add(b); return Task.CompletedTask; }
     public Task DeleteBlock(string id) { Blocked.RemoveAll(x => x.Id == id); return Task.CompletedTask; }
+    public Task<Review?> ReviewByBookingId(string bookingId) => Task.FromResult(Reviews.SingleOrDefault(r => r.BookingId == bookingId));
+    public Task<List<Review>> ReviewsForBarber(string barberId) => Task.FromResult(Reviews.Where(r => r.BarberId == barberId).ToList());
+    public Task SaveReview(Review review)
+    {
+        if (Reviews.Any(r => r.BookingId == review.BookingId)) throw new DuplicateReviewException();
+        Reviews.Add(review); return Task.CompletedTask;
+    }
 }
 public sealed class TestClock : TimeProvider
 {
     public DateTimeOffset Now { get; set; } = DateTimeOffset.Parse("2026-09-18T06:00:00Z");
     public override DateTimeOffset GetUtcNow() => Now;
+}
+
+public sealed record SentEmail(string To, string Subject, string Body);
+// Captures emails instead of sending them, so tests never touch a real provider.
+public sealed class RecordingEmailSender : IEmailSender
+{
+    public List<SentEmail> Sent { get; } = [];
+    public Task SendAsync(string toEmail, string subject, string htmlBody, CancellationToken ct = default)
+    {
+        lock (Sent) Sent.Add(new SentEmail(toEmail, subject, htmlBody));
+        return Task.CompletedTask;
+    }
 }
