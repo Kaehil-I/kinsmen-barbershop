@@ -24,6 +24,20 @@ Secrets live only in the Render dashboard. Do not commit connection strings, pas
 
 Login uses Auth0; follow [`docs/auth/AUTH0-SETUP.md`](../auth/AUTH0-SETUP.md). In Production the API refuses to start without `Auth:Authority`, and development tokens are disabled by design, so the Auth0 tenant must exist before the Blueprint is applied. Render asks for `Auth__Authority` on the API and `Auth0__Domain`, `Auth0__ClientId` and `Auth0__ClientSecret` on the web app.
 
+## Booking emails
+
+Booking confirmation emails are sent through [Brevo](https://www.brevo.com)'s HTTPS API, because Render's free tier blocks outbound SMTP. They are off until configured: with no API key the API uses a no-op sender. To turn them on, set these on `kinsmen-api` (**Environment** in the Render dashboard):
+
+| Variable | Value |
+|---|---|
+| `Email__BrevoApiKey` | Brevo API key (secret; dashboard only) |
+| `Email__FromAddress` | A sender address verified in Brevo |
+| `Email__FromName` | Display name; `render.yaml` sets `Kinsmen Barbers` |
+
+Set `Email__BrevoApiKey` and `Email__FromAddress` together. The API refuses to start with a key but no from-address, which would fail the deploy.
+
+Because the Blueprint already exists, Render does not prompt for these new `sync: false` values when `render.yaml` changes; add them by hand in the dashboard.
+
 ## Free-tier behaviour
 
 Free services sleep after about 15 minutes without traffic, and the first request afterwards can take up to a minute. Open both services shortly before a demo or presentation.

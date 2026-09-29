@@ -32,6 +32,15 @@ services:
         sync: false
       - key: Auth__Audience
         value: kinsmen-api
+      # Booking emails via Brevo's HTTPS API (Render's free tier blocks outbound SMTP). With no API key the
+      # API uses a no-op sender. Set the key and the verified sender address together: the API refuses to
+      # start with a key but no FromAddress.
+      - key: Email__BrevoApiKey
+        sync: false
+      - key: Email__FromAddress
+        sync: false
+      - key: Email__FromName
+        value: Kinsmen Barbers
 
   - type: web
     name: kinsmen-web
