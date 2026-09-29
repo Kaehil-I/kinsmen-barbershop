@@ -9,8 +9,12 @@ profiles.
 
 | | Link |
 |---|---|
-| **Live system** | *Deployment in progress (Render). The link will be added here once the hosted services are live.* |
+| **Live system** | https://kinsmen-web.onrender.com |
+| **Booking API** | https://kinsmen-api.onrender.com (health: [`/health/ready`](https://kinsmen-api.onrender.com/health/ready)) |
 | **Part 1 prototype** | https://kaehil-i.github.io/kinsmen-barbershop/kinsmen_prototype.html |
+
+The live system runs on Render's free tier: after about 15 minutes without visitors it sleeps, and the
+first page load can take up to a minute. Open it shortly before a demo.
 
 ## How it works
 
