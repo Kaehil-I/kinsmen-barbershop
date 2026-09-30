@@ -21,4 +21,23 @@ public sealed class ClaimsPrincipalExtensionsTests
     [Fact]
     public void AVisitorWhoIsNotSignedInIsNotStaff()
         => Assert.False(new ClaimsPrincipal(new ClaimsIdentity()).IsStaff());
+
+    [Fact]
+    public void DisplayNamePrefersTheHumanProfileName()
+    {
+        var user = new ClaimsPrincipal(new ClaimsIdentity([
+            new Claim("sub", "auth0|internal-id"),
+            new Claim("name", "Zario Di Paolo")], "test"));
+
+        Assert.Equal("Zario Di Paolo", user.DisplayName());
+    }
+
+    [Fact]
+    public void DisplayNameNeverFallsBackToTheAuth0Subject()
+    {
+        var user = new ClaimsPrincipal(new ClaimsIdentity([
+            new Claim("sub", "auth0|internal-id")], "test"));
+
+        Assert.Equal("Signed-in user", user.DisplayName());
+    }
 }
