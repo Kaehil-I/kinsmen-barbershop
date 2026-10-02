@@ -4,6 +4,15 @@
 #
 # Staging deploys from integration-part2. Switch `branch` to main for the submission build.
 
+# Shared by both services. Proxy__Key lets the API trust the web app's "which visitor is this" header, so the
+# API rate limits per visitor instead of treating the web server as one caller. Render generates the value;
+# nobody needs to see or enter it.
+envVarGroups:
+  - name: kinsmen-internal
+    envVars:
+      - key: Proxy__Key
+        generateValue: true
+
 services:
   - type: web
     name: kinsmen-api
@@ -41,6 +50,7 @@ services:
         sync: false
       - key: Email__FromName
         value: Kinsmen Barbers
+      - fromGroup: kinsmen-internal
 
   - type: web
     name: kinsmen-web
@@ -71,3 +81,4 @@ services:
         sync: false
       - key: Auth0__Audience
         value: kinsmen-api
+      - fromGroup: kinsmen-internal

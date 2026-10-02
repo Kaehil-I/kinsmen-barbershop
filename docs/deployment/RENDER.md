@@ -38,10 +38,14 @@ Set `Email__BrevoApiKey` and `Email__FromAddress` together. The API refuses to s
 
 Because the Blueprint already exists, Render does not prompt for these new `sync: false` values when `render.yaml` changes; add them by hand in the dashboard.
 
+## Shared proxy key
+
+`render.yaml` defines an environment group, `kinsmen-internal`, with a `Proxy__Key` that Render generates and attaches to both services. The web app sends it with each API call so the API can rate limit per visitor rather than counting the whole web server as one caller (see the API contract's error-handling notes). Nobody needs to enter or copy it. If it's missing, everything still works, but anonymous visitors share one API rate-limit bucket. To rotate it, regenerate the value in the group and redeploy both services.
+
 ## Free-tier behaviour
 
 Free services sleep after about 15 minutes without traffic, and the first request afterwards can take up to a minute. Open both services shortly before a demo or presentation.
 
 ## Checks before a deploy
 
-The *Build and test* workflow builds both Docker images and starts each one with production settings (`Container images` job), alongside the unit and MongoDB tests. A deploy only starts when those checks pass.
+The *Build and test* workflow builds both Docker images and starts each one with production settings (`Container images` job), alongside the unit and MongoDB tests and a check for NuGet packages with known security advisories. A deploy only starts when those checks pass.

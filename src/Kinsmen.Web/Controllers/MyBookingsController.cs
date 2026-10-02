@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.RateLimiting;
 using Kinsmen.Web.ApiClient;
 using Kinsmen.Web.Helpers;
 using Kinsmen.Web.Models.Api;
@@ -85,6 +86,7 @@ public sealed class MyBookingsController(IKinsmenApiClient apiClient) : Controll
     }
 
     [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.Writes)]
     public async Task<IActionResult> Reschedule(
         string id, [FromBody] RescheduleRequest request, CancellationToken cancellationToken)
     {
@@ -107,6 +109,7 @@ public sealed class MyBookingsController(IKinsmenApiClient apiClient) : Controll
     }
 
     [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.Writes)]
     public async Task<IActionResult> Cancel(
         string id, [FromBody] VersionRequest request, CancellationToken cancellationToken)
     {

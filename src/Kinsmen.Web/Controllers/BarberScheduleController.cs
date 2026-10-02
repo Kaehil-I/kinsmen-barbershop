@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.RateLimiting;
 using Kinsmen.Web.ApiClient;
 using Kinsmen.Web.Helpers;
 using Kinsmen.Web.Models.Api;
@@ -91,6 +92,7 @@ public sealed class BarberScheduleController(IKinsmenApiClient apiClient) : Cont
     }
 
     [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.Writes)]
     public async Task<IActionResult> UpdateStatus(
         string id, [FromBody] StatusChangeRequest request, CancellationToken cancellationToken)
     {
@@ -173,6 +175,7 @@ public sealed class BarberScheduleController(IKinsmenApiClient apiClient) : Cont
     }
 
     [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.Writes)]
     public async Task<IActionResult> CreateBlock(
         [FromQuery] string barberId, [FromBody] CreateBlockRequest request, CancellationToken cancellationToken)
     {
@@ -202,6 +205,7 @@ public sealed class BarberScheduleController(IKinsmenApiClient apiClient) : Cont
     }
 
     [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.Writes)]
     public async Task<IActionResult> DeleteBlock(string id, CancellationToken cancellationToken)
     {
         try

@@ -12,6 +12,8 @@ public interface IBookingSession
     Task<List<ServiceItem>> Services();
     Task<List<Barber>> Barbers();
     Task TouchBarbers(IEnumerable<string> ids);
+    // Same idea per customer: concurrent creates for one customer conflict, so the active-booking cap can't be raced.
+    Task TouchCustomer(string customerId);
     Task<Booking?> BookingById(string id);
     Task<List<Booking>> Bookings(string? customerId, string? barberId, DateTime from, DateTime to);
     Task<List<TimeBlock>> Blocks(string barberId, DateTime from, DateTime to);
