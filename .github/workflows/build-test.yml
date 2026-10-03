@@ -52,6 +52,15 @@ jobs:
       - name: Restore
         run: dotnet restore Kinsmen.slnx --locked-mode
 
+      # Fails the build if any direct or transitive NuGet package has a published security advisory.
+      - name: Check for vulnerable packages
+        run: |
+          dotnet list Kinsmen.slnx package --vulnerable --include-transitive | tee vulnerable-packages.txt
+          if grep -q "has the following vulnerable packages" vulnerable-packages.txt; then
+            echo "::error::Vulnerable NuGet packages found. Update them (see the list above)."
+            exit 1
+          fi
+
       - name: Build
         run: dotnet build Kinsmen.slnx --no-restore -c Release
 

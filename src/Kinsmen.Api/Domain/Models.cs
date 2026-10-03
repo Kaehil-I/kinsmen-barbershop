@@ -31,8 +31,10 @@ public sealed record BarberRequest(string Name, string UserId, WorkingPeriod[] H
 public sealed record ActiveRequest(bool Active);
 // Admin view of a barber: includes the linked identity and active flag, but not the internal revision counter.
 public sealed record BarberProfile(string Id, string Name, string UserId, WorkingPeriod[] Hours, bool Active);
+// MaxActiveBookingsPerCustomer caps Pending/Confirmed bookings that haven't finished yet, so one account
+// can't reserve every slot.
 public sealed record BookingPolicy(int MinimumNoticeMinutes = 60, int CancellationNoticeMinutes = 60,
-    int HorizonDays = 30, int SlotMinutes = 15);
+    int HorizonDays = 30, int SlotMinutes = 15, int MaxActiveBookingsPerCustomer = 3);
 
 public sealed class DomainError(int status, string code, string message) : Exception(message)
 {

@@ -1,4 +1,6 @@
-﻿using Auth0.AspNetCore.Authentication;
+﻿using Kinsmen.Web.Helpers;
+using Microsoft.AspNetCore.RateLimiting;
+using Auth0.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +10,7 @@ namespace Kinsmen.Web.Controllers;
 
 public class AccountController : Controller
 {
+    [EnableRateLimiting(RateLimitPolicies.Login)]
     public async Task Login(string returnUrl = "/")
     {
         var properties = new LoginAuthenticationPropertiesBuilder()
@@ -16,6 +19,7 @@ public class AccountController : Controller
         await HttpContext.ChallengeAsync(Auth0Constants.AuthenticationScheme, properties);
     }
 
+    [EnableRateLimiting(RateLimitPolicies.Login)]
     public async Task Register(string returnUrl = "/")
     {
         var properties = new LoginAuthenticationPropertiesBuilder()

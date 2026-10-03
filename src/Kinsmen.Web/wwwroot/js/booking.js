@@ -3,6 +3,16 @@
 // that keeps the bearer token server-side and sidesteps CORS entirely (see
 // BookingController's class-level comment for why).
 document.addEventListener('DOMContentLoaded', function () {
+    // Page data arrives as a JSON block (not an inline script) so the CSP can block inline scripts.
+    window.kinsmenBooking = JSON.parse(document.getElementById('kinsmen-booking-data').textContent);
+
+    // Service and barber names come from the catalogue, so they must never be inserted as raw HTML.
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
     var servicesById = {};
     (window.kinsmenBooking.services || []).forEach(function (s) { servicesById[s.id] = s; });
 
@@ -237,9 +247,9 @@ document.addEventListener('DOMContentLoaded', function () {
             var barber = barbersById[barberSelect.value];
             var barberLabel = barber ? barber.name : 'any available barber';
             var dateStr = state.selectedDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-            summaryText.innerHTML = '<strong>' + selectedServiceNames() + '</strong> (' +
-                formatZarCents(selectedServicesTotal()) + ') with <strong>' + barberLabel +
-                '</strong> \u2014 ' + dateStr + ' at <strong>' + state.selectedTime + '</strong>';
+            summaryText.innerHTML = '<strong>' + escapeHtml(selectedServiceNames()) + '</strong> (' +
+                escapeHtml(formatZarCents(selectedServicesTotal())) + ') with <strong>' + escapeHtml(barberLabel) +
+                '</strong> \u2014 ' + escapeHtml(dateStr) + ' at <strong>' + escapeHtml(state.selectedTime) + '</strong>';
             confirmBtn.disabled = false;
         } else {
             summaryText.textContent = 'Select a barber, date and time to continue.';
@@ -313,9 +323,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
 
-                successText.innerHTML = '<strong>' + selectedServiceNames() + '</strong> with <strong>' +
-                    barberLabel + '</strong> \u2014 ' + dateStr + ' at <strong>' + state.selectedTime +
-                    '</strong>. Total <strong>' + formatZarCents(result.body.totalCents) + '</strong>.';
+                successText.innerHTML = '<strong>' + escapeHtml(selectedServiceNames()) + '</strong> with <strong>' +
+                    escapeHtml(barberLabel) + '</strong> \u2014 ' + escapeHtml(dateStr) + ' at <strong>' + escapeHtml(state.selectedTime) +
+                    '</strong>. Total <strong>' + escapeHtml(formatZarCents(result.body.totalCents)) + '</strong>.';
                 summaryPanel.style.display = 'none';
                 bookingError.style.display = 'none';
                 successCard.classList.add('show');

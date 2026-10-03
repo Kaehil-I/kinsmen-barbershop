@@ -142,6 +142,35 @@ public sealed class MongoTests : IAsyncLifetime
         var barber = (await fresh.Read(s => s.Barbers())).Single(b => b.Id == "barber-b");
         Assert.Equal("Renamed", barber.Name); Assert.True(barber.Revision > 0);
     }
+    [MongoFact] public async Task ConcurrentRequestsCannotTakeACustomerPastTheBookingLimit()
+    {
+        await Service.Create(Customer, Request with { ServiceIds = ["haircut"] });
+        await Service.Create(Customer, Request with { ServiceIds = ["haircut"], Start = BookingTests.Start.AddHours(1) });
+        // Different barbers and times, so only the per-customer lock can stop these racing past the limit of 3.
+        async Task<string> Create(int i)
+        {
+            var service = new BookingService(new MongoBookingStore(connection, database), new TestClock(), new());
+            try
+            {
+                await service.Create(Customer, new(i % 2 == 0 ? "barber-a" : "barber-b", ["haircut"], BookingTests.Start.AddHours(2 + i)));
+                return "created";
+            }
+            catch (DomainError e) { return e.Code; }
+        }
+        var outcomes = await Task.WhenAll(Enumerable.Range(0, 5).Select(Create));
+        Assert.Single(outcomes, o => o == "created");
+        Assert.All(outcomes.Where(o => o != "created"), o => Assert.Equal("booking_limit", o));
+        Assert.Equal(3, (await Service.List(Customer, BookingTests.Start, BookingTests.Start.AddDays(1), null)).Count);
+    }
+    [MongoFact] public async Task DatabasesInitialisedBeforeTheBookingLimitStillAcceptBookings()
+    {
+        // Like the live Atlas database: initialised before customerLocks existed, never re-initialised.
+        var raw = new MongoClient(connection).GetDatabase(database);
+        await raw.DropCollectionAsync("customerLocks");
+        var service = new BookingService(new MongoBookingStore(connection, database), new TestClock(), new());
+        await service.Create(Customer, Request);
+        Assert.Contains("customerLocks", await (await raw.ListCollectionNamesAsync()).ToListAsync());
+    }
     [MongoFact] public async Task FreshConnectionCanReplayACommittedRequest()
     {
         var b = await Service.Create(Customer, Request, idempotencyKey: "same-request-key-003");

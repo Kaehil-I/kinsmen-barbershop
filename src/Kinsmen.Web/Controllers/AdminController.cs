@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.RateLimiting;
 using Kinsmen.Web.ApiClient;
 using Kinsmen.Web.Helpers;
 using Kinsmen.Web.Models.Api;
@@ -44,6 +45,7 @@ public sealed class AdminController(IKinsmenApiClient apiClient) : Controller
     // --- Services -----------------------------------------------------------
 
     [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.Writes)]
     public async Task<IActionResult> SaveService(
         [FromBody] SaveServiceAjaxRequest request, CancellationToken cancellationToken)
     {
@@ -67,6 +69,7 @@ public sealed class AdminController(IKinsmenApiClient apiClient) : Controller
     }
 
     [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.Writes)]
     public async Task<IActionResult> SetServiceActive(
         string id, [FromBody] ActiveInput request, CancellationToken cancellationToken)
     {
@@ -82,6 +85,7 @@ public sealed class AdminController(IKinsmenApiClient apiClient) : Controller
     // --- Barbers ------------------------------------------------------------
 
     [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.Writes)]
     public async Task<IActionResult> SaveBarber(
         [FromBody] SaveBarberAjaxRequest request, CancellationToken cancellationToken)
     {
@@ -105,6 +109,7 @@ public sealed class AdminController(IKinsmenApiClient apiClient) : Controller
     }
 
     [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.Writes)]
     public async Task<IActionResult> SetBarberActive(
         string id, [FromBody] ActiveInput request, CancellationToken cancellationToken)
     {

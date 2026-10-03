@@ -33,6 +33,7 @@ public sealed class TestStore : IBookingStore, IBookingSession
     public Task<List<ServiceItem>> Services() => Task.FromResult(Catalog.ToList());
     public Task<List<Barber>> Barbers() => Task.FromResult(Staff.ToList());
     public Task TouchBarbers(IEnumerable<string> ids) => Task.CompletedTask;
+    public Task TouchCustomer(string customerId) => Task.CompletedTask;
     public Task<Booking?> BookingById(string id) => Task.FromResult(Saved.SingleOrDefault(b => b.Id == id));
     public Task<List<Booking>> Bookings(string? customerId, string? barberId, DateTime from, DateTime to)
         => Task.FromResult(Saved.Where(b => (customerId is null || b.CustomerId == customerId) && (barberId is null || b.BarberId == barberId)

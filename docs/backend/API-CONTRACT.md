@@ -117,6 +117,8 @@ Both Pending and Confirmed bookings can be rescheduled or cancelled before the c
 
 The assigned barber/admin can move Pending to Confirmed before the appointment start. Confirmed can become Completed at/after its end, or NoShow at/after its start. Final statuses cannot be reopened through this API. Staff cancellation is an Admin operation; barbers have confirmation/completion/no-show privileges. Pending bookings reserve slots until cancelled or processed; there is no automatic expiry yet.
 
+A customer can hold at most **3 active bookings** (Pending or Confirmed, not yet finished) at a time, configurable as `Booking__MaxActiveBookingsPerCustomer`. A fourth returns `409 booking_limit`; cancelling one, or one finishing, frees a place. Rescheduling doesn't count as a new booking, an idempotent replay of an already-created booking still succeeds, and bookings an admin makes on a customer's behalf count towards that customer's limit. Concurrent requests for the same customer are serialised (a per-customer lock document in `customerLocks`, written inside the same transaction), so the limit can't be raced.
+
 ## Time blocks
 
 ```json
@@ -159,10 +161,11 @@ Admins manage services and barber profiles. Nothing is deleted: deactivating hid
 | `409` `idempotency_conflict` | A request key was reused with a different payload | Keep the key for exact retries; generate a new key for a genuinely new attempt |
 | `409` `duplicate_name` | Another active service already uses this name | Ask the admin for a different name |
 | `409` `duplicate_user` | The account is already linked to another barber | Show which account is taken; pick another |
-| `429` | Request limit reached | Pause and retry later |
+| `409` `booking_limit` | The customer already has the maximum number of active bookings | Show the message; offer My Bookings to cancel one |
+| `429` | Request limit reached (`Retry-After: 60`) | Pause and retry later |
 | `503` | Database unavailable/not initialized/not transaction-capable | Show service unavailable; refresh bookings before retrying a write |
 | `500` | Unexpected server error | Show generic failure; retain returned trace ID for diagnosis |
 
-Authentication middleware and rate limiting can return empty error bodies. Do not assume every non-success response has JSON. The API currently allows 120 requests/minute per direct source IP per process. Kaehil must configure trusted proxy forwarding and hosting-level limits for production; do not blindly trust forwarded headers. CORS is not opened to arbitrary origins. Choose same-origin hosting or add exact approved frontend origins during integration.
+Authentication middleware and rate limiting can return empty error bodies. Do not assume every non-success response has JSON. The API allows 120 requests/minute (`RateLimit__PermitPerMinute`) per bucket, per process, and `/health/*` is never limited. The bucket is the signed-in user (token `sub`); otherwise the visitor the web app reports in `X-Kinsmen-Client`, but only when the request also carries the shared secret in `X-Kinsmen-Proxy-Key` (`Proxy__Key` on both services); otherwise the caller's IP. Without that, every visitor would share the web server's single bucket, because browsers never call the API directly. Kinsmen.Web applies its own per-visitor limits first (120/minute overall, 20/minute for data-changing actions, 10/minute for starting a login). CORS is not opened to arbitrary origins. Choose same-origin hosting or add exact approved frontend origins during integration.
 
 For uncertain create results, retry with the original key and payload or query the customer's bookings. Do not generate a new key for a network retry. Requests without an idempotency key retain the legacy behavior and must not be automatically retried.
