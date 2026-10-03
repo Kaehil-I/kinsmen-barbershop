@@ -70,6 +70,13 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
             && !blocks.Any(b => Overlaps(start, end, b.StartUtc, b.EndUtc));
     }
 
+    // Older Atlas records did not yet have serviceIds. Treating that missing field as
+    // all services preserves existing bookings while every barber edited in the admin
+    // screen becomes explicitly skills-based.
+    private static bool CanPerform(Barber barber, IEnumerable<ServiceSnapshot> services)
+        => barber.ServiceIds is null or { Length: 0 }
+            || services.All(service => barber.ServiceIds.Contains(service.ServiceId, StringComparer.Ordinal));
+
     public async Task<Booking> Create(Actor actor, CreateBookingRequest input, CancellationToken ct = default, string? idempotencyKey = null)
     {
         if (!actor.IsCustomer && !actor.IsAdmin) throw DomainError.Forbidden();
@@ -96,19 +103,20 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
                 if (idempotencyKey is not null && await s.BookingById(bookingId) is { } previous)
                     return Replay(previous, fingerprint);
                 ValidateStart(start);
+                var services = SelectServices(await s.Services(), input.ServiceIds);
                 await s.TouchCustomer(customer);
                 var active = (await s.Bookings(customer, null, Now, Now.AddDays(policy.HorizonDays + 1)))
                     .Count(b => b.Status is BookingStatus.Pending or BookingStatus.Confirmed);
                 if (active >= policy.MaxActiveBookingsPerCustomer)
                     throw new DomainError(409, "booking_limit", $"You can have at most {policy.MaxActiveBookingsPerCustomer} upcoming bookings " +
                         "at a time. Cancel one, or wait until one has passed, before booking another.");
-                var candidates = (await s.Barbers()).Where(b => b.Active && (input.BarberId is null || b.Id == input.BarberId))
+                var candidates = (await s.Barbers()).Where(b => b.Active && (input.BarberId is null || b.Id == input.BarberId)
+                    && CanPerform(b, services))
                     .OrderBy(b => b.Id, StringComparer.Ordinal).ToList();
-                if (candidates.Count == 0) throw DomainError.Invalid("No active matching barber exists.");
+                if (candidates.Count == 0) throw DomainError.Invalid("No active barber can perform the selected service(s).");
                 // Every schedule mutation writes the same barber document before querying overlaps.
                 // Concurrent transactions therefore conflict and retry against the committed schedule.
                 await s.TouchBarbers(candidates.Select(b => b.Id));
-                var services = SelectServices(await s.Services(), input.ServiceIds);
                 var end = start.AddMinutes(services.Sum(x => x.DurationMinutes));
                 foreach (var barber in candidates)
                 {
@@ -229,8 +237,10 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
             if (date < firstDate || date > firstDate.AddDays(policy.HorizonDays))
                 throw DomainError.Invalid("Date is outside the booking horizon.");
             var midnight = TimeZoneInfo.ConvertTimeToUtc(date.ToDateTime(TimeOnly.MinValue), ShopZone);
-            var duration = SelectServices(await s.Services(), serviceIds).Sum(x => x.DurationMinutes);
-            var candidates = (await s.Barbers()).Where(b => b.Active && (barberId is null || b.Id == barberId)).ToList();
+            var services = SelectServices(await s.Services(), serviceIds);
+            var duration = services.Sum(x => x.DurationMinutes);
+            var candidates = (await s.Barbers()).Where(b => b.Active && (barberId is null || b.Id == barberId)
+                && CanPerform(b, services)).ToList();
             var result = new List<AvailableSlot>();
             foreach (var barber in candidates)
             {

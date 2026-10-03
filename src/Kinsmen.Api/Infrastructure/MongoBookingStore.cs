@@ -104,7 +104,8 @@ public sealed class MongoBookingStore : IBookingStore
         foreach (var barber in DemoData.Barbers)
         {
             var update = Builders<Barber>.Update.SetOnInsert(x => x.Name, barber.Name).SetOnInsert(x => x.UserId, barber.UserId)
-                .SetOnInsert(x => x.Hours, barber.Hours).SetOnInsert(x => x.Active, true).SetOnInsert(x => x.Revision, 0);
+                .SetOnInsert(x => x.Hours, barber.Hours).SetOnInsert(x => x.ServiceIds, barber.ServiceIds)
+                .SetOnInsert(x => x.Active, true).SetOnInsert(x => x.Revision, 0);
             await db.GetCollection<Barber>("barbers").UpdateOneAsync(x => x.Id == barber.Id, update, new UpdateOptions { IsUpsert = true }, ct);
         }
     }
@@ -193,7 +194,7 @@ internal sealed class MongoSession(IMongoDatabase db, IClientSessionHandle? sess
             if (insert) { await collection.InsertOneAsync(WriteSession, barber with { Revision = 0 }, cancellationToken: ct); return; }
             // Update profile fields only; the revision is incremented, never overwritten, to keep schedule locking intact.
             var result = await collection.UpdateOneAsync(WriteSession, x => x.Id == barber.Id, Builders<Barber>.Update
-                .Set(x => x.Name, barber.Name).Set(x => x.UserId, barber.UserId).Set(x => x.Hours, barber.Hours)
+                .Set(x => x.Name, barber.Name).Set(x => x.UserId, barber.UserId).Set(x => x.Hours, barber.Hours).Set(x => x.ServiceIds, barber.ServiceIds)
                 .Set(x => x.Active, barber.Active).Inc(x => x.Revision, 1), cancellationToken: ct);
             if (result.MatchedCount != 1) throw DomainError.Missing();
         }
@@ -215,7 +216,7 @@ public static class DemoData
 {
     public static readonly ServiceItem[] Services = [new("haircut", "Demo haircut", 20000, 30), new("beard", "Demo beard trim", 10000, 15)];
     public static readonly Barber[] Barbers = [
-        new("barber-a", "Demo barber A", "staff-a", Enumerable.Range(1, 6).Select(d => new WorkingPeriod(d, 540, 1020)).ToArray()),
-        new("barber-b", "Demo barber B", "staff-b", Enumerable.Range(1, 6).Select(d => new WorkingPeriod(d, 540, 1020)).ToArray())
+        new("barber-a", "Demo barber A", "staff-a", Enumerable.Range(1, 6).Select(d => new WorkingPeriod(d, 540, 1020)).ToArray(), ServiceIds: ["haircut", "beard"]),
+        new("barber-b", "Demo barber B", "staff-b", Enumerable.Range(1, 6).Select(d => new WorkingPeriod(d, 540, 1020)).ToArray(), ServiceIds: ["haircut", "beard"])
     ];
 }
