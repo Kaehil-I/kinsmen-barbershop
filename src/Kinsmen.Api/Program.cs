@@ -36,13 +36,18 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 builder.Services.AddSingleton(TimeProvider.System);
 var policy = builder.Configuration.GetSection("Booking").Get<BookingPolicy>() ?? new();
 if (policy.SlotMinutes is < 1 or > 60 || 60 % policy.SlotMinutes != 0 || policy.HorizonDays is < 1 or > 365
-    || policy.MinimumNoticeMinutes < 0 || policy.CancellationNoticeMinutes < 0)
+    || policy.MinimumNoticeMinutes < 0 || policy.CancellationNoticeMinutes < 0 || policy.MaxActiveBookingsPerCustomer is < 1 or > 50)
     throw new InvalidOperationException("Invalid booking policy configuration.");
 builder.Services.AddSingleton(policy);
 builder.Services.AddSingleton(_ => new MongoBookingStore(
     builder.Configuration["Mongo:ConnectionString"] ?? throw new InvalidOperationException("Mongo connection required."),
     builder.Configuration["Mongo:Database"] ?? "kinsmen_dev"));
 builder.Services.AddSingleton<IBookingStore>(s => s.GetRequiredService<MongoBookingStore>());
+//<<<<<<< HEAD
+//=======
+
+builder.Services.AddSingleton<CatalogueService>();
+//>>>>>>> origin/integration-part2
 
 
 // Booking emails. Without Email:BrevoApiKey the app uses a no-op sender, so nothing else needs configuring.
@@ -105,12 +110,24 @@ else
     builder.Services.AddAuthentication("Bearer").AddScheme<AuthenticationSchemeOptions, RejectAuthentication>("Bearer", _ => { });
 }
 builder.Services.AddAuthorization();
+// Browsers never call the API directly: Kinsmen.Web does, from one server address. Limiting per IP alone would
+// put every visitor in one shared bucket, so signed-in calls are limited per user, and anonymous calls the web
+// app vouches for (shared Proxy:Key) per visitor. Anything else, e.g. direct calls to the public API, per IP.
+var proxyKey = builder.Configuration["Proxy:Key"];
+if (!string.IsNullOrEmpty(proxyKey) && proxyKey.Length < 32)
+    throw new InvalidOperationException("Proxy:Key must be at least 32 characters.");
+var permitPerMinute = builder.Configuration.GetValue("RateLimit:PermitPerMinute", 120);
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = 429;
+    o.OnRejected = (context, _) =>
+    {
+        context.HttpContext.Response.Headers.RetryAfter = "60";
+        return ValueTask.CompletedTask;
+    };
     o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
-        RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions
-        { PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+        RateLimitPartition.GetFixedWindowLimiter(RateLimitKeys.For(ctx, proxyKey), _ => new FixedWindowRateLimiterOptions
+        { PermitLimit = permitPerMinute, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
 
 var app = builder.Build();
@@ -167,11 +184,14 @@ app.Use(async (context, next) =>
             extensions: new Dictionary<string, object?> { ["traceId"] = context.TraceIdentifier }).ExecuteAsync(context);
     }
 });
-app.UseRateLimiter();
+// Authenticate first so the rate limiter can partition by the token's subject.
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
-app.MapGet("/health/live", () => Results.Ok(new { status = "alive" }));
-app.MapGet("/health/ready", async (MongoBookingStore store, CancellationToken ct) => { await store.Ping(ct); return Results.Ok(new { status = "ready" }); });
+// Render's health checks must never be throttled into a failed deploy.
+app.MapGet("/health/live", () => Results.Ok(new { status = "alive" })).DisableRateLimiting();
+app.MapGet("/health/ready", async (MongoBookingStore store, CancellationToken ct) => { await store.Ping(ct); return Results.Ok(new { status = "ready" }); })
+    .DisableRateLimiting();
 app.MapGet("/api/services", (BookingService service, CancellationToken ct) => service.Services(ct));
 app.MapGet("/api/barbers", async (BookingService service, CancellationToken ct) =>
     (await service.Barbers(ct)).Select(b => new { b.Id, b.Name, b.Hours }));
@@ -214,6 +234,25 @@ secure.MapDelete("/blocks/{id}", async (string id, HttpContext ctx, BookingServi
     await service.RemoveBlock(CurrentActor(ctx), id, ct);
     return Results.NoContent();
 });
+
+// Admin catalogue: CatalogueService enforces the Admin role and returns 403 for everyone else.
+var admin = app.MapGroup("/api/admin").RequireAuthorization();
+admin.MapGet("/services", (HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => catalogue.AllServices(CurrentActor(ctx), ct));
+admin.MapPost("/services", async (ServiceRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => Results.Json(await catalogue.CreateService(CurrentActor(ctx), input, ct), statusCode: 201));
+admin.MapPut("/services/{id}", (string id, ServiceRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => catalogue.UpdateService(CurrentActor(ctx), id, input, ct));
+admin.MapPatch("/services/{id}/active", (string id, ActiveRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => catalogue.SetServiceActive(CurrentActor(ctx), id, input.Active, ct));
+admin.MapGet("/barbers", (HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => catalogue.AllBarbers(CurrentActor(ctx), ct));
+admin.MapPost("/barbers", async (BarberRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => Results.Json(await catalogue.CreateBarber(CurrentActor(ctx), input, ct), statusCode: 201));
+admin.MapPut("/barbers/{id}", (string id, BarberRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => catalogue.UpdateBarber(CurrentActor(ctx), id, input, ct));
+admin.MapPatch("/barbers/{id}/active", (string id, ActiveRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => catalogue.SetBarberActive(CurrentActor(ctx), id, input.Active, ct));
 app.Run();
 
 static Actor CurrentActor(HttpContext context)

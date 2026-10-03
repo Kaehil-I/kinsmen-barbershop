@@ -54,7 +54,7 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
             throw DomainError.Invalid($"Start must align to a {policy.SlotMinutes}-minute slot.");
     }
 
-    private static bool WithinHours(Barber barber, DateTime start, DateTime end)
+    internal static bool WithinHours(Barber barber, DateTime start, DateTime end)
     {
         var a = TimeZoneInfo.ConvertTimeFromUtc(start, ShopZone);
         var b = TimeZoneInfo.ConvertTimeFromUtc(end, ShopZone);
@@ -109,6 +109,12 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
                 if (idempotencyKey is not null && await s.BookingById(bookingId) is { } previous)
                     return Replay(previous, fingerprint);
                 ValidateStart(start);
+                await s.TouchCustomer(customer);
+                var active = (await s.Bookings(customer, null, Now, Now.AddDays(policy.HorizonDays + 1)))
+                    .Count(b => b.Status is BookingStatus.Pending or BookingStatus.Confirmed);
+                if (active >= policy.MaxActiveBookingsPerCustomer)
+                    throw new DomainError(409, "booking_limit", $"You can have at most {policy.MaxActiveBookingsPerCustomer} upcoming bookings " +
+                        "at a time. Cancel one, or wait until one has passed, before booking another.");
                 var candidates = (await s.Barbers()).Where(b => b.Active && (input.BarberId is null || b.Id == input.BarberId))
                     .OrderBy(b => b.Id, StringComparer.Ordinal).ToList();
                 if (candidates.Count == 0) throw DomainError.Invalid("No active matching barber exists.");

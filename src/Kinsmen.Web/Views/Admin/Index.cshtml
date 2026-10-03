@@ -1,0 +1,175 @@
+@model AdminCataloguePageViewModel
+@{
+    ViewData["Title"] = "Admin - Catalogue";
+
+    var camelCase = new System.Text.Json.JsonSerializerOptions
+    {
+        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+    };
+
+    // Auth0 user IDs always contain a "|" (google-oauth2|123..., auth0|abc...). Anything
+    // without one (staff-a, unlinked-robert) is a placeholder no real login can match yet.
+    bool LooksLinked(string userId) => userId.Contains('|');
+}
+
+<section class="page-intro">
+    <div class="wrap">
+        <div class="tag">Staff &middot; Admin</div>
+        <h1>Catalogue</h1>
+        <p>
+            Manage the services and barbers customers see when booking. Nothing is ever
+            deleted &mdash; deactivating hides a service or barber from booking but keeps
+            every past booking intact.
+        </p>
+    </div>
+</section>
+
+<section>
+    <div class="wrap" id="admin-page" style="padding-bottom: 80px;">
+        @if (Model.ErrorMessage is not null)
+        {
+            <p class="price-note">@Model.ErrorMessage</p>
+        }
+        else
+        {
+            @* ------------------------------ Services ------------------------------ *@
+            <h2 style="font-family:var(--display); font-weight:600; font-size:20px; color:var(--heading); margin-bottom:14px;">Services</h2>
+
+            <p id="services-message" style="display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-bottom:12px;"></p>
+
+            <button id="add-service-btn" class="add-toggle-btn neo-raised" type="button">+ Add a service</button>
+
+            <div id="service-form" class="panel neo-raised" style="display:none; padding:24px; margin-bottom:20px;">
+                <input type="hidden" id="service-id" />
+                <div class="field-row">
+                    <div class="form-field">
+                        <label>Name</label>
+                        <div class="input-shell neo-pressed"><input type="text" id="service-name" maxlength="80" placeholder="e.g. Skin fade" /></div>
+                    </div>
+                    <div class="form-field">
+                        <label>Price (R)</label>
+                        <div class="input-shell neo-pressed"><input type="number" id="service-price" min="0" max="10000" step="0.01" placeholder="230" /></div>
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="form-field">
+                        <label>Duration (minutes)</label>
+                        <div class="input-shell neo-pressed"><input type="number" id="service-duration" min="1" max="480" step="1" placeholder="30" /></div>
+                    </div>
+                    <div></div>
+                </div>
+                <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+                    <button id="service-save-btn" class="btn-confirm neo-pill-raised" type="button">Save service</button>
+                    <button id="service-cancel-btn" class="row-link" type="button">Cancel</button>
+                </div>
+                <p id="service-error" style="display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-top:12px;"></p>
+            </div>
+
+            <div id="services-list" class="panel neo-raised" style="padding: 8px 18px; margin-bottom: 48px;">
+                @if (Model.Services.Count == 0)
+                {
+                    <p class="no-date-msg" style="padding:16px 0;">No services yet.</p>
+                }
+                @foreach (var service in Model.Services)
+                {
+                    <div class="admin-row service-item"
+                         data-id="@service.Id"
+                         data-name="@service.Name"
+                         data-price-cents="@service.PriceCents"
+                         data-duration="@service.DurationMinutes"
+                         data-active="@(service.Active ? "true" : "false")"
+                         style="margin-bottom:0; padding:16px 0; border-bottom:1px solid var(--sh-dark-soft);@(service.Active ? "" : " opacity:0.6;")">
+                        <div>
+                            <div class="aname">@service.Name</div>
+                            <div class="adesc">@service.DurationMinutes min</div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; justify-content:flex-end;">
+                            <span class="aprice">@PriceFormatter.FormatZarCents(service.PriceCents)</span>
+                            <span class="badge-pill @(service.Active ? "badge-teal" : "badge-grey")">@(service.Active ? "Active" : "Inactive")</span>
+                            <button class="row-link teal edit-service-btn" type="button">Edit</button>
+                            <button class="row-link @(service.Active ? "brick" : "teal") toggle-service-btn" type="button">@(service.Active ? "Deactivate" : "Activate")</button>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @* ------------------------------ Barbers ------------------------------- *@
+            <h2 style="font-family:var(--display); font-weight:600; font-size:20px; color:var(--heading); margin-bottom:14px;">Barbers</h2>
+
+            <p id="barbers-message" style="display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-bottom:12px;"></p>
+
+            <button id="add-barber-btn" class="add-toggle-btn neo-raised" type="button">+ Add a barber</button>
+
+            <div id="barber-form" class="panel neo-raised" style="display:none; padding:24px; margin-bottom:20px;">
+                <input type="hidden" id="barber-id" />
+                <div class="field-row">
+                    <div class="form-field">
+                        <label>Name</label>
+                        <div class="input-shell neo-pressed"><input type="text" id="barber-name" maxlength="80" placeholder="e.g. Frankie" /></div>
+                    </div>
+                    <div class="form-field">
+                        <label>Linked login (Auth0 user ID)</label>
+                        <div class="input-shell neo-pressed"><input type="text" id="barber-user-id" maxlength="128" placeholder="google-oauth2|123... or unlinked-frankie" /></div>
+                    </div>
+                </div>
+                <p style="font-size:13px; color:var(--text-dim); margin:-6px 0 18px;">
+                    Each barber needs a unique ID. Use the barber's Auth0 user ID once they have a login
+                    (it's on their user page in Auth0); until then a placeholder such as
+                    <span style="font-family:var(--mono);">unlinked-frankie</span> works and can be replaced later.
+                </p>
+
+                <label>Working hours</label>
+                <div id="hours-list"></div>
+                <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-bottom:22px;">
+                    <button id="add-period-btn" class="row-link teal" type="button">+ Add a working period</button>
+                    <button id="fill-preset-btn" class="row-link teal" type="button">Fill Mon to Sat, 09:00 to 17:00</button>
+                </div>
+
+                <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+                    <button id="barber-save-btn" class="btn-confirm neo-pill-raised" type="button">Save barber</button>
+                    <button id="barber-cancel-btn" class="row-link" type="button">Cancel</button>
+                </div>
+                <p id="barber-error" style="display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-top:12px;"></p>
+            </div>
+
+            <div id="barbers-list" class="panel neo-raised" style="padding: 8px 18px;">
+                @if (Model.Barbers.Count == 0)
+                {
+                    <p class="no-date-msg" style="padding:16px 0;">No barbers yet.</p>
+                }
+                @foreach (var barber in Model.Barbers)
+                {
+                    var hoursJson = System.Text.Json.JsonSerializer.Serialize(barber.Hours, camelCase);
+
+                    <div class="admin-row barber-item"
+                         data-id="@barber.Id"
+                         data-name="@barber.Name"
+                         data-user-id="@barber.UserId"
+                         data-hours="@hoursJson"
+                         data-active="@(barber.Active ? "true" : "false")"
+                         style="margin-bottom:0; padding:16px 0; border-bottom:1px solid var(--sh-dark-soft);@(barber.Active ? "" : " opacity:0.6;")">
+                        <div>
+                            <div class="aname">@barber.Name</div>
+                            <div class="adesc">@WorkingHoursFormatter.Format(barber.Hours)</div>
+                            <div class="adesc" style="font-family:var(--mono); font-size:11.5px;">
+                                @barber.UserId
+                                @if (!LooksLinked(barber.UserId))
+                                {
+                                    <span>&middot; no login linked yet</span>
+                                }
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; justify-content:flex-end;">
+                            <span class="badge-pill @(barber.Active ? "badge-teal" : "badge-grey")">@(barber.Active ? "Active" : "Inactive")</span>
+                            <button class="row-link teal edit-barber-btn" type="button">Edit</button>
+                            <button class="row-link @(barber.Active ? "brick" : "teal") toggle-barber-btn" type="button">@(barber.Active ? "Deactivate" : "Activate")</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<script src="~/js/auth-fetch.js" asp-append-version="true"></script>
+<script src="~/js/admin.js" asp-append-version="true"></script>

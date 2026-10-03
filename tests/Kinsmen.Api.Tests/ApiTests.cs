@@ -14,7 +14,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Kinsmen.Api.Tests;
 
-public sealed class ApiFactory : WebApplicationFactory<Program>
+public sealed class ApiFactory(IReadOnlyDictionary<string, string>? settings = null) : WebApplicationFactory<Program>
 {
     // Only the in-process test host uses this known key. It is never production configuration.
     public const string TestKey = "in-process-test-only-key-not-for-deployment-12345";
@@ -23,6 +23,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseEnvironment("Development");
         builder.UseSetting("Auth:DevelopmentSigningKey", TestKey);
         builder.UseSetting("Auth:Issuer", "kinsmen-local"); builder.UseSetting("Auth:Audience", "kinsmen-api");
+        foreach (var (key, value) in settings ?? new Dictionary<string, string>()) builder.UseSetting(key, value);
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<IBookingStore>(); services.AddSingleton<IBookingStore, TestStore>();
@@ -128,6 +129,42 @@ public sealed class ApiTests : IDisposable
         var id = body.GetProperty("id").GetString();
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/api/bookings/{id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await factory.Client("other-customer").GetAsync($"/api/bookings/{id}")).StatusCode);
+    }
+    [Fact] public async Task AdminCatalogueRequiresAnAdminToken()
+    {
+        Assert.Equal(HttpStatusCode.Unauthorized, (await factory.Client().GetAsync("/api/admin/services")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await factory.Client("customer-a").GetAsync("/api/admin/services")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await factory.Client("staff-a", "Barber").PostAsJsonAsync("/api/admin/barbers",
+            new { name = "X", userId = "x", hours = Array.Empty<object>() })).StatusCode);
+    }
+    [Fact] public async Task AdminCanCreateServiceThatAppearsInPublicCatalogue()
+    {
+        var admin = factory.Client("admin-a", "Admin");
+        var created = await admin.PostAsJsonAsync("/api/admin/services", new { name = "Skin fade", priceCents = 25000, durationMinutes = 45 });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var body = await created.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.True(body.GetProperty("active").GetBoolean());
+        var id = body.GetProperty("id").GetString();
+        Assert.Contains(id!, await factory.Client().GetStringAsync("/api/services"));
+        var hidden = await admin.PatchAsJsonAsync($"/api/admin/services/{id}/active", new { active = false });
+        Assert.Equal(HttpStatusCode.OK, hidden.StatusCode);
+        Assert.DoesNotContain(id!, await factory.Client().GetStringAsync("/api/services"));
+    }
+    [Fact] public async Task AdminBarberViewShowsLinkedAccountWithoutInternalRevision()
+    {
+        var json = await factory.Client("admin-a", "Admin").GetStringAsync("/api/admin/barbers");
+        Assert.Contains("\"userId\":\"staff-a\"", json);
+        Assert.Contains("\"active\":true", json);
+        Assert.DoesNotContain("revision", json);
+    }
+    [Fact] public async Task AdminCatalogueRejectsUnknownFieldsAndInvalidValues()
+    {
+        var admin = factory.Client("admin-a", "Admin");
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync("/api/admin/services",
+            new { name = "Fade", priceCents = 100, durationMinutes = 30, active = false })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/admin/barbers/barber-a",
+            new { name = "A", userId = "staff-a", hours = new[] { new { weekday = 9, startMinute = 0, endMinute = 60 } } })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.PatchAsJsonAsync("/api/admin/barbers/missing/active", new { active = true })).StatusCode);
     }
     [Fact] public async Task InvalidIdempotencyHeaderReturnsBadRequest()
     {

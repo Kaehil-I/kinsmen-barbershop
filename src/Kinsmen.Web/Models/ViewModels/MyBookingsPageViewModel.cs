@@ -12,5 +12,5 @@ public sealed class MyBookingsPageViewModel
 {
     public List<Booking> Bookings { get; set; } = [];
     public Dictionary<string, string> BarberNamesById { get; set; } = [];
-    public bool ApiUnavailable { get; set; }
+    public string? ErrorMessage { get; set; }
 }

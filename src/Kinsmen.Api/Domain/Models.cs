@@ -27,8 +27,16 @@ public sealed record VersionRequest(long Version);
 public sealed record StatusChangeRequest(BookingStatus Status, long Version);
 public sealed record BlockRequest(DateTimeOffset Start, DateTimeOffset End, string Reason);
 public sealed record AvailableSlot(string BarberId, DateTime StartUtc, DateTime EndUtc);
+// Admin catalogue management. Records are deactivated, never deleted, so booking history stays intact.
+public sealed record ServiceRequest(string Name, int PriceCents, int DurationMinutes);
+public sealed record BarberRequest(string Name, string UserId, WorkingPeriod[] Hours);
+public sealed record ActiveRequest(bool Active);
+// Admin view of a barber: includes the linked identity and active flag, but not the internal revision counter.
+public sealed record BarberProfile(string Id, string Name, string UserId, WorkingPeriod[] Hours, bool Active);
+// MaxActiveBookingsPerCustomer caps Pending/Confirmed bookings that haven't finished yet, so one account
+// can't reserve every slot.
 public sealed record BookingPolicy(int MinimumNoticeMinutes = 60, int CancellationNoticeMinutes = 60,
-    int HorizonDays = 30, int SlotMinutes = 15);
+    int HorizonDays = 30, int SlotMinutes = 15, int MaxActiveBookingsPerCustomer = 3);
 public sealed record Review(string Id, string BookingId, string CustomerId, string BarberId, int Rating, string? Comment, DateTime CreatedUtc);
 public sealed record SubmitReviewRequest(int Rating, string? Comment = null);
 
@@ -46,3 +54,5 @@ public sealed class DomainError(int status, string code, string message) : Excep
 public sealed class DuplicateBookingIdException : Exception;
 // Repository signal handled by SubmitReview when the one-review-per-booking index rejects a second review.
 public sealed class DuplicateReviewException : Exception;
+// Repository signal for the unique barbers.userId index: one barber profile per staff identity.
+public sealed class DuplicateBarberUserException : Exception;

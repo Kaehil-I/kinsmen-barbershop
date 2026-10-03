@@ -64,4 +64,28 @@ public interface IKinsmenApiClient
         string barberId, CreateBlockRequest request, CancellationToken cancellationToken = default);
 
     Task DeleteBarberBlockAsync(string blockId, CancellationToken cancellationToken = default);
+
+    // --- Admin catalogue (Admin role only - the API returns 403 for everyone else) ---
+
+    /// <summary>Every service, including inactive ones (the public list only has active).</summary>
+    Task<List<Service>> GetAdminServicesAsync(CancellationToken cancellationToken = default);
+
+    Task<Service> CreateAdminServiceAsync(ServiceInput input, CancellationToken cancellationToken = default);
+
+    Task<Service> UpdateAdminServiceAsync(
+        string id, ServiceInput input, CancellationToken cancellationToken = default);
+
+    Task<Service> SetAdminServiceActiveAsync(
+        string id, bool active, CancellationToken cancellationToken = default);
+
+    /// <summary>Every barber, including inactive ones and each one's linked login.</summary>
+    Task<List<AdminBarber>> GetAdminBarbersAsync(CancellationToken cancellationToken = default);
+
+    Task<AdminBarber> CreateAdminBarberAsync(BarberInput input, CancellationToken cancellationToken = default);
+
+    Task<AdminBarber> UpdateAdminBarberAsync(
+        string id, BarberInput input, CancellationToken cancellationToken = default);
+
+    Task<AdminBarber> SetAdminBarberActiveAsync(
+        string id, bool active, CancellationToken cancellationToken = default);
 }

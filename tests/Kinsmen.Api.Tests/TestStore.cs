@@ -20,14 +20,20 @@ public sealed class TestStore : IBookingStore, IBookingSession
     public async Task<T> Write<T>(Func<IBookingSession, Task<T>> action, CancellationToken ct = default)
     {
         await gate.WaitAsync(ct);
-        var saved = Saved.ToList(); var blocks = Blocked.ToList(); var reviews = Reviews.ToList();
+        var saved = Saved.ToList(); var blocks = Blocked.ToList(); var catalog = Catalog.ToList(); var staff = Staff.ToList(); var reviews = Reviews.ToList();
         try { return await action(this); }
-        catch { Saved = saved; Blocked = blocks; Reviews = reviews; throw; }
+        catch
+        {
+            Saved = saved; Blocked = blocks; Reviews = reviews;
+            Catalog.Clear(); Catalog.AddRange(catalog); Staff.Clear(); Staff.AddRange(staff);
+            throw;
+        }
         finally { gate.Release(); }
     }
     public Task<List<ServiceItem>> Services() => Task.FromResult(Catalog.ToList());
     public Task<List<Barber>> Barbers() => Task.FromResult(Staff.ToList());
     public Task TouchBarbers(IEnumerable<string> ids) => Task.CompletedTask;
+    public Task TouchCustomer(string customerId) => Task.CompletedTask;
     public Task<Booking?> BookingById(string id) => Task.FromResult(Saved.SingleOrDefault(b => b.Id == id));
     public Task<List<Booking>> Bookings(string? customerId, string? barberId, DateTime from, DateTime to)
         => Task.FromResult(Saved.Where(b => (customerId is null || b.CustomerId == customerId) && (barberId is null || b.BarberId == barberId)
@@ -42,12 +48,32 @@ public sealed class TestStore : IBookingStore, IBookingSession
     }
     public Task SaveBlock(TimeBlock b) { Blocked.Add(b); return Task.CompletedTask; }
     public Task DeleteBlock(string id) { Blocked.RemoveAll(x => x.Id == id); return Task.CompletedTask; }
+    public Task SaveService(ServiceItem service, bool insert = false)
+    {
+        var index = Catalog.FindIndex(x => x.Id == service.Id);
+        if (insert) Catalog.Add(service);
+        else if (index < 0) throw DomainError.Missing();
+        else Catalog[index] = service;
+        return Task.CompletedTask;
+    }
+    public Task SaveBarber(Barber barber, bool insert = false)
+    {
+        // Mirrors the unique barbers.userId index.
+        if (Staff.Any(x => x.Id != barber.Id && x.UserId == barber.UserId)) throw new DuplicateBarberUserException();
+        var index = Staff.FindIndex(x => x.Id == barber.Id);
+        if (insert) Staff.Add(barber with { Revision = 0 });
+        else if (index < 0) throw DomainError.Missing();
+        else Staff[index] = barber with { Revision = Staff[index].Revision + 1 };
+        return Task.CompletedTask;
+    }
     public Task<Review?> ReviewByBookingId(string bookingId) => Task.FromResult(Reviews.SingleOrDefault(r => r.BookingId == bookingId));
     public Task<List<Review>> ReviewsForBarber(string barberId) => Task.FromResult(Reviews.Where(r => r.BarberId == barberId).ToList());
     public Task SaveReview(Review review)
     {
+        // Mirrors the unique reviews.bookingId index.
         if (Reviews.Any(r => r.BookingId == review.BookingId)) throw new DuplicateReviewException();
-        Reviews.Add(review); return Task.CompletedTask;
+        Reviews.Add(review);
+        return Task.CompletedTask;
     }
 }
 public sealed class TestClock : TimeProvider

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.RateLimiting;
 using Kinsmen.Web.ApiClient;
 using Kinsmen.Web.Helpers;
 using Kinsmen.Web.Models.Api;
@@ -19,6 +20,11 @@ public sealed class MyBookingsController(IKinsmenApiClient apiClient) : Controll
 
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
+        // My Bookings is a customer's own bookings. For a barber the API would hand back
+        // their whole schedule instead, dressed up with customer buttons that then fail -
+        // so staff are sent to the screen that is actually theirs.
+        if (User.IsStaff()) return RedirectToAction("Index", "BarberSchedule");
+
         try
         {
             var now = DateTimeOffset.UtcNow;
@@ -42,10 +48,13 @@ public sealed class MyBookingsController(IKinsmenApiClient apiClient) : Controll
                 BarberNamesById = barbers.ToDictionary(b => b.Id, b => b.Name)
             });
         }
-        catch (Exception ex) when (ex is KinsmenApiException or HttpRequestException)
+        catch (KinsmenApiException ex)
         {
-            // See ServicesController - same reasoning, full handling in step 8.
-            return View(new MyBookingsPageViewModel { ApiUnavailable = true });
+            return View(new MyBookingsPageViewModel { ErrorMessage = ApiErrorMessages.For(ex) });
+        }
+        catch (HttpRequestException)
+        {
+            return View(new MyBookingsPageViewModel { ErrorMessage = ApiErrorMessages.ForConnectionFailure() });
         }
     }
 
@@ -77,15 +86,16 @@ public sealed class MyBookingsController(IKinsmenApiClient apiClient) : Controll
         }
         catch (KinsmenApiException ex)
         {
-            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ex.Message });
+            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ApiErrorMessages.For(ex) });
         }
         catch (HttpRequestException)
         {
-            return StatusCode(503, new { message = "Couldn't reach the booking service." });
+            return StatusCode(503, new { message = ApiErrorMessages.ForConnectionFailure() });
         }
     }
 
     [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.Writes)]
     public async Task<IActionResult> Reschedule(
         string id, [FromBody] RescheduleRequest request, CancellationToken cancellationToken)
     {
@@ -96,17 +106,19 @@ public sealed class MyBookingsController(IKinsmenApiClient apiClient) : Controll
         }
         catch (KinsmenApiException ex)
         {
-            // 409 stale_version is the one this step is specifically about - the
-            // message already says to refresh, which the client-side handler acts on.
-            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ex.Message });
+            // 409 stale_version gets its own message in my-bookings.js (result.body
+            // still carries this one as a fallback for any other status code that
+            // reaches this same catch).
+            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ApiErrorMessages.For(ex) });
         }
         catch (HttpRequestException)
         {
-            return StatusCode(503, new { message = "Couldn't reach the booking service." });
+            return StatusCode(503, new { message = ApiErrorMessages.ForConnectionFailure() });
         }
     }
 
     [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.Writes)]
     public async Task<IActionResult> Cancel(
         string id, [FromBody] VersionRequest request, CancellationToken cancellationToken)
     {
@@ -117,11 +129,11 @@ public sealed class MyBookingsController(IKinsmenApiClient apiClient) : Controll
         }
         catch (KinsmenApiException ex)
         {
-            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ex.Message });
+            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ApiErrorMessages.For(ex) });
         }
         catch (HttpRequestException)
         {
-            return StatusCode(503, new { message = "Couldn't reach the booking service." });
+            return StatusCode(503, new { message = ApiErrorMessages.ForConnectionFailure() });
         }
     }
 

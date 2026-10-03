@@ -3,6 +3,16 @@
 // that keeps the bearer token server-side and sidesteps CORS entirely (see
 // BookingController's class-level comment for why).
 document.addEventListener('DOMContentLoaded', function () {
+    // Page data arrives as a JSON block (not an inline script) so the CSP can block inline scripts.
+    window.kinsmenBooking = JSON.parse(document.getElementById('kinsmen-booking-data').textContent);
+
+    // Service and barber names come from the catalogue, so they must never be inserted as raw HTML.
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
     var servicesById = {};
     (window.kinsmenBooking.services || []).forEach(function (s) { servicesById[s.id] = s; });
 
@@ -24,11 +34,17 @@ document.addEventListener('DOMContentLoaded', function () {
     var successCard = document.getElementById('success-card');
     var successText = document.getElementById('success-text');
     var bookAnotherLink = document.getElementById('book-another');
+    var notesInput = document.getElementById('booking-notes');
 
     if (!calGrid) return; // API was unavailable / nothing to book — view didn't render the form.
 
     var today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    var preselectedServiceId = window.kinsmenBooking.preselectedServiceId;
+    var initialServiceId = (preselectedServiceId && servicesById[preselectedServiceId])
+        ? preselectedServiceId
+        : (window.kinsmenBooking.services[0] ? window.kinsmenBooking.services[0].id : null);
 
     var state = {
         viewYear: today.getFullYear(),
@@ -36,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function () {
         selectedDate: null,      // Date, local calendar date only
         selectedTime: null,      // "HH:mm" shop-local, for display
         selectedStartUtc: null,  // ISO string from the availability slot, for submission
-        selectedServiceIds: (window.kinsmenBooking.services[0] ? [window.kinsmenBooking.services[0].id] : []),
+        selectedServiceIds: (initialServiceId ? [initialServiceId] : []),
         idempotencyKey: null,
         idempotencyKeySignature: null
     };
@@ -231,9 +247,9 @@ document.addEventListener('DOMContentLoaded', function () {
             var barber = barbersById[barberSelect.value];
             var barberLabel = barber ? barber.name : 'any available barber';
             var dateStr = state.selectedDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-            summaryText.innerHTML = '<strong>' + selectedServiceNames() + '</strong> (' +
-                formatZarCents(selectedServicesTotal()) + ') with <strong>' + barberLabel +
-                '</strong> \u2014 ' + dateStr + ' at <strong>' + state.selectedTime + '</strong>';
+            summaryText.innerHTML = '<strong>' + escapeHtml(selectedServiceNames()) + '</strong> (' +
+                escapeHtml(formatZarCents(selectedServicesTotal())) + ') with <strong>' + escapeHtml(barberLabel) +
+                '</strong> \u2014 ' + escapeHtml(dateStr) + ' at <strong>' + escapeHtml(state.selectedTime) + '</strong>';
             confirmBtn.disabled = false;
         } else {
             summaryText.textContent = 'Select a barber, date and time to continue.';
@@ -272,7 +288,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var barberLabel = barbersById[barberSelect.value] ? barbersById[barberSelect.value].name : 'your barber';
         var dateStr = state.selectedDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 
-        fetch('/Booking/Create', {
+        authFetch('/Booking/Create', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -281,7 +297,8 @@ document.addEventListener('DOMContentLoaded', function () {
             body: JSON.stringify({
                 barberId: barberSelect.value || null,
                 serviceIds: state.selectedServiceIds,
-                startUtc: state.selectedStartUtc
+                startUtc: state.selectedStartUtc,
+                notes: notesInput.value.trim() || null
             })
         })
             .then(function (response) {
@@ -306,9 +323,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
 
-                successText.innerHTML = '<strong>' + selectedServiceNames() + '</strong> with <strong>' +
-                    barberLabel + '</strong> \u2014 ' + dateStr + ' at <strong>' + state.selectedTime +
-                    '</strong>. Total <strong>' + formatZarCents(result.body.totalCents) + '</strong>.';
+                successText.innerHTML = '<strong>' + escapeHtml(selectedServiceNames()) + '</strong> with <strong>' +
+                    escapeHtml(barberLabel) + '</strong> \u2014 ' + escapeHtml(dateStr) + ' at <strong>' + escapeHtml(state.selectedTime) +
+                    '</strong>. Total <strong>' + escapeHtml(formatZarCents(result.body.totalCents)) + '</strong>.';
                 summaryPanel.style.display = 'none';
                 bookingError.style.display = 'none';
                 successCard.classList.add('show');
@@ -328,6 +345,7 @@ document.addEventListener('DOMContentLoaded', function () {
         state.selectedStartUtc = null;
         state.idempotencyKey = null;
         state.idempotencyKeySignature = null;
+        notesInput.value = '';
 
         successCard.classList.remove('show');
         summaryPanel.style.display = '';
@@ -341,4 +359,10 @@ document.addEventListener('DOMContentLoaded', function () {
     renderCalendar();
     fetchAndRenderTimes();
     updateSummary();
+
+    // If we arrived with a barber preselected (server-rendered <option selected>), make
+    // sure the note text and the rest of the UI reflect that on first paint too.
+    if (barberSelect.value) {
+        barberNote.textContent = 'Booking specifically with ' + (barbersById[barberSelect.value] ? barbersById[barberSelect.value].name : '') + '.';
+    }
 });

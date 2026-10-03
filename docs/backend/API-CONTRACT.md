@@ -29,6 +29,14 @@ Version 0.1, 20 September 2026. The executable source is `src/Kinsmen.Api`; [ope
 | `GET /api/barbers/{barberId}/blocks` | Same active Barber/Admin | `from`, `to` | `200` private time-block records |
 | `POST /api/barbers/{barberId}/blocks` | Same active Barber/Admin | `start`, `end`, `reason` | `201` time block |
 | `DELETE /api/blocks/{id}` | Same active Barber/Admin | None | `204` |
+| `GET /api/admin/services` | Admin | None | `200` all services, including inactive |
+| `POST /api/admin/services` | Admin | `name`, `priceCents`, `durationMinutes` | `201` new active service |
+| `PUT /api/admin/services/{id}` | Admin | `name`, `priceCents`, `durationMinutes` | `200` updated service |
+| `PATCH /api/admin/services/{id}/active` | Admin | `active` | `200` updated service |
+| `GET /api/admin/barbers` | Admin | None | `200` all barber profiles, including linked `userId` and `active` |
+| `POST /api/admin/barbers` | Admin | `name`, `userId`, `hours` | `201` new active barber profile |
+| `PUT /api/admin/barbers/{id}` | Admin | `name`, `userId`, `hours` | `200` updated barber profile |
+| `PATCH /api/admin/barbers/{id}/active` | Admin | `active` | `200` updated barber profile |
 | `GET /health/live` | Public | None | `200` process alive |
 | `GET /health/ready` | Public | None | `200` database checks pass; otherwise `503` |
 
@@ -109,6 +117,8 @@ Both Pending and Confirmed bookings can be rescheduled or cancelled before the c
 
 The assigned barber/admin can move Pending to Confirmed before the appointment start. Confirmed can become Completed at/after its end, or NoShow at/after its start. Final statuses cannot be reopened through this API. Staff cancellation is an Admin operation; barbers have confirmation/completion/no-show privileges. Pending bookings reserve slots until cancelled or processed; there is no automatic expiry yet.
 
+A customer can hold at most **3 active bookings** (Pending or Confirmed, not yet finished) at a time, configurable as `Booking__MaxActiveBookingsPerCustomer`. A fourth returns `409 booking_limit`; cancelling one, or one finishing, frees a place. Rescheduling doesn't count as a new booking, an idempotent replay of an already-created booking still succeeds, and bookings an admin makes on a customer's behalf count towards that customer's limit. Concurrent requests for the same customer are serialised (a per-customer lock document in `customerLocks`, written inside the same transaction), so the limit can't be raced.
+
 ## Time blocks
 
 ```json
@@ -116,6 +126,27 @@ The assigned barber/admin can move Pending to Confirmed before the appointment s
 ```
 
 Blocks must have positive duration, start in the future, last no longer than 31 days and end within the configured horizon plus one day. A block cannot overwrite an existing appointment or overlap another block. The reason is visible only to the relevant barber/admin. Public availability does not reveal appointment identities or break reasons.
+
+## Admin catalogue
+
+Admins manage services and barber profiles. Nothing is deleted: deactivating hides a record from the public catalogue and from new bookings, while existing bookings keep valid references. Customers never see inactive records; the admin list endpoints return everything.
+
+```json
+{"name":"Skin fade","priceCents":25000,"durationMinutes":45}
+```
+
+- Service names are 1–80 characters (trimmed), unique among **active** services (case-insensitive), priced R0–R10 000 and 1–480 minutes long. Editing a service does not change existing bookings: they keep the name, price and duration captured when booked.
+- Reactivating a service fails with `409 duplicate_name` if another active service now uses its name.
+
+```json
+{"name":"Sipho","userId":"auth0|65f0c1a2b3","hours":[{"weekday":1,"startMinute":540,"endMinute":1020},{"weekday":6,"startMinute":540,"endMinute":780}]}
+```
+
+- `userId` is the staff member's identity-provider subject (`sub`, e.g. from Auth0) and links their login to this barber. Each account can be linked to one barber only (`409 duplicate_user`, also enforced by a unique database index).
+- `hours` uses ISO weekdays (Monday=1 … Sunday=7) and minutes since local midnight, at most 21 periods. Split shifts are allowed; periods on the same day must not overlap. An empty array means the barber currently has no working days.
+- Changing hours is refused with `409 booking_conflict` when an upcoming Pending/Confirmed booking would fall outside the new hours. Deactivating a barber is refused while they have upcoming Pending/Confirmed bookings. Move or cancel those bookings first.
+- Barber edits and deactivation lock the barber's schedule in the same way as booking writes, so a booking made at the same moment either lands before the change (and the change is checked against it) or sees the new profile.
+- Catalogue edits are last-write-wins; there is no version field on services or barbers.
 
 ## Error handling for Greg
 
@@ -128,10 +159,13 @@ Blocks must have positive duration, start in the future, last no longer than 31 
 | `409` `booking_conflict` | Time/status/notice conflict | Refresh availability or booking; explain conflict |
 | `409` `stale_version` | Another update already changed this booking | Refresh record/version before retry |
 | `409` `idempotency_conflict` | A request key was reused with a different payload | Keep the key for exact retries; generate a new key for a genuinely new attempt |
-| `429` | Request limit reached | Pause and retry later |
+| `409` `duplicate_name` | Another active service already uses this name | Ask the admin for a different name |
+| `409` `duplicate_user` | The account is already linked to another barber | Show which account is taken; pick another |
+| `409` `booking_limit` | The customer already has the maximum number of active bookings | Show the message; offer My Bookings to cancel one |
+| `429` | Request limit reached (`Retry-After: 60`) | Pause and retry later |
 | `503` | Database unavailable/not initialized/not transaction-capable | Show service unavailable; refresh bookings before retrying a write |
 | `500` | Unexpected server error | Show generic failure; retain returned trace ID for diagnosis |
 
-Authentication middleware and rate limiting can return empty error bodies. Do not assume every non-success response has JSON. The API currently allows 120 requests/minute per direct source IP per process. Kaehil must configure trusted proxy forwarding and hosting-level limits for production; do not blindly trust forwarded headers. CORS is not opened to arbitrary origins. Choose same-origin hosting or add exact approved frontend origins during integration.
+Authentication middleware and rate limiting can return empty error bodies. Do not assume every non-success response has JSON. The API allows 120 requests/minute (`RateLimit__PermitPerMinute`) per bucket, per process, and `/health/*` is never limited. The bucket is the signed-in user (token `sub`); otherwise the visitor the web app reports in `X-Kinsmen-Client`, but only when the request also carries the shared secret in `X-Kinsmen-Proxy-Key` (`Proxy__Key` on both services); otherwise the caller's IP. Without that, every visitor would share the web server's single bucket, because browsers never call the API directly. Kinsmen.Web applies its own per-visitor limits first (120/minute overall, 20/minute for data-changing actions, 10/minute for starting a login). CORS is not opened to arbitrary origins. Choose same-origin hosting or add exact approved frontend origins during integration.
 
 For uncertain create results, retry with the original key and payload or query the customer's bookings. Do not generate a new key for a network retry. Requests without an idempotency key retain the legacy behavior and must not be automatically retried.

@@ -14,4 +14,8 @@ public sealed class CreateBookingAjaxRequest
 
     /// <summary>The exact startUtc value from the availability slot the customer clicked.</summary>
     public string StartUtc { get; set; } = string.Empty;
+
+    /// <summary>Optional note for the barber, up to 500 chars. Rendered as plain text
+    /// wherever it's shown - never as raw HTML.</summary>
+    public string? Notes { get; set; }
 }

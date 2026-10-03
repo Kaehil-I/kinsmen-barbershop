@@ -1,0 +1,74 @@
+@{
+    ViewData["Title"] = "Find Us";
+
+    const string Address = "Shop 5, 8 Mackeurtan Ave, Durban North, 4051";
+    var encodedAddress = Uri.EscapeDataString(Address);
+
+    // No API key needed for either of these - the embed uses Google's long-standing
+    // no-key "output=embed" form (simpler than the official Maps Embed API, which
+    // does require a key/billing setup we don't have for this project), and the
+    // directions link is the standard Maps URL scheme. Leaving "origin" out of the
+    // directions URL is deliberate: Google Maps fills it in as the user's current
+    // location automatically (prompting for location permission if needed) rather
+    // than us doing our own geolocation lookup.
+    var mapEmbedUrl = $"https://maps.google.com/maps?q={encodedAddress}&output=embed";
+    var directionsUrl = $"https://www.google.com/maps/dir/?api=1&destination={encodedAddress}&travelmode=driving";
+}
+
+<section class="page-intro">
+    <div class="wrap">
+        <div class="tag">Durban North &middot; Classic Barbershop</div>
+        <h1>Find Us</h1>
+        <p>
+            Shop 5 on Mackeurtan Ave, Durban North &mdash; easy to find, easy to park.
+            Booked by appointment, so check the hours below before you head over.
+        </p>
+    </div>
+</section>
+
+<section>
+    <div class="wrap" style="padding-bottom: 40px;">
+        <div class="loc-grid">
+
+            <div class="panel neo-raised loc-panel">
+                <h3>Opening Hours</h3>
+                <div class="hours-row"><span>Monday</span><span>09:00 &ndash; 18:00</span></div>
+                <div class="hours-row"><span>Tuesday</span><span>09:00 &ndash; 18:00</span></div>
+                <div class="hours-row"><span>Wednesday</span><span>09:00 &ndash; 18:00</span></div>
+                <div class="hours-row"><span>Thursday</span><span>09:00 &ndash; 18:00</span></div>
+                <div class="hours-row"><span>Friday</span><span>09:00 &ndash; 18:00</span></div>
+                <div class="hours-row"><span>Saturday</span><span>09:00 &ndash; 18:00</span></div>
+                <div class="hours-row"><span>Sunday</span><span>09:00 &ndash; 15:00</span></div>
+
+                <div class="addr">
+                    <strong>Shop 5, 8 Mackeurtan Ave</strong>
+                    Durban North, Durban, 4051
+                </div>
+                <div class="contact-links">
+                    <a href="tel:+27672307952">+27 67 230 7952</a>
+                    <a href="mailto:kinsmenbarbers@gmail.com">kinsmenbarbers@gmail.com</a>
+                    <a href="@directionsUrl" target="_blank" rel="noopener">Get Directions &rarr;</a>
+                </div>
+            </div>
+
+            <div class="panel neo-raised map-panel">
+                <iframe src="@mapEmbedUrl"
+                        title="Kinsman Barbers location map"
+                        style="width:100%; height:100%; min-height:280px; border:0; display:block;"
+                        loading="lazy"
+                        referrerpolicy="no-referrer-when-downgrade"></iframe>
+            </div>
+
+        </div>
+
+        <p class="price-note" style="margin-top:20px;">
+            General hours shown above &mdash; individual barbers may work different days.
+            Check <a asp-controller="Team" asp-action="Index" style="color:var(--teal);">Team</a>
+            for each barber's actual hours, or just check the booking calendar directly.
+        </p>
+
+        <div class="cta-row">
+            <a asp-controller="Booking" asp-action="Index" class="neo-pill-raised">Book a Chair</a>
+        </div>
+    </div>
+</section>
