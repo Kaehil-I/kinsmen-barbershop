@@ -14,7 +14,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Kinsmen.Api.Tests;
 
-public sealed class ApiFactory : WebApplicationFactory<Program>
+public sealed class ApiFactory(IReadOnlyDictionary<string, string>? settings = null) : WebApplicationFactory<Program>
 {
     // Only the in-process test host uses this known key. It is never production configuration.
     public const string TestKey = "in-process-test-only-key-not-for-deployment-12345";
@@ -23,6 +23,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseEnvironment("Development");
         builder.UseSetting("Auth:DevelopmentSigningKey", TestKey);
         builder.UseSetting("Auth:Issuer", "kinsmen-local"); builder.UseSetting("Auth:Audience", "kinsmen-api");
+        foreach (var (key, value) in settings ?? new Dictionary<string, string>()) builder.UseSetting(key, value);
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<IBookingStore>(); services.AddSingleton<IBookingStore, TestStore>();

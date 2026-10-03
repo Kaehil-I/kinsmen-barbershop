@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.RateLimiting;
 using Kinsmen.Web.ApiClient;
 using Kinsmen.Web.Helpers;
 using Kinsmen.Web.Models.Api;
@@ -103,6 +104,7 @@ public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
     /// wwwroot/js/booking.js for how the key's lifetime is managed client-side.</summary>
     [HttpPost]
     [Authorize]
+    [EnableRateLimiting(RateLimitPolicies.Writes)]
     public async Task<IActionResult> Create(
         [FromBody] CreateBookingAjaxRequest request, CancellationToken cancellationToken)
     {
