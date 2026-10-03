@@ -21,4 +21,5 @@ public sealed class SaveBarberAjaxRequest
     public string Name { get; set; } = string.Empty;
     public string UserId { get; set; } = string.Empty;
     public List<WorkingPeriod> Hours { get; set; } = [];
+    public List<string> ServiceIds { get; set; } = [];
 }
