@@ -1,0 +1,42 @@
+@model List<Barber>
+@{
+    ViewData["Title"] = "Your Barber";
+    var errorMessage = ViewData["ErrorMessage"] as string;
+}
+
+<section class="page-intro">
+    <div class="wrap">
+        <div class="tag">Meet the Team</div>
+        <h1>Your Barber</h1>
+        <p>Pick a chair, or pick a person &mdash; every barber here has their own hours.</p>
+    </div>
+</section>
+
+<section>
+    <div class="wrap">
+        @if (errorMessage is not null)
+        {
+            <p class="price-note">@errorMessage</p>
+        }
+        else if (Model.Count == 0)
+        {
+            <p class="price-note">No barbers are available right now.</p>
+        }
+
+        <div class="team-grid">
+            @foreach (var barber in Model)
+            {
+                <div class="panel neo-raised team-card">
+                    <div class="avatar"></div>
+                    <div class="tname">@barber.Name</div>
+                    <div class="tspec">@WorkingHoursFormatter.Format(barber.Hours)</div>
+                    @if (!User.IsStaff())
+                    {
+                        <a asp-controller="Booking" asp-action="Index" asp-route-barberId="@barber.Id" class="book-link neo-pill-raised">Book with @barber.Name</a>
+                    }
+                </div>
+            }
+        </div>
+        <p class="price-note" style="margin-top:-4px;">Specialties and photos aren't part of the barber profile data yet &mdash; worth raising with the team if you want them back.</p>
+    </div>
+</section>

@@ -1,0 +1,123 @@
+@{
+    // Which navigation to show. The rules, by account:
+    //   - Staff (barbers and admins) don't book appointments, so Book a Chair and
+    //     My Bookings are left out, and the public Location page isn't offered either.
+    //   - Barbers also don't need the Team page. Admins keep it.
+    // This is only about what's offered: the real protection is [Authorize] on each
+    // controller and the API's own rules, not whether a link is visible.
+    var isAdmin = User.IsInRole("Admin");
+    var isBarber = User.IsInRole("Barber");
+    var isStaff = User.IsStaff();
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>@ViewData["Title"] - Kinsmen Barbers</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/kinsmen.css" asp-append-version="true" />
+</head>
+<body>
+    <header>
+        <div class="nav wrap">
+            <a asp-controller="Home" asp-action="Index" class="wordmark">
+                <img src="~/img/kinsmen-logo.png" alt="Kinsman Barbers logo" class="logo-badge" />
+                Kinsman
+            </a>
+            <nav class="nav-links" id="nav-links">
+                @if (isAdmin)
+                {
+                    <a asp-controller="Admin" asp-action="Index">Admin</a>
+                }
+                @if (isStaff)
+                {
+                    <a asp-controller="BarberSchedule" asp-action="Index">My Schedule</a>
+                }
+                else
+                {
+                    <a asp-controller="Booking" asp-action="Index">Book a Chair</a>
+                }
+                <a asp-controller="Services" asp-action="Index">Services</a>
+                @if (!isBarber)
+                {
+                    <a asp-controller="Team" asp-action="Index">Team</a>
+                }
+                @if (!isStaff)
+                {
+                    <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
+                    <a asp-controller="Location" asp-action="Index">Location</a>
+                }
+            </nav>
+            <div class="nav-auth" id="nav-auth">
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <span class="nav-user">@User.Identity.Name</span>
+                    <form asp-controller="Account" asp-action="Logout" method="post" class="inline-form">
+                        <button type="submit" class="link-btn">Log Out</button>
+                    </form>
+                }
+                else
+                {
+                    <a asp-controller="Account" asp-action="Login" class="link-btn">Log In</a>
+                    <a asp-controller="Account" asp-action="Register" class="btn-account neo-pill-raised">Create Account</a>
+                }
+            </div>
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+        <div class="mobile-menu" id="mobile-menu">
+            @if (isAdmin)
+            {
+                <a asp-controller="Admin" asp-action="Index">Admin</a>
+            }
+            @if (isStaff)
+            {
+                <a asp-controller="BarberSchedule" asp-action="Index">My Schedule</a>
+            }
+            else
+            {
+                <a asp-controller="Booking" asp-action="Index">Book a Chair</a>
+            }
+            <a asp-controller="Services" asp-action="Index">Services</a>
+            @if (!isBarber)
+            {
+                <a asp-controller="Team" asp-action="Index">Team</a>
+            }
+            @if (!isStaff)
+            {
+                <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
+                <a asp-controller="Location" asp-action="Index">Location</a>
+            }
+            <hr />
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <span class="nav-user">@User.Identity.Name</span>
+                <form asp-controller="Account" asp-action="Logout" method="post"><button type="submit">Log Out</button></form>
+            }
+            else
+            {
+                <a asp-controller="Account" asp-action="Login">Log In</a>
+                <a asp-controller="Account" asp-action="Register" class="mobile-account">Create Account</a>
+            }
+        </div>
+    </header>
+
+    <main>
+        @RenderBody()
+    </main>
+
+    <footer>
+        <div class="wrap foot-row">
+            <span>Kinsman Barbers — Shop 5, 8 Mackeurtan Ave, Durban North</span>
+            <span>+27 67 230 7952 · kinsmenbarbers@gmail.com</span>
+        </div>
+    </footer>
+
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
