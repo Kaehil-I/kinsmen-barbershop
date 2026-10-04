@@ -11,6 +11,7 @@ public sealed class AdminBarber
     public string UserId { get; set; } = string.Empty;
     public List<WorkingPeriod> Hours { get; set; } = [];
     public bool Active { get; set; }
+    public List<string>? ServiceIds { get; set; }
 }
 
 /// <summary>Body for POST/PUT /api/admin/services. The API rejects any JSON member it
@@ -35,6 +36,9 @@ public sealed class BarberInput
     public string UserId { get; set; } = string.Empty;
 
     public List<WorkingPeriod> Hours { get; set; } = [];
+
+    /// <summary>IDs of active services this barber is qualified to perform.</summary>
+    public List<string> ServiceIds { get; set; } = [];
 }
 
 /// <summary>Body for PATCH /api/admin/services/{id}/active and
