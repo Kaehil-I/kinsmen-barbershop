@@ -5,10 +5,10 @@
     --base:      #E8E3D8;   /* lighter surface — panels, buttons, calendar, chips */
     --text:      #322F29;   /* soft near-black — body copy */
     --heading:   #55503F;   /* lighter warm charcoal — headings only, easier on the eye */
-    --text-dim:  #726C5E;   /* muted text */
+    --text-dim:  #635D51;   /* muted text */
     --accent:    #7C3626;   /* muted brick — brand / primary CTA */
     --teal:      #1F5C57;   /* deep teal — date & schedule selection */
-    --ochre:     #9C6B22;   /* warm mustard — choice-chip selection */
+    --ochre:     #7E561B;   /* warm mustard — choice-chip selection */
     --accent-ink:#F3EAE3;   /* text on any accent fill */
 
     --sh-light:  rgba(255,255,255,0.85);
@@ -34,6 +34,29 @@
   button, select{ font-family:inherit; cursor:pointer; border:none; background:none; color:inherit; }
 
   .wrap{ max-width:1080px; margin:0 auto; padding:0 32px; }
+
+  /* ---------- accessibility + shared feedback ---------- */
+  /* One visible focus style for everything a keyboard can reach. Text inputs and selects
+     already get a ring from their neomorphic shell (:focus-within), so they opt out. */
+  :focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
+  .input-shell input:focus-visible,
+  .input-shell textarea:focus-visible,
+  .select-shell select:focus-visible{ outline:none; }
+
+  .skip-link{
+    position:absolute; left:16px; top:-64px; z-index:100;
+    padding:10px 16px; border-radius:12px; background:var(--base); color:var(--text);
+    font-family:var(--display); font-weight:600; font-size:14px;
+    box-shadow:5px 5px 10px var(--sh-dark-soft), -5px -5px 10px var(--sh-light-soft);
+  }
+  .skip-link:focus{ top:12px; }
+  main:focus{ outline:none; } /* skip-link target only; not a control, so no ring */
+
+  /* Inline error/notice text. JS reveals it with style.display = 'block'. Replaces the
+     same inline style that was repeated on every page. */
+  .form-error{ display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-top:10px; }
+
+  @media (prefers-reduced-motion: reduce){ html{ scroll-behavior:auto; } }
 
   /* ---------- neomorphic primitives ---------- */
   .neo-raised{
@@ -502,7 +525,7 @@
   }
   .badge-teal{ background:rgba(31,92,87,0.14); color:var(--teal); }
   .badge-brick{ background:rgba(124,54,38,0.14); color:var(--accent); }
-  .badge-ochre{ background:rgba(156,107,34,0.16); color:var(--ochre); }
+  .badge-ochre{ background:rgba(156,107,34,0.10); color:var(--ochre); }
 
   /* ---------- shop ---------- */
   .product-grid{
@@ -647,7 +670,7 @@
   .my-booking-actions .danger{ color:var(--accent); }
   .my-booking-actions .not-yet-eligible{ opacity:0.45; }
   .my-booking-actions .not-yet-eligible:hover{ box-shadow:none; }
-  .badge-grey{ background:rgba(114,108,94,0.16); color:var(--text-dim); }
+  .badge-grey{ background:rgba(114,108,94,0.10); color:var(--text-dim); }
   .star-picker{ display:flex; gap:6px; margin:10px 0; }
   .star-picker button{ font-size:22px; color:var(--sh-dark); background:none; border:none; cursor:pointer; padding:2px; }
   .star-picker button.active{ color:var(--ochre); }
