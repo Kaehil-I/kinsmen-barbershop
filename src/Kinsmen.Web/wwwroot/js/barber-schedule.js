@@ -409,7 +409,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 })
                 .catch(function () {
                     btn.disabled = false;
-                    window.alert("Couldn't remove that block - please try again.");
+                    var blockErrorEl = document.getElementById('block-error');
+                    blockErrorEl.textContent = "Couldn't remove that block - please try again.";
+                    blockErrorEl.style.display = 'block';
                 });
         });
     }

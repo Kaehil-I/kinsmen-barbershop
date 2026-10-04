@@ -130,9 +130,9 @@
                     var allCancelled = group.All(b => b.Status == BookingStatus.Cancelled);
 
                     <div id="day-@group.Key" data-all-cancelled="@(allCancelled ? "true" : "false")" style="margin-bottom:28px; scroll-margin-top:20px;@(allCancelled ? " display:none;" : "")">
-                        <div class="month-label" style="margin-bottom:12px; @(isToday ? "color:var(--teal);" : isPast ? "color:var(--text-dim);" : "")">
+                        <h2 class="month-label" style="margin-bottom:12px; @(isToday ? "color:var(--teal);" : isPast ? "color:var(--text-dim);" : "")">
                             @groupDate.ToString("dddd d MMMM")@(isToday ? " \u2014 Today" : "")
-                        </div>
+                        </h2>
 
                         @foreach (var booking in group)
                         {
@@ -172,7 +172,7 @@
                                         <button class="neo-pill-raised danger status-btn" data-status="NoShow" type="button">No-Show</button>
                                     }
                                 </div>
-                                <p class="status-error" style="display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-top:8px;"></p>
+                                <p class="status-error form-error"></p>
                             </div>
                         }
                     </div>
@@ -216,7 +216,7 @@
                         </div>
 
                         <button class="btn-confirm neo-pill-raised" id="add-block-btn" disabled type="button" style="margin-top:18px;">Add Time Block</button>
-                        <p id="block-error" style="display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-top:10px;"></p>
+                        <p id="block-error" class="form-error"></p>
                     </div>
 
                     <div id="blocks-list">
