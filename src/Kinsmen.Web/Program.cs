@@ -117,6 +117,14 @@ builder.Services.AddHttpClient<IKinsmenApiClient, KinsmenApiClient>((serviceProv
     .AddHttpMessageHandler<BearerTokenHandler>()
     .AddHttpMessageHandler<ProxyHeadersHandler>();
 
+builder.Services.AddHttpClient<IStaffApiClient, StaffApiClient>((serviceProvider, client) =>
+{
+    var apiOptions = serviceProvider.GetRequiredService<IOptions<ApiClientOptions>>().Value;
+    if (!string.IsNullOrWhiteSpace(apiOptions.BaseUrl)) client.BaseAddress = new Uri(apiOptions.BaseUrl);
+})
+    .AddHttpMessageHandler<BearerTokenHandler>()
+    .AddHttpMessageHandler<ProxyHeadersHandler>();
+
 var app = builder.Build();
 
 // First, so every response gets them, including errors and static files.

@@ -37,6 +37,11 @@ Version 0.1, 20 September 2026. The executable source is `src/Kinsmen.Api`; [ope
 | `POST /api/admin/barbers` | Admin | `name`, `userId`, `hours` | `201` new active barber profile |
 | `PUT /api/admin/barbers/{id}` | Admin | `name`, `userId`, `hours` | `200` updated barber profile |
 | `PATCH /api/admin/barbers/{id}/active` | Admin | `active` | `200` updated barber profile |
+| `GET /api/admin/staff/status` | Admin | None | `200` `{ enabled }`: whether Auth0 management credentials are configured |
+| `GET /api/admin/staff` | Admin | None | `200` everyone with the Barber or Admin role |
+| `GET /api/admin/staff/lookup` | Admin | `email` | `200` accounts using that email (`userId`, `email`, `emailVerified`, `name`, `role`) |
+| `PUT /api/admin/staff/{userId}/role` | Admin | `role` | `200` the person with their new role |
+| `GET /api/admin/staff/audit` | Admin | None | `200` the 50 most recent role changes |
 | `GET /health/live` | Public | None | `200` process alive |
 | `GET /health/ready` | Public | None | `200` database checks pass; otherwise `503` |
 
@@ -148,6 +153,21 @@ Admins manage services and barber profiles. Nothing is deleted: deactivating hid
 - Barber edits and deactivation lock the barber's schedule in the same way as booking writes, so a booking made at the same moment either lands before the change (and the change is checked against it) or sees the new profile.
 - Catalogue edits are last-write-wins; there is no version field on services or barbers.
 
+## Staff management
+
+Roles live in Auth0 (`app_metadata.role`) and reach the API as the token's `role` claim. These endpoints change them through the Auth0 Management API, using a Machine-to-Machine application allowed only `read:users` and `update:users_app_metadata` (setup: `docs/auth/AUTH0-SETUP.md`, Part 8). Without those credentials every staff endpoint except `status` and `audit` returns `503 staff_management_disabled`.
+
+```json
+{"role":"Barber"}
+```
+
+- `role` is exactly `Customer`, `Barber` or `Admin`. `userId` is the Auth0 user ID, URL-encoded in the path (`auth0%7C65f0...`).
+- The person must already have an account; Barber and Admin need a **verified email** (`409 email_not_verified`).
+- You can't change your own role (`409 own_role`), and **an Admin can't be demoted here** (`409 admin_demotion_not_allowed`); that's done in the Auth0 dashboard by the project owner.
+- A Barber whose active barber profile has upcoming Pending/Confirmed bookings can't be made a Customer (`409 barber_has_bookings`).
+- Setting the role someone already has is a no-op. Every real change is recorded in the `auditLog` collection.
+- The API sees a new role when the person's access token is next issued; the web app when they next sign in.
+
 ## Error handling for Greg
 
 | Status | Meaning | UI response |
@@ -162,6 +182,9 @@ Admins manage services and barber profiles. Nothing is deleted: deactivating hid
 | `409` `duplicate_name` | Another active service already uses this name | Ask the admin for a different name |
 | `409` `duplicate_user` | The account is already linked to another barber | Show which account is taken; pick another |
 | `409` `booking_limit` | The customer already has the maximum number of active bookings | Show the message; offer My Bookings to cancel one |
+| `409` `own_role` / `admin_demotion_not_allowed` / `email_not_verified` / `barber_has_bookings` | A staff role change was refused (see Staff management) | Show the message as-is |
+| `503` `staff_management_disabled` | Auth0 management credentials aren't configured | Explain that roles are set in the Auth0 dashboard for now |
+| `502`/`503` `identity_provider_*` | Auth0 rejected or couldn't be reached for a staff change | Show the message; retry later |
 | `429` | Request limit reached (`Retry-After: 60`) | Pause and retry later |
 | `503` | Database unavailable/not initialized/not transaction-capable | Show service unavailable; refresh bookings before retrying a write |
 | `500` | Unexpected server error | Show generic failure; retain returned trace ID for diagnosis |
