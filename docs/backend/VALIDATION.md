@@ -1,6 +1,6 @@
 # Backend validation record
 
-Validated locally on 20 September 2026. This record concerns the backend contribution, not the unconnected prototype or a deployed production service.
+Initially validated locally on 20 September 2026. The booking backend is now integrated with the MVC application, Auth0, MongoDB Atlas and the Render deployment. This record preserves the reproducible backend result; live deployment verification is tracked separately in `docs/SUBMISSION.md` and must be completed on the final submission commit.
 
 ## Environment
 
@@ -58,9 +58,9 @@ Use your own test replica-set connection when reproducing. A run without `KINSME
 
 - The provided Docker Compose file has not been executed on this machine because Docker is not installed; the actual database checks used a portable local MongoDB server with the same server version and replica-set topology.
 - OpenAPI references and schema copies were structurally checked; import into the group's chosen API client remains an integration step.
-- GitHub CI and automatic deployment have not been configured or run by this contribution.
-- No hosted Render/Vercel/MongoDB service has been tested. Hosted TLS/proxy/network configuration, backup/restore, load behavior and reliability remain outstanding.
-- No frontend integration, browser accessibility test or real identity-provider/account lifecycle test has been completed here.
+- GitHub Actions now builds the solution, runs the test suite against a throwaway MongoDB replica set, builds both Docker images and smoke-tests them on every pull request to `integration-part2` and `main`. Record the successful final-run link in `docs/SUBMISSION.md` before submission.
+- The release architecture uses Render for the MVC app and API and MongoDB Atlas for persistence. Re-check `/health/ready`, a real booking, database persistence and the email/review flow after the final deployment; free-tier services can need time to wake after inactivity.
+- The MVC/Auth0 integration and accessibility improvements are implemented. The group must retain final browser evidence for customer, barber and admin paths, including keyboard navigation and small-screen layout.
 - Client-approved prices, hours, notice rules and pending-booking handling are still required.
 
 The local test server is stopped after verification. No group repository changes have been pushed.

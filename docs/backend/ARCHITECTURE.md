@@ -1,13 +1,13 @@
 # Booking backend architecture and data design
 
-This implementation replaces the planned Azure SQL/Entity Framework booking persistence with MongoDB. It retains C#/ASP.NET Core and provides HTTP APIs; integrating them into the final front end and choosing hosting remain group work. This document describes implemented behavior, with unconfirmed client rules listed explicitly in the run guide.
+This Part 2 implementation replaces the planned Azure SQL/Entity Framework persistence with MongoDB Atlas. It retains C#/ASP.NET Core and integrates the MVC front end, Auth0 identity provider and booking API. The system is deployed as two Docker web services on Render. This document describes the implemented design; client decisions that still need confirmation are explicitly identified in the run guide.
 
 ## Layers and responsibilities
 
 ```mermaid
 flowchart LR
-    UI[Customer and staff UI\nIntegration pending] -->|HTTPS JSON and access token| API[ASP.NET Core endpoints]
-    Identity[Trusted identity provider\nKyra integration pending] -->|Validated sub and role claims| API
+    UI[ASP.NET Core MVC customer and staff UI] -->|Server-to-server HTTPS and bearer token| API[ASP.NET Core endpoints]
+    Identity[Auth0] -->|Validated subject and role claims| API
     API --> Rules[BookingService\nOwnership, pricing, scheduling, states]
     Rules --> Interface[IBookingStore and IBookingSession]
     Interface --> Store[MongoBookingStore\nTransactions and query mapping]
@@ -16,7 +16,7 @@ flowchart LR
 
 Endpoints handle HTTP serialization, authentication and response codes. `BookingService` owns business rules and depends on repository interfaces, a clock and a configurable policy. `MongoBookingStore` implements persistent queries and transactions. Tests substitute a transactional test double for fast rule checks and also run against real MongoDB for concurrency/rollback behavior. No in-memory repository is registered by the production application.
 
-The patterns actually used are dependency injection, repository abstraction and a transaction/unit-of-work boundary. Do not claim Factory, Strategy or Observer implementations just because they appeared in the Part 1 plan. Email integration can later consume committed booking events, but no event/outbox system is currently implemented.
+The patterns actually used are dependency injection, repository abstraction and a transaction/unit-of-work boundary. Do not claim Factory, Strategy or Observer implementations just because they appeared in the Part 1 plan. Booking and review emails are delivered through Brevo after the relevant operation commits; there is no event/outbox system in this version.
 
 ## Domain relationships
 
@@ -247,14 +247,18 @@ Rescheduling is allowed for Pending/Confirmed before the notice deadline and pre
 
 ```mermaid
 flowchart TB
-    Browser[Public browser] -->|HTTPS| App[Chosen app/API host\nRender or Vercel undecided]
-    App -->|TLS and authenticated database connection| Mongo[(Hosted MongoDB replica set)]
-    App -->|HTTPS metadata and signing keys| Identity[Selected identity service]
-    Env[Host environment secrets] --> App
+    Browser[Public browser] -->|HTTPS| Web[Render: Kinsmen.Web]
+    Web -->|HTTPS, server-to-server bearer token| Api[Render: Kinsmen.Api]
+    Api -->|TLS and authenticated connection| Mongo[(MongoDB Atlas replica set)]
+    Web -->|OpenID Connect| Identity[Auth0]
+    Api -->|JWT validation and Management API| Identity
+    Api -->|HTTPS transactional email| Brevo[Brevo]
+    Env[Render environment secrets] --> Web
+    Env --> Api
 ```
 
-This is a proposed deployment topology, not evidence of a deployed service. MongoDB replaces Azure SQL; it does not replace the web host. No Azure packages, App Service settings, SQL migration pipeline or Azure connection strings are used by this implementation. Select the host with a runtime compatibility trial and keep database credentials server-side.
+Render hosts the public MVC app and the API as separate Docker web services; MongoDB Atlas hosts the replica set used by booking transactions. Render receives the secrets through its dashboard rather than the repository, and the web application keeps Auth0 access tokens server-side while it calls the API. MongoDB replaces Azure SQL; no Azure packages, App Service settings, SQL migration pipeline or Azure connection strings are used. `render.yaml` pins staging to `integration-part2` and only triggers an automatic deployment after GitHub checks pass.
 
-The API currently does not provide registration, password reset, production token issuance, email/outbox delivery, reviews, shop checkout or admin catalogue editing. It does not verify administrator-supplied customer IDs against a real account collection. Group integration must complete these applicable requirements. Configure trusted proxy behavior, exact frontend origins (if separate), TLS, runtime secrets, test/release gates, backups and monitoring on the selected host. Do not describe local unit tests as production availability evidence.
+Auth0 provides account registration, password reset and production token issuance. The integrated system includes booking emails, reviews, administrator catalogue management, barber-service skill matching and staff-role management. Shop checkout, loyalty and guest booking are deliberately out of the agreed Part 2 scope. Before submission, validate that the final Render deployment has the required secrets, confirm the API readiness route, check the live booking and role workflows with real accounts, and retain the evidence. Automated tests support the deployment but do not replace live-service verification.
 
 Official implementation references: [MongoDB transactions](https://www.mongodb.com/docs/drivers/csharp/current/crud/transactions/), [MongoDB atomicity](https://www.mongodb.com/docs/manual/core/write-operations-atomicity/), [ASP.NET Core authentication and authorization](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis/security?view=aspnetcore-10.0).
