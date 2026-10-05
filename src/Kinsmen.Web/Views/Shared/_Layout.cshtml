@@ -32,6 +32,7 @@
                 @if (isAdmin)
                 {
                     <a asp-controller="Admin" asp-action="Index">Admin</a>
+                    <a asp-controller="Staff" asp-action="Index">Staff accounts</a>
                 }
                 @if (isStaff)
                 {
@@ -74,6 +75,7 @@
             @if (isAdmin)
             {
                 <a asp-controller="Admin" asp-action="Index">Admin</a>
+                <a asp-controller="Staff" asp-action="Index">Staff accounts</a>
             }
             @if (isStaff)
             {
