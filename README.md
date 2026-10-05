@@ -4,8 +4,8 @@ INSY7315 Work Integrated Learning project for **Kinsmen Barbers**, Shop 5, 8 Mac
 Built by **Kaehil, Kyra, Zario and Gregory** — BCA3, IIE Emeris.
 
 Customers browse services and barbers, book a chair online and manage their own bookings. Barbers see
-their schedule, confirm appointments and block off time. Admins manage the service catalogue and barber
-profiles.
+their schedule, confirm appointments and block off time. Admins manage the service catalogue, barber
+profiles, barber service skills and staff access.
 
 | | Link |
 |---|---|
@@ -31,6 +31,9 @@ Browser ──> Kinsmen.Web (ASP.NET Core MVC) ──server-to-server, bearer to
   (Pending → Confirmed → Completed / Cancelled / No-Show).
 - **Auth0** handles registration, login, password reset and email verification; the API trusts only
   tokens signed by our Auth0 tenant with audience `kinsmen-api` and a `role` of Customer, Barber or Admin.
+- **Staff management** lets an existing admin assign Customer, Barber or Admin roles through the
+  application once the restricted Auth0 Management API integration has been configured in Render. Every
+  role change is audit-logged in MongoDB.
 
 More detail: [architecture and data model](docs/backend/ARCHITECTURE.md) ·
 [API contract](docs/backend/API-CONTRACT.md) · [OpenAPI definition](docs/backend/openapi.json).
@@ -46,11 +49,11 @@ More detail: [architecture and data model](docs/backend/ARCHITECTURE.md) ·
 | Hosting | Render (two Docker web services, defined in [`render.yaml`](render.yaml)) |
 | CI | GitHub Actions: build, full test suite against a real MongoDB replica set, Docker image build and smoke test |
 
-The Part 1 report proposed SQL Server, Entity Framework Core and Azure. The team replaced these with
-MongoDB, Auth0 and Render: the data design is in [`docs/backend/ARCHITECTURE.md`](docs/backend/ARCHITECTURE.md),
-login in [`docs/auth/AUTH0-SETUP.md`](docs/auth/AUTH0-SETUP.md) and hosting in
-[`docs/deployment/RENDER.md`](docs/deployment/RENDER.md). The Word report in `Documentation/` has not yet
-been updated to match.
+The Part 1 report proposed SQL Server, Entity Framework Core and Azure. The implemented Part 2 solution
+uses MongoDB Atlas, Auth0 and Render instead. The supporting technical record is in
+[`docs/backend/ARCHITECTURE.md`](docs/backend/ARCHITECTURE.md),
+[`docs/auth/AUTH0-SETUP.md`](docs/auth/AUTH0-SETUP.md) and
+[`docs/deployment/RENDER.md`](docs/deployment/RENDER.md).
 
 ## Running locally
 
@@ -157,9 +160,11 @@ The system deploys to Render as two Docker web services (`kinsmen-api`, `kinsmen
 [`render.yaml`](render.yaml). Staging deploys from `integration-part2`, and only after a commit's GitHub
 checks pass; the submission build deploys from `main`.
 
-Secrets (the MongoDB connection string and the Auth0 client secret) are entered in the Render dashboard
-and never committed. Setup steps, Atlas network access and free-tier behaviour are in
-[`docs/deployment/RENDER.md`](docs/deployment/RENDER.md).
+Secrets are entered in the Render dashboard and never committed. The API requires the MongoDB connection
+string and, where those features are enabled, the Brevo transactional-email settings and restricted Auth0
+Management API credentials. Setup steps, Atlas network access and free-tier behaviour are in
+[`docs/deployment/RENDER.md`](docs/deployment/RENDER.md); role-management setup is in Part 8 of
+[`docs/auth/AUTH0-SETUP.md`](docs/auth/AUTH0-SETUP.md).
 
 ## Working on the code
 
@@ -198,20 +203,29 @@ kinsmen-barbershop/
 
 | Member | Area |
 |---|---|
-| Kaehil | Group leader; GitHub workflow, CI, hosting and deployment; admin catalogue |
-| Zario | Booking API, MongoDB data design and booking rules |
+| Kaehil | Group leader; GitHub workflow, CI, hosting, deployment, admin catalogue and staff management |
+| Zario | Booking API, MongoDB data design, booking rules and barber-service matching |
 | Gregory | Front end and user experience |
-| Kyra | Authentication, security and testing |
+| Kyra | Authentication, security, email/review workflow and testing |
 
-## Known gaps
+## Scope and remaining configuration
 
-Tracked so the documentation, prototype and system can be aligned before submission:
+The implemented Part 2 scope includes customer booking, customer booking management, role-based access,
+barber scheduling, service and barber administration, MongoDB persistence, Auth0 authentication, Render
+deployment and automated CI checks.
+
+The following items either sit outside the agreed Part 2 scope or require final configuration before a live
+demonstration:
 
 - **Loyalty:** shown in the prototype, but listed as out of scope in the Task 1 report. Not built.
 - **Guest booking:** the report describes a Guest role; the system currently requires an account to book.
 - **Shop and checkout:** the report's cart/checkout flow and the prototype's Barber POS are not built.
-- **Reviews and confirmation emails:** planned (Kyra); not yet built.
-- **Admin screens:** the admin catalogue API is in review; the web screens follow once login is merged.
+- **Email and review delivery:** the implementation must be merged, then configured and tested with the
+  Brevo variables in Render before it is treated as live functionality.
+- **Staff role changes:** require the limited Auth0 Management API machine-to-machine credentials in Render.
+  Until they are configured, the Staff page remains safely disabled.
+- **Barber account linking:** each real barber must sign in and have their Auth0 user ID linked to their
+  barber profile; demo placeholder IDs cannot grant access to a real account.
 - **Barber profile pages:** the report describes one page per barber; the site has a single Team page.
 - **Client rules:** prices, durations, opening hours, notice periods, booking horizon and pending-booking
   expiry still use demo values and need client confirmation.
