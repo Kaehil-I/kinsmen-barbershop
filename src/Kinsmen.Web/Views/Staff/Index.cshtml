@@ -1,0 +1,112 @@
+@model StaffPageViewModel
+@{
+    ViewData["Title"] = "Admin - Staff accounts";
+    var roles = new[] { "Customer", "Barber", "Admin" };
+}
+
+<section class="page-intro">
+    <div class="wrap">
+        <div class="tag">Staff &middot; Admin</div>
+        <h1>Staff accounts</h1>
+        <p>
+            Give people the Barber or Admin role. Ask them to create an account on the site and verify their
+            email first, then find them here by email. A new role applies the next time they sign in.
+            Admins can't be demoted here; that's done in the Auth0 dashboard by the project owner.
+        </p>
+        <p><a asp-controller="Admin" asp-action="Index" class="row-link">&larr; Back to the catalogue</a></p>
+    </div>
+</section>
+
+<section>
+    <div class="wrap" id="staff-page" style="padding-bottom: 80px;">
+        @if (Model.ErrorMessage is not null)
+        {
+            <p class="price-note">@Model.ErrorMessage</p>
+        }
+        else if (!Model.Enabled)
+        {
+            <div class="panel neo-raised" style="padding:24px;">
+                <p><strong>Staff management isn't switched on yet.</strong></p>
+                <p>
+                    The API needs Auth0 Machine-to-Machine credentials before it can change roles. Until then, roles
+                    are set in the Auth0 dashboard (see <code>docs/auth/AUTH0-SETUP.md</code>, "Staff management").
+                </p>
+            </div>
+        }
+        else
+        {
+            <h2 style="font-family:var(--display); font-weight:600; font-size:20px; color:var(--heading); margin-bottom:14px;">Find a person</h2>
+            <form id="lookup-form" class="panel neo-raised" style="padding:24px; margin-bottom:28px;">
+                <div class="form-field">
+                    <label for="lookup-email">Email address they signed up with</label>
+                    <div class="input-shell neo-pressed"><input type="email" id="lookup-email" autocomplete="off" required maxlength="254" /></div>
+                </div>
+                <button type="submit" class="neo-pill-raised" style="margin-top:14px;">Find</button>
+                <p id="lookup-message" role="status" style="display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-top:12px;"></p>
+                <div id="lookup-results" style="margin-top:12px;"></div>
+            </form>
+
+            <h2 style="font-family:var(--display); font-weight:600; font-size:20px; color:var(--heading); margin-bottom:14px;">Current staff</h2>
+            <p id="staff-message" role="status" style="display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-bottom:12px;"></p>
+            <div id="staff-list" style="margin-bottom:28px;">
+                @if (Model.Staff.Count == 0)
+                {
+                    <p class="price-note">No barbers or admins found.</p>
+                }
+                @foreach (var person in Model.Staff)
+                {
+                    var isSelf = person.UserId == Model.CurrentUserId;
+                    <div class="admin-row" data-user-id="@person.UserId" data-role="@person.Role">
+                        <div>
+                            <div class="aname">@(person.Name ?? person.Email ?? person.UserId) @(isSelf ? "(you)" : "")</div>
+                            <div class="adesc">@person.Email &middot; @person.Role &middot; <code>@person.UserId</code></div>
+                        </div>
+                        @if (isSelf || person.Role == "Admin")
+                        {
+                            <span class="adesc">@(isSelf ? "Your own role can't be changed here" : "Change in Auth0")</span>
+                        }
+                        else
+                        {
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <div class="select-shell neo-pressed">
+                                    <select class="barber-select staff-role" aria-label="Role for @(person.Email ?? person.UserId)">
+                                        @foreach (var role in roles)
+                                        {
+                                            <option value="@role" selected="@(role == person.Role)">@role</option>
+                                        }
+                                    </select>
+                                </div>
+                                <button type="button" class="row-link staff-save">Save</button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        <h2 style="font-family:var(--display); font-weight:600; font-size:20px; color:var(--heading); margin-bottom:14px;">Recent role changes</h2>
+        @if (Model.RecentChanges.Count == 0)
+        {
+            <p class="price-note">No role changes recorded yet.</p>
+        }
+        else
+        {
+            <div id="audit-list">
+                @foreach (var change in Model.RecentChanges)
+                {
+                    <div class="admin-row">
+                        <div>
+                            <div class="aname">@(change.TargetEmail ?? change.TargetUserId): @change.FromRole &rarr; @change.ToRole</div>
+                            <div class="adesc">by <code>@change.ActorId</code> &middot; @change.AtUtc.ToString("yyyy-MM-dd HH:mm") UTC</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/js/auth-fetch.js" asp-append-version="true"></script>
+    <script src="~/js/staff.js" asp-append-version="true"></script>
+}

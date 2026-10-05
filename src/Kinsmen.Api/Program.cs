@@ -5,6 +5,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using Kinsmen.Api;
 using Kinsmen.Api.Domain;
 using Kinsmen.Api.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
@@ -45,6 +46,7 @@ builder.Services.AddSingleton(_ => new MongoBookingStore(
 builder.Services.AddSingleton<IBookingStore>(s => s.GetRequiredService<MongoBookingStore>());
 builder.Services.AddSingleton<BookingService>();
 builder.Services.AddSingleton<CatalogueService>();
+builder.Services.AddStaffManagement(builder.Configuration);
 
 var authority = builder.Configuration["Auth:Authority"];
 var localKey = builder.Configuration["Auth:DevelopmentSigningKey"];
@@ -222,6 +224,7 @@ admin.MapPut("/barbers/{id}", (string id, BarberRequest input, HttpContext ctx, 
     => catalogue.UpdateBarber(CurrentActor(ctx), id, input, ct));
 admin.MapPatch("/barbers/{id}/active", (string id, ActiveRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
     => catalogue.SetBarberActive(CurrentActor(ctx), id, input.Active, ct));
+app.MapStaffEndpoints(CurrentActor);
 app.Run();
 
 static Actor CurrentActor(HttpContext context)

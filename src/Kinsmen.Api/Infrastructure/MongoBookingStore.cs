@@ -10,6 +10,7 @@ public sealed class MongoBookingStore : IBookingStore
     private readonly IMongoClient client;
     private readonly IMongoDatabase db;
     private volatile bool customerLocksReady;
+    internal IMongoDatabase Database => db;
     static MongoBookingStore()
     {
         ConventionRegistry.Register("kinsmen", new ConventionPack

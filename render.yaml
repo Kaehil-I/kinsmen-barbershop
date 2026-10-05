@@ -50,6 +50,12 @@ services:
         sync: false
       - key: Email__FromName
         value: Kinsmen Barbers
+      # Staff management (docs/auth/AUTH0-SETUP.md Part 8): an Auth0 Machine-to-Machine app limited to
+      # read:users and update:users_app_metadata. Without these the Staff page is simply switched off.
+      - key: Auth0Management__ClientId
+        sync: false
+      - key: Auth0Management__ClientSecret
+        sync: false
       - fromGroup: kinsmen-internal
 
   - type: web
