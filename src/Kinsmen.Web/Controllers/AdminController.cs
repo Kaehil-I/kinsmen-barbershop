@@ -93,7 +93,8 @@ public sealed class AdminController(IKinsmenApiClient apiClient) : Controller
         {
             Name = request.Name,
             UserId = request.UserId,
-            Hours = request.Hours
+            Hours = request.Hours,
+            ServiceIds = request.ServiceIds
         };
 
         try

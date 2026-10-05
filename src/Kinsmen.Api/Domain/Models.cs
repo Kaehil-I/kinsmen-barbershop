@@ -5,7 +5,8 @@ namespace Kinsmen.Api.Domain;
 public sealed record ServiceItem(string Id, string Name, int PriceCents, int DurationMinutes, bool Active = true);
 // Weekday uses ISO numbering: Monday=1 ... Sunday=7. Minutes are local shop time.
 public sealed record WorkingPeriod(int Weekday, int StartMinute, int EndMinute);
-public sealed record Barber(string Id, string Name, string UserId, WorkingPeriod[] Hours, bool Active = true, long Revision = 0);
+public sealed record Barber(string Id, string Name, string UserId, WorkingPeriod[] Hours, bool Active = true, long Revision = 0,
+    string[]? ServiceIds = null);
 public sealed record ServiceSnapshot(string ServiceId, string Name, int PriceCents, int DurationMinutes);
 public enum BookingStatus { Pending, Confirmed, Cancelled, Completed, NoShow }
 public sealed record Booking(string Id, string CustomerId, string BarberId, DateTime StartUtc, DateTime EndUtc,
@@ -29,10 +30,10 @@ public sealed record BlockRequest(DateTimeOffset Start, DateTimeOffset End, stri
 public sealed record AvailableSlot(string BarberId, DateTime StartUtc, DateTime EndUtc);
 // Admin catalogue management. Records are deactivated, never deleted, so booking history stays intact.
 public sealed record ServiceRequest(string Name, int PriceCents, int DurationMinutes);
-public sealed record BarberRequest(string Name, string UserId, WorkingPeriod[] Hours);
+public sealed record BarberRequest(string Name, string UserId, WorkingPeriod[] Hours, string[]? ServiceIds = null);
 public sealed record ActiveRequest(bool Active);
 // Admin view of a barber: includes the linked identity and active flag, but not the internal revision counter.
-public sealed record BarberProfile(string Id, string Name, string UserId, WorkingPeriod[] Hours, bool Active);
+public sealed record BarberProfile(string Id, string Name, string UserId, WorkingPeriod[] Hours, bool Active, string[]? ServiceIds);
 // MaxActiveBookingsPerCustomer caps Pending/Confirmed bookings that haven't finished yet, so one account
 // can't reserve every slot.
 public sealed record BookingPolicy(int MinimumNoticeMinutes = 60, int CancellationNoticeMinutes = 60,

@@ -5,6 +5,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using Kinsmen.Api;
 using Kinsmen.Api.Domain;
 using Kinsmen.Api.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
@@ -43,11 +44,8 @@ builder.Services.AddSingleton(_ => new MongoBookingStore(
     builder.Configuration["Mongo:ConnectionString"] ?? throw new InvalidOperationException("Mongo connection required."),
     builder.Configuration["Mongo:Database"] ?? "kinsmen_dev"));
 builder.Services.AddSingleton<IBookingStore>(s => s.GetRequiredService<MongoBookingStore>());
-//<<<<<<< HEAD
-//=======
-
 builder.Services.AddSingleton<CatalogueService>();
-//>>>>>>> origin/integration-part2
+builder.Services.AddStaffManagement(builder.Configuration);
 
 
 // Booking emails. Without Email:BrevoApiKey the app uses a no-op sender, so nothing else needs configuring.
@@ -253,6 +251,7 @@ admin.MapPut("/barbers/{id}", (string id, BarberRequest input, HttpContext ctx, 
     => catalogue.UpdateBarber(CurrentActor(ctx), id, input, ct));
 admin.MapPatch("/barbers/{id}/active", (string id, ActiveRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
     => catalogue.SetBarberActive(CurrentActor(ctx), id, input.Active, ct));
+app.MapStaffEndpoints(CurrentActor);
 app.Run();
 
 static Actor CurrentActor(HttpContext context)

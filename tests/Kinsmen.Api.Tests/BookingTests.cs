@@ -51,6 +51,19 @@ public sealed class BookingTests
         await Service.Create(Customer, Request());
         Assert.Equal("barber-b", (await Service.Create(Customer, Request(null))).BarberId);
     }
+    [Fact] public async Task BarberSkillsFilterAvailabilityAndBookingCandidates()
+    {
+        store.Staff[0] = store.Staff[0] with { ServiceIds = ["haircut"] };
+        store.Staff[1] = store.Staff[1] with { ServiceIds = ["beard"] };
+
+        var slots = await Service.Availability(new DateOnly(2026, 9, 19), ["beard"], null);
+        Assert.NotEmpty(slots);
+        Assert.All(slots, slot => Assert.Equal("barber-b", slot.BarberId));
+        Assert.Equal("barber-b", (await Service.Create(Customer, Request(null, ids: ["beard"]))).BarberId);
+
+        var error = await Assert.ThrowsAsync<DomainError>(() => Service.Create(Customer, Request("barber-a", ids: ["beard"])));
+        Assert.Equal(400, error.Status);
+    }
     [Fact] public async Task CustomerCannotBookForAnotherUser()
         => Assert.Equal(403, (await Assert.ThrowsAsync<DomainError>(() => Service.Create(Customer, Request() with { CustomerId = "victim" }))).Status);
     [Fact] public async Task CustomerCannotModifyOrListOthersBookings()

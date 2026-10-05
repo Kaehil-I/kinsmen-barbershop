@@ -151,6 +151,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var barberId = document.getElementById('barber-id');
     var barberName = document.getElementById('barber-name');
     var barberUserId = document.getElementById('barber-user-id');
+    var barberSkills = document.getElementById('barber-skills');
     var hoursList = document.getElementById('hours-list');
     var barberSave = document.getElementById('barber-save-btn');
     var barberError = document.getElementById('barber-error');
@@ -200,6 +201,12 @@ document.addEventListener('DOMContentLoaded', function () {
         barberName.value = item ? item.name : '';
         barberUserId.value = item ? item.userId : '';
         barberSave.textContent = item ? 'Save changes' : 'Add barber';
+
+        var assignedSkills = item && item.serviceIds ? item.serviceIds :
+            Array.prototype.map.call(barberSkills.querySelectorAll('.barber-skill'), function (skill) { return skill.value; });
+        barberSkills.querySelectorAll('.barber-skill').forEach(function (skill) {
+            skill.checked = assignedSkills.indexOf(skill.value) !== -1;
+        });
 
         hoursList.innerHTML = '';
         (item ? item.hours : []).forEach(addPeriodRow);
@@ -275,12 +282,15 @@ document.addEventListener('DOMContentLoaded', function () {
         if (e.target.closest('.edit-barber-btn')) {
             var hours = [];
             try { hours = JSON.parse(row.dataset.hours || '[]'); } catch (err) { hours = []; }
+            var serviceIds = null;
+            try { serviceIds = JSON.parse(row.dataset.serviceIds || 'null'); } catch (err) { serviceIds = null; }
 
             openBarberForm({
                 id: row.dataset.id,
                 name: row.dataset.name,
                 userId: row.dataset.userId,
-                hours: hours
+                hours: hours,
+                serviceIds: serviceIds
             });
         } else if (e.target.closest('.toggle-barber-btn')) {
             toggleActive('/Admin/SetBarberActive/', row, barbersMessage);
@@ -293,10 +303,12 @@ document.addEventListener('DOMContentLoaded', function () {
         var name = barberName.value.trim();
         var userId = barberUserId.value.trim();
         var collected = collectPeriods();
+        var serviceIds = Array.prototype.map.call(barberSkills.querySelectorAll('.barber-skill:checked'), function (skill) { return skill.value; });
 
         if (!name) { show(barberError, 'Enter a name.'); return; }
         if (!userId) { show(barberError, 'Enter a linked login ID (a placeholder like unlinked-name is fine for now).'); return; }
         if (collected.problem) { show(barberError, collected.problem); return; }
+        if (serviceIds.length === 0) { show(barberError, 'Select at least one service this barber can perform.'); return; }
 
         barberSave.disabled = true;
 
@@ -304,7 +316,8 @@ document.addEventListener('DOMContentLoaded', function () {
             id: barberId.value || null,
             name: name,
             userId: userId,
-            hours: collected.periods
+            hours: collected.periods,
+            serviceIds: serviceIds
         })
             .then(function (result) {
                 barberSave.disabled = false;
