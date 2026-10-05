@@ -45,11 +45,21 @@ document.addEventListener('DOMContentLoaded', function () {
     function toggleActive(urlPrefix, row, messageEl) {
         var currentlyActive = row.dataset.active === 'true';
 
-        if (currentlyActive && !window.confirm(
-            'Deactivate ' + row.dataset.name + '? It will disappear from booking, but past bookings are kept.')) {
-            return;
-        }
+        var confirmed = currentlyActive
+            ? window.kinsmenConfirm('It will disappear from booking, but past bookings are kept.', {
+                title: 'Deactivate ' + row.dataset.name + '?',
+                confirmText: 'Deactivate',
+                cancelText: 'Keep active',
+                danger: true
+            })
+            : Promise.resolve(true);
 
+        confirmed.then(function (ok) {
+            if (ok) submitToggle(urlPrefix, row, messageEl, currentlyActive);
+        });
+    }
+
+    function submitToggle(urlPrefix, row, messageEl, currentlyActive) {
         hide(messageEl);
 
         postJson(urlPrefix + row.dataset.id, { active: !currentlyActive })

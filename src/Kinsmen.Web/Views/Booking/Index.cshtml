@@ -11,7 +11,7 @@
     <div class="wrap">
         <div class="tag">Book a Chair</div>
         <h1>Choose your barber, day and time</h1>
-        <p>Availability shown below is live from the booking system &mdash; pick a barber (or leave it open), your service(s), then a date and time.</p>
+        <p>Pick a barber (or leave it open), your service(s), then a date and time &mdash; only times that are actually free are shown.</p>
     </div>
 </section>
 
@@ -104,14 +104,14 @@ else
                     </div>
                     <button class="btn-confirm neo-pill-raised" id="confirm-btn" disabled type="button">Confirm Booking</button>
                 </div>
-                <p id="booking-error" style="display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-top:-8px;"></p>
+                <p id="booking-error" class="form-error" style="margin-top:-8px;"></p>
 
                 <div class="panel neo-raised success-card" id="success-card">
                     <div class="success-badge">&#10003;</div>
                     <div>
                         <h3>You're booked in</h3>
                         <p id="success-text"></p>
-                        <p style="margin-top:8px;"><a href="#" id="book-another" class="link-btn" style="color:var(--teal);">Book another appointment</a></p>
+                        <p style="margin-top:8px;"><a asp-controller="MyBookings" asp-action="Index" class="link-btn" style="color:var(--teal);">View my bookings</a> &middot; <a href="#" id="book-another" class="link-btn" style="color:var(--teal);">Book another appointment</a></p>
                     </div>
                 </div>
 

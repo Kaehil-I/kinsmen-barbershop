@@ -323,8 +323,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
 
+                // Use the barber the API actually assigned, not just what was selected in
+                // the dropdown - for "Any available barber" that was empty, and the success
+                // message would otherwise always say the generic "your barber" instead of
+                // naming who the customer actually got.
+                var assignedBarber = barbersById[result.body.barberId];
+                var confirmedBarberLabel = assignedBarber ? assignedBarber.name : barberLabel;
+
                 successText.innerHTML = '<strong>' + escapeHtml(selectedServiceNames()) + '</strong> with <strong>' +
-                    escapeHtml(barberLabel) + '</strong> \u2014 ' + escapeHtml(dateStr) + ' at <strong>' + escapeHtml(state.selectedTime) +
+                    escapeHtml(confirmedBarberLabel) + '</strong> \u2014 ' + escapeHtml(dateStr) + ' at <strong>' + escapeHtml(state.selectedTime) +
                     '</strong>. Total <strong>' + escapeHtml(formatZarCents(result.body.totalCents)) + '</strong>.';
                 summaryPanel.style.display = 'none';
                 bookingError.style.display = 'none';

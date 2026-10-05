@@ -21,7 +21,6 @@
             deleted &mdash; deactivating hides a service or barber from booking but keeps
             every past booking intact.
         </p>
-        <p><a asp-controller="Staff" asp-action="Index" class="row-link">Staff accounts &rarr;</a> give people the Barber or Admin role.</p>
     </div>
 </section>
 
@@ -36,7 +35,7 @@
             @* ------------------------------ Services ------------------------------ *@
             <h2 style="font-family:var(--display); font-weight:600; font-size:20px; color:var(--heading); margin-bottom:14px;">Services</h2>
 
-            <p id="services-message" style="display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-bottom:12px;"></p>
+            <p id="services-message" class="form-error" style="margin:0 0 12px;"></p>
 
             <button id="add-service-btn" class="add-toggle-btn neo-raised" type="button">+ Add a service</button>
 
@@ -63,7 +62,7 @@
                     <button id="service-save-btn" class="btn-confirm neo-pill-raised" type="button">Save service</button>
                     <button id="service-cancel-btn" class="row-link" type="button">Cancel</button>
                 </div>
-                <p id="service-error" style="display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-top:12px;"></p>
+                <p id="service-error" class="form-error" style="margin-top:12px;"></p>
             </div>
 
             <div id="services-list" class="panel neo-raised" style="padding: 8px 18px; margin-bottom: 48px;">
@@ -97,7 +96,7 @@
             @* ------------------------------ Barbers ------------------------------- *@
             <h2 style="font-family:var(--display); font-weight:600; font-size:20px; color:var(--heading); margin-bottom:14px;">Barbers</h2>
 
-            <p id="barbers-message" style="display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-bottom:12px;"></p>
+            <p id="barbers-message" class="form-error" style="margin:0 0 12px;"></p>
 
             <button id="add-barber-btn" class="add-toggle-btn neo-raised" type="button">+ Add a barber</button>
 
@@ -141,7 +140,7 @@
                     <button id="barber-save-btn" class="btn-confirm neo-pill-raised" type="button">Save barber</button>
                     <button id="barber-cancel-btn" class="row-link" type="button">Cancel</button>
                 </div>
-                <p id="barber-error" style="display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-top:12px;"></p>
+                <p id="barber-error" class="form-error" style="margin-top:12px;"></p>
             </div>
 
             <div id="barbers-list" class="panel neo-raised" style="padding: 8px 18px;">

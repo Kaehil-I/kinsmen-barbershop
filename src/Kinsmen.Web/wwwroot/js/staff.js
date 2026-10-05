@@ -38,17 +38,30 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Granting Admin can't be undone from the site, so it asks first; other roles go straight through.
+    function confirmRoleChange(role, who) {
+        if (role !== 'Admin') return Promise.resolve(true);
+        return window.kinsmenConfirm('Only the project owner can undo this, in Auth0.', {
+            title: 'Make ' + who + ' an Admin?',
+            confirmText: 'Make Admin',
+            cancelText: 'Cancel',
+            danger: true
+        });
+    }
+
     // Current staff rows: a role dropdown and Save button (absent for admins and yourself).
     page.querySelectorAll('.staff-save').forEach(function (button) {
         button.addEventListener('click', function () {
             var row = button.closest('.admin-row');
             var role = row.querySelector('.staff-role').value;
             if (role === row.dataset.role) { show(staffMessage, 'No change to save.'); return; }
-            if (role === 'Admin' && !window.confirm('Make this person an Admin? Only the project owner can undo this, in Auth0.')) return;
-            button.disabled = true;
-            setRole(row.dataset.userId, role, staffMessage).then(function (saved) {
-                button.disabled = false;
-                if (saved) row.dataset.role = role;
+            confirmRoleChange(role, 'this person').then(function (ok) {
+                if (!ok) return;
+                button.disabled = true;
+                setRole(row.dataset.userId, role, staffMessage).then(function (saved) {
+                    button.disabled = false;
+                    if (saved) row.dataset.role = role;
+                });
             });
         });
     });
@@ -89,10 +102,11 @@ document.addEventListener('DOMContentLoaded', function () {
                         var button = el('button', 'row-link', 'Make ' + role);
                         button.type = 'button';
                         button.addEventListener('click', function () {
-                            if (role === 'Admin' && !window.confirm('Make ' + (person.email || 'this person') +
-                                ' an Admin? Only the project owner can undo this, in Auth0.')) return;
-                            setRole(person.userId, role, rowMessage).then(function (saved) {
-                                if (saved) actions.textContent = '';
+                            confirmRoleChange(role, person.email || 'this person').then(function (ok) {
+                                if (!ok) return;
+                                setRole(person.userId, role, rowMessage).then(function (saved) {
+                                    if (saved) actions.textContent = '';
+                                });
                             });
                         });
                         actions.appendChild(button);
