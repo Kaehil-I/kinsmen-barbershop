@@ -259,10 +259,27 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function handleCancel(row) {
-        if (!window.confirm('Cancel this booking?')) return;
-
         var cancelBtn = row.querySelector('.cancel-btn');
+        var cancelError = row.querySelector('.cancel-error');
+
+        window.kinsmenConfirm('Your chair will be released and you\u2019ll need to book again if you change your mind.', {
+            title: 'Cancel this booking?',
+            confirmText: 'Cancel booking',
+            cancelText: 'Keep booking',
+            danger: true
+        }).then(function (confirmed) {
+            if (confirmed) submitCancel(row, cancelBtn, cancelError);
+        });
+    }
+
+    function showCancelError(cancelError, message) {
+        cancelError.textContent = message;
+        cancelError.style.display = 'block';
+    }
+
+    function submitCancel(row, cancelBtn, cancelError) {
         cancelBtn.disabled = true;
+        cancelError.style.display = 'none';
 
         authFetch('/MyBookings/Cancel/' + row.dataset.bookingId, {
             method: 'POST',
@@ -279,7 +296,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     var message = result.status === 409
                         ? "Couldn't cancel \u2014 this booking changed elsewhere. Refresh and try again."
                         : (result.body.message || 'Something went wrong \u2014 please try again.');
-                    window.alert(message);
+                    showCancelError(cancelError, message);
                     cancelBtn.disabled = false;
                     return;
                 }
@@ -289,9 +306,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 var panel = row.querySelector('.reschedule-panel');
                 if (actions) actions.remove();
                 if (panel) panel.remove();
+                cancelError.remove();
             })
             .catch(function () {
-                window.alert("Couldn't reach the booking service \u2014 please try again.");
+                showCancelError(cancelError, "Couldn't reach the booking service \u2014 please try again.");
                 cancelBtn.disabled = false;
             });
     }
