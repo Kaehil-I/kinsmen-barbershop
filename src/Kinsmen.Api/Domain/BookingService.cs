@@ -1,10 +1,12 @@
+using System.Globalization;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
 namespace Kinsmen.Api.Domain;
 
-public sealed class BookingService(IBookingStore store, TimeProvider clock, BookingPolicy policy)
+public sealed class BookingService(IBookingStore store, TimeProvider clock, BookingPolicy policy, IEmailSender? email = null)
 {
     // Kinsmen's shop timezone is explicit, independent of the host machine timezone.
     private static readonly TimeZoneInfo ShopZone = TimeZoneInfo.FindSystemTimeZoneById("Africa/Johannesburg");
@@ -70,6 +72,13 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
             && !blocks.Any(b => Overlaps(start, end, b.StartUtc, b.EndUtc));
     }
 
+    // Older Atlas records did not yet have serviceIds. Treating that missing field as
+    // all services preserves existing bookings while every barber edited in the admin
+    // screen becomes explicitly skills-based.
+    private static bool CanPerform(Barber barber, IEnumerable<ServiceSnapshot> services)
+        => barber.ServiceIds is null or { Length: 0 }
+            || services.All(service => barber.ServiceIds.Contains(service.ServiceId, StringComparer.Ordinal));
+
     public async Task<Booking> Create(Actor actor, CreateBookingRequest input, CancellationToken ct = default, string? idempotencyKey = null)
     {
         if (!actor.IsCustomer && !actor.IsAdmin) throw DomainError.Forbidden();
@@ -86,31 +95,50 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
         var bookingId = idempotencyKey is null ? Guid.NewGuid().ToString("N") : Hash(new { actor.UserId, Key = idempotencyKey });
         var fingerprint = idempotencyKey is null ? null : Hash(new
         {
-            CustomerId = customer, input.BarberId, Services = input.ServiceIds.Order(StringComparer.Ordinal).ToArray(),
-            StartUtcTicks = start.Ticks, Notes = notes
+            CustomerId = customer,
+            input.BarberId,
+            Services = input.ServiceIds.Order(StringComparer.Ordinal).ToArray(),
+            StartUtcTicks = start.Ticks,
+            Notes = notes
         });
+        // The customer's own email, only when the customer is the one booking. When an admin books on a
+        // customer's behalf, the token's email is the admin's, so it must not be stored as the customer's.
+        var customerEmail = actor.IsAdmin ? null : actor.Email;
+        // True only when this call actually created the booking, so an idempotent replay never re-sends
+        // the email. Reset at the start of every attempt because Write may retry the callback.
+        var created = false;
+        Booking result;
         try
         {
-            return await store.Write(async s =>
+            result = await store.Write(async s =>
             {
+                created = false;
                 if (idempotencyKey is not null && await s.BookingById(bookingId) is { } previous)
                     return Replay(previous, fingerprint);
                 ValidateStart(start);
-                var candidates = (await s.Barbers()).Where(b => b.Active && (input.BarberId is null || b.Id == input.BarberId))
+                var services = SelectServices(await s.Services(), input.ServiceIds);
+                await s.TouchCustomer(customer);
+                var active = (await s.Bookings(customer, null, Now, Now.AddDays(policy.HorizonDays + 1)))
+                    .Count(b => b.Status is BookingStatus.Pending or BookingStatus.Confirmed);
+                if (active >= policy.MaxActiveBookingsPerCustomer)
+                    throw new DomainError(409, "booking_limit", $"You can have at most {policy.MaxActiveBookingsPerCustomer} upcoming bookings " +
+                        "at a time. Cancel one, or wait until one has passed, before booking another.");
+                var candidates = (await s.Barbers()).Where(b => b.Active && (input.BarberId is null || b.Id == input.BarberId)
+                    && CanPerform(b, services))
                     .OrderBy(b => b.Id, StringComparer.Ordinal).ToList();
-                if (candidates.Count == 0) throw DomainError.Invalid("No active matching barber exists.");
+                if (candidates.Count == 0) throw DomainError.Invalid("No active barber can perform the selected service(s).");
                 // Every schedule mutation writes the same barber document before querying overlaps.
                 // Concurrent transactions therefore conflict and retry against the committed schedule.
                 await s.TouchBarbers(candidates.Select(b => b.Id));
-                var services = SelectServices(await s.Services(), input.ServiceIds);
                 var end = start.AddMinutes(services.Sum(x => x.DurationMinutes));
                 foreach (var barber in candidates)
                 {
                     if (!await Free(s, barber, start, end)) continue;
                     var booking = new Booking(bookingId, customer, barber.Id, start, end,
                         services, services.Sum(x => x.PriceCents), BookingStatus.Pending, Now,
-                        Notes: notes, CreationFingerprint: fingerprint);
+                        Notes: notes, CreationFingerprint: fingerprint, CustomerEmail: customerEmail);
                     await s.SaveBooking(booking, true);
+                    created = true;
                     return booking;
                 }
                 throw DomainError.Conflict("That time is no longer available. Choose another slot.");
@@ -124,6 +152,12 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
             if (existing is null) throw DomainError.Conflict("The booking request raced another update. Retry using the same key.");
             return Replay(existing, fingerprint);
         }
+
+        // Sent only after the transaction has committed, so a retried transaction can't duplicate it.
+        if (created)
+            await SendBookingEmail(result, "We've received your booking request",
+                $"<p>Thanks for booking with Kinsmen! We've received your request for {Describe(result)}. We'll email you again once it's confirmed.</p>");
+        return result;
     }
 
     public Task<Booking> Get(Actor actor, string id, CancellationToken ct = default)
@@ -181,8 +215,9 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
             return updated;
         }, ct);
 
-    public Task<Booking> ChangeStatus(Actor actor, string id, StatusRequest input, CancellationToken ct = default)
-        => store.Write(async s =>
+    public async Task<Booking> ChangeStatus(Actor actor, string id, StatusChangeRequest input, CancellationToken ct = default)
+    {
+        var updated = await store.Write(async s =>
         {
             var booking = await s.BookingById(id) ?? throw DomainError.Missing();
             var barber = (await s.Barbers()).Single(b => b.Id == booking.BarberId);
@@ -199,10 +234,56 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
             }
             else throw DomainError.Conflict("Allowed staff transitions are Pending to Confirmed, and Confirmed to Completed or NoShow.");
             await s.TouchBarbers([barber.Id]);
-            var updated = booking with { Status = input.Status, Version = booking.Version + 1 };
-            await s.SaveBooking(updated);
-            return updated;
+            var changed = booking with { Status = input.Status, Version = booking.Version + 1 };
+            await s.SaveBooking(changed);
+            return changed;
         }, ct);
+
+        // Sent only after the transaction has committed, so a retry can't duplicate it. The recipient comes
+        // from the address stored on the booking, because the caller here is staff, not the customer.
+        if (updated.Status == BookingStatus.Confirmed)
+            await SendBookingEmail(updated, "Your booking is confirmed",
+                $"<p>Your appointment ({Describe(updated)}) is confirmed. See you then!</p>");
+        else if (updated.Status == BookingStatus.Completed)
+            await SendBookingEmail(updated, "How was your visit?",
+                "<p>Thanks for visiting Kinsmen! We'd love to hear how it went. Sign in and open My Bookings to leave a review.</p>");
+        return updated;
+    }
+
+    private static string Describe(Booking booking)
+    {
+        var local = TimeZoneInfo.ConvertTimeFromUtc(booking.StartUtc, ShopZone);
+        var services = string.Join(", ", booking.Services.Select(s => WebUtility.HtmlEncode(s.Name)));
+        return $"{services} on {local.ToString("dddd d MMMM", CultureInfo.InvariantCulture)} at {local.ToString("HH:mm", CultureInfo.InvariantCulture)}";
+    }
+
+    // A failed or slow email provider must never fail the booking action the customer is waiting on.
+    private async Task SendBookingEmail(Booking booking, string subject, string htmlBody)
+    {
+        if (email is null || string.IsNullOrWhiteSpace(booking.CustomerEmail)) return;
+        try { await email.SendAsync(booking.CustomerEmail, subject, htmlBody); }
+        catch (Exception e) { Console.Error.WriteLine($"Booking email failed: {e.GetType().Name}"); }
+    }
+
+    public Task<Review> SubmitReview(Actor actor, string bookingId, SubmitReviewRequest input, CancellationToken ct = default)
+        => store.Write(async s =>
+        {
+            if (!actor.IsCustomer) throw DomainError.Forbidden();
+            var booking = await s.BookingById(bookingId) ?? throw DomainError.Missing();
+            if (booking.CustomerId != actor.UserId) throw DomainError.Missing();
+            if (booking.Status != BookingStatus.Completed) throw DomainError.Conflict("Only completed appointments can be reviewed.");
+            if (input.Rating is < 1 or > 5) throw DomainError.Invalid("Rating must be between 1 and 5.");
+            if (input.Comment?.Length > 1000) throw DomainError.Invalid("Review comment must be no longer than 1000 characters.");
+            if (await s.ReviewByBookingId(bookingId) is not null) throw DomainError.Conflict("This appointment has already been reviewed.");
+            var review = new Review(Guid.NewGuid().ToString("N"), bookingId, actor.UserId, booking.BarberId,
+                input.Rating, string.IsNullOrWhiteSpace(input.Comment) ? null : input.Comment.Trim(), Now);
+            try { await s.SaveReview(review); }
+            catch (DuplicateReviewException) { throw DomainError.Conflict("This appointment has already been reviewed."); }
+            return review;
+        }, ct);
+
+    public Task<List<Review>> ReviewsForBarber(string barberId, CancellationToken ct = default)
+        => store.Read(async s => (await s.ReviewsForBarber(barberId)).OrderByDescending(r => r.CreatedUtc).Take(100).ToList(), ct);
 
     public Task<List<Booking>> List(Actor actor, DateTimeOffset from, DateTimeOffset to, string? barberId, CancellationToken ct = default)
         => store.Read(async s =>
@@ -223,8 +304,10 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
             if (date < firstDate || date > firstDate.AddDays(policy.HorizonDays))
                 throw DomainError.Invalid("Date is outside the booking horizon.");
             var midnight = TimeZoneInfo.ConvertTimeToUtc(date.ToDateTime(TimeOnly.MinValue), ShopZone);
-            var duration = SelectServices(await s.Services(), serviceIds).Sum(x => x.DurationMinutes);
-            var candidates = (await s.Barbers()).Where(b => b.Active && (barberId is null || b.Id == barberId)).ToList();
+            var services = SelectServices(await s.Services(), serviceIds);
+            var duration = services.Sum(x => x.DurationMinutes);
+            var candidates = (await s.Barbers()).Where(b => b.Active && (barberId is null || b.Id == barberId)
+                && CanPerform(b, services)).ToList();
             var result = new List<AvailableSlot>();
             foreach (var barber in candidates)
             {

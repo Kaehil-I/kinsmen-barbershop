@@ -55,7 +55,7 @@
             <div class="nav-auth" id="nav-auth">
                 @if (User.Identity?.IsAuthenticated == true)
                 {
-                    <span class="nav-user">@User.Identity.Name</span>
+                    <span class="nav-user">@User.DisplayName()</span>
                     <form asp-controller="Account" asp-action="Logout" method="post" class="inline-form">
                         <button type="submit" class="link-btn">Log Out</button>
                     </form>
@@ -96,7 +96,7 @@
             <hr />
             @if (User.Identity?.IsAuthenticated == true)
             {
-                <span class="nav-user">@User.Identity.Name</span>
+                <span class="nav-user">@User.DisplayName()</span>
                 <form asp-controller="Account" asp-action="Logout" method="post"><button type="submit">Log Out</button></form>
             }
             else

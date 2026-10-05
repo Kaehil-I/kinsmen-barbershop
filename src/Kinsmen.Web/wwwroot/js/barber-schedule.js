@@ -5,6 +5,13 @@ document.addEventListener('DOMContentLoaded', function () {
     var scheduleList = document.getElementById('schedule-list');
     if (!scheduleList) return; // API was unavailable - view didn't render the page body.
 
+    // Block reasons and server messages are text, so they must never be inserted as raw HTML.
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
     // --- Jump to today ---------------------------------------------------------
 
     var jumpBtn = document.getElementById('jump-today-btn');
@@ -317,7 +324,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 .then(function (result) {
                     if (!result.ok) {
                         startGrid.innerHTML = '<span class="no-date-msg">' +
-                            (result.body.message || "Couldn't load times.") + '</span>';
+                            escapeHtml(result.body.message || "Couldn't load times.") + '</span>';
                         return;
                     }
                     blockState.workingStart = result.body.workingStart;
@@ -375,8 +382,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     row.className = 'admin-row';
                     row.dataset.blockId = result.body.id;
                     row.innerHTML =
-                        '<div><div class="aname">' + result.body.dateLabel + '</div>' +
-                        '<div class="adesc">' + result.body.timeLabel + ' &middot; ' + result.body.reason + '</div></div>' +
+                        '<div><div class="aname">' + escapeHtml(result.body.dateLabel) + '</div>' +
+                        '<div class="adesc">' + escapeHtml(result.body.timeLabel) + ' &middot; ' + escapeHtml(result.body.reason) + '</div></div>' +
                         '<button class="row-link brick delete-block-btn" type="button">Remove</button>';
                     blocksList.appendChild(row);
 

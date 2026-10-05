@@ -17,7 +17,7 @@ public sealed class KinsmenApiClient(HttpClient httpClient) : IKinsmenApiClient
     // confirmed, ..., noShow). This must match on both serialize and deserialize —
     // ASP.NET Core's own MVC JSON options don't apply here since this is a plain
     // HttpClient talking to a different process.
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    internal static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
@@ -125,7 +125,13 @@ public sealed class KinsmenApiClient(HttpClient httpClient) : IKinsmenApiClient
             cancellationToken);
         return await ReadOrThrowAsync<Booking>(response, cancellationToken);
     }
-
+    public async Task<Review> SubmitReviewAsync(
+    string bookingId, SubmitReviewRequest request, CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsJsonAsync(
+            $"/api/bookings/{Uri.EscapeDataString(bookingId)}/review", request, JsonOptions, cancellationToken);
+        return await ReadOrThrowAsync<Review>(response, cancellationToken);
+    }
     // --- Barber time blocks ---------------------------------------------------
 
     public async Task<List<TimeBlock>> GetBarberBlocksAsync(
@@ -230,7 +236,7 @@ public sealed class KinsmenApiClient(HttpClient httpClient) : IKinsmenApiClient
 
     // --- Shared response handling ---------------------------------------------
 
-    private static async Task<T> ReadOrThrowAsync<T>(
+    internal static async Task<T> ReadOrThrowAsync<T>(
         HttpResponseMessage response, CancellationToken cancellationToken)
     {
         if (!response.IsSuccessStatusCode)
@@ -244,7 +250,7 @@ public sealed class KinsmenApiClient(HttpClient httpClient) : IKinsmenApiClient
             "The API returned an empty body where a result was expected.");
     }
 
-    private static async Task ThrowForFailureAsync(
+    internal static async Task ThrowForFailureAsync(
         HttpResponseMessage response, CancellationToken cancellationToken)
     {
         // Auth failures and rate limiting can come back with no body at all — don't

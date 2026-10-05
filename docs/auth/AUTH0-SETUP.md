@@ -287,6 +287,42 @@ Render restarts clear the web app's session encryption keys, so users may need t
 
 To inspect a token while debugging, copy it from the debugger (never from production) into [jwt.io](https://jwt.io) and check `aud`, `sub` and `role`.
 
+## Part 8: Staff management (admins changing roles in the app)
+
+**Admin → Staff accounts** lets an admin find a person by email and make them a Customer, Barber or Admin, instead of editing `app_metadata` here by hand. The API does it through the Auth0 Management API with a dedicated Machine-to-Machine (M2M) application. Until that application's credentials are set on the API, the Staff page says the feature is switched off and nothing else changes.
+
+### 8.1 Create the M2M application (once)
+1. **Applications → Applications → Create Application**, name it `Kinsmen Staff Management`, choose **Machine to Machine Applications**.
+2. When asked which API it may call, choose **Auth0 Management API** and grant **only** these two permissions:
+   - `read:users`
+   - `update:users_app_metadata`
+
+   Nothing else: it can't create or delete users, change passwords or read secrets.
+3. Note its **Client ID** and **Client Secret**. Like the web app's secret, these go **only** into Render, never into Git or chat.
+
+### 8.2 Shorten the API's access-token lifetime
+**Applications → APIs → Kinsmen API → Settings → Token Expiration (Seconds)**: set **3600** (1 hour). A changed role reaches the API when the person's token is next issued, so a shorter lifetime means a demoted barber loses barber access within the hour. (Asking them to sign out and back in applies a change everywhere immediately.)
+
+### 8.3 Render
+On **kinsmen-api → Environment**, add (they're declared in `render.yaml` with `sync: false`, so Render won't prompt for them on an existing Blueprint):
+
+| Variable | Value |
+|---|---|
+| `Auth0Management__ClientId` | Client ID from 8.1 |
+| `Auth0Management__ClientSecret` | Client Secret from 8.1 |
+
+The tenant domain is taken from `Auth__Authority`, which is already set. Save; the API redeploys and the Staff page switches on.
+
+### 8.4 Rules the API enforces
+- Only Admins can use it, and every change is written to an audit log (`auditLog` in MongoDB) shown on the Staff page.
+- People must **sign up themselves and verify their email** before they can be made a Barber or Admin (stops someone registering with another person's address and being promoted).
+- **Nobody can change their own role.**
+- **Admins can't be demoted in the app.** Removing an admin is done here in the dashboard by the project owner (edit their `app_metadata`). That way one compromised admin account can't lock the others out, and two admins can't race to remove each other.
+- A barber whose active barber profile still has upcoming bookings can't be made a Customer until those are moved or cancelled.
+
+### 8.5 The first admin
+The app can only grant roles once someone is already an Admin, so the very first admin is set here by hand (Part 3: `{ "role": "Admin" }` in their `app_metadata`).
+
 ## Security and testing notes for the report
 
 - Passwords, password resets and email verification are handled by Auth0; our database stores no credentials.

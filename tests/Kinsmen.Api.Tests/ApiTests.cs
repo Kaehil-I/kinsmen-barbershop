@@ -14,7 +14,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Kinsmen.Api.Tests;
 
-public sealed class ApiFactory : WebApplicationFactory<Program>
+public sealed class ApiFactory(IReadOnlyDictionary<string, string>? settings = null) : WebApplicationFactory<Program>
 {
     // Only the in-process test host uses this known key. It is never production configuration.
     public const string TestKey = "in-process-test-only-key-not-for-deployment-12345";
@@ -23,10 +23,13 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseEnvironment("Development");
         builder.UseSetting("Auth:DevelopmentSigningKey", TestKey);
         builder.UseSetting("Auth:Issuer", "kinsmen-local"); builder.UseSetting("Auth:Audience", "kinsmen-api");
+        foreach (var (key, value) in settings ?? new Dictionary<string, string>()) builder.UseSetting(key, value);
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<IBookingStore>(); services.AddSingleton<IBookingStore, TestStore>();
             services.RemoveAll<TimeProvider>(); services.AddSingleton<TimeProvider, TestClock>();
+            services.RemoveAll<IEmailSender>(); services.AddSingleton<IEmailSender, RecordingEmailSender>();
+            services.RemoveAll<IAuditLog>(); services.AddSingleton<IAuditLog, InMemoryAuditLog>();
         });
     }
     public HttpClient Client(string? user = null, string role = "Customer", bool expired = false, string audience = "kinsmen-api", bool includeSubject = true)
@@ -164,6 +167,35 @@ public sealed class ApiTests : IDisposable
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/admin/barbers/barber-a",
             new { name = "A", userId = "staff-a", hours = new[] { new { weekday = 9, startMinute = 0, endMinute = 60 } } })).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await admin.PatchAsJsonAsync("/api/admin/barbers/missing/active", new { active = true })).StatusCode);
+    }
+    [Fact] public async Task StaffEndpointsAreAdminOnlyAndOffUntilConfigured()
+    {
+        Assert.Equal(HttpStatusCode.Unauthorized, (await factory.Client().GetAsync("/api/admin/staff")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await factory.Client("customer-a").GetAsync("/api/admin/staff")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await factory.Client("staff-a", "Barber").PutAsJsonAsync("/api/admin/staff/auth0%7Cx/role", new { role = "Admin" })).StatusCode);
+        var admin = factory.Client("admin-a", "Admin");
+        Assert.Contains("\"enabled\":false", await admin.GetStringAsync("/api/admin/staff/status"));
+        var disabled = await admin.GetAsync("/api/admin/staff");
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, disabled.StatusCode);
+        Assert.Contains("staff_management_disabled", await disabled.Content.ReadAsStringAsync());
+    }
+    [Fact] public async Task AdminCanPromoteThroughTheApiAndSeeTheAuditTrail()
+    {
+        using var configured = factory.WithWebHostBuilder(b => b.ConfigureServices(services =>
+        {
+            services.RemoveAll<IIdentityDirectory>(); services.AddSingleton<IIdentityDirectory>(new FakeIdentityDirectory());
+        }));
+        var admin = configured.CreateClient();
+        admin.DefaultRequestHeaders.Authorization = factory.Client("auth0|admin", "Admin").DefaultRequestHeaders.Authorization;
+        Assert.Contains("\"enabled\":true", await admin.GetStringAsync("/api/admin/staff/status"));
+        Assert.Contains("auth0|customer", await admin.GetStringAsync("/api/admin/staff/lookup?email=sipho%40kinsmen.test"));
+        var promoted = await admin.PutAsJsonAsync("/api/admin/staff/auth0%7Ccustomer/role", new { role = "Barber" });
+        Assert.Equal(HttpStatusCode.OK, promoted.StatusCode);
+        Assert.Contains("\"role\":\"Barber\"", await promoted.Content.ReadAsStringAsync());
+        Assert.Contains("\"toRole\":\"Barber\"", await admin.GetStringAsync("/api/admin/staff/audit"));
+        var self = await admin.PutAsJsonAsync("/api/admin/staff/auth0%7Cadmin/role", new { role = "Customer" });
+        Assert.Equal(HttpStatusCode.Conflict, self.StatusCode);
+        Assert.Contains("own_role", await self.Content.ReadAsStringAsync());
     }
     [Fact] public async Task InvalidIdempotencyHeaderReturnsBadRequest()
     {

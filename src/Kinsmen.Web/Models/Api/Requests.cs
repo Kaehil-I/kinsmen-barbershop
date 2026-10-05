@@ -51,3 +51,14 @@ public sealed class CreateBlockRequest
     public DateTimeOffset End { get; set; }
     public string Reason { get; set; } = string.Empty;
 }
+
+/// <summary>Body for POST /api/bookings/{id}/review. Customer-only, once per booking,
+/// and only after the API confirms the booking is Completed.</summary>
+public sealed class SubmitReviewRequest
+{
+    /// <summary>1 to 5.</summary>
+    public int Rating { get; set; }
+
+    /// <summary>Up to 1000 chars, optional. Never render this back as HTML.</summary>
+    public string? Comment { get; set; }
+}

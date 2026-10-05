@@ -27,11 +27,13 @@ public sealed class CatalogueTests
         }
     }
 
-    [Fact] public async Task CreatedServiceIsListedAndBookable()
+    [Fact] public async Task NewServiceMustBeAssignedToABarberBeforeItIsBookable()
     {
         var fade = await Catalogue.CreateService(Admin, new("  Skin fade  ", 25000, 45));
         Assert.Equal("Skin fade", fade.Name);
         Assert.Contains(await Bookings.Services(default), s => s.Id == fade.Id);
+        await Assert.ThrowsAsync<DomainError>(() => Bookings.Create(Customer, Booking(services: [fade.Id])));
+        await Catalogue.UpdateBarber(Admin, "barber-a", new("Demo barber A", "staff-a", WeekdayHours(), ["haircut", "beard", fade.Id]));
         var booking = await Bookings.Create(Customer, Booking(services: [fade.Id]));
         Assert.Equal(25000, booking.TotalCents);
         Assert.Equal(TimeSpan.FromMinutes(45), booking.EndUtc - booking.StartUtc);
@@ -94,6 +96,29 @@ public sealed class CatalogueTests
         var booking = await Bookings.Create(Customer, Booking(barber.Id));
         var confirmed = await Bookings.ChangeStatus(new("auth0|sipho", "Barber"), booking.Id, new(BookingStatus.Confirmed, 1));
         Assert.Equal(BookingStatus.Confirmed, confirmed.Status);
+    }
+
+    [Fact] public async Task BarberSkillsAreSavedAndMustReferenceActiveServices()
+    {
+        var barber = await Catalogue.CreateBarber(Admin, new("Specialist", "auth0|specialist", WeekdayHours(), ["beard"]));
+        Assert.Equal(["beard"], barber.ServiceIds!);
+
+        var error = await Assert.ThrowsAsync<DomainError>(() => Catalogue.CreateBarber(
+            Admin, new("Invalid", "auth0|invalid", WeekdayHours(), ["missing"])));
+        Assert.Equal(400, error.Status);
+
+        await Catalogue.SetServiceActive(Admin, "beard", false);
+        error = await Assert.ThrowsAsync<DomainError>(() => Catalogue.CreateBarber(
+            Admin, new("Inactive", "auth0|inactive", WeekdayHours(), ["beard"])));
+        Assert.Equal(400, error.Status);
+    }
+
+    [Fact] public async Task RemovingAnUpcomingBookingSkillIsRejected()
+    {
+        await Bookings.Create(Customer, Booking(services: ["beard"]));
+        var error = await Assert.ThrowsAsync<DomainError>(() => Catalogue.UpdateBarber(
+            Admin, "barber-a", new("Demo barber A", "staff-a", WeekdayHours(), ["haircut"])));
+        Assert.Equal(409, error.Status);
     }
 
     [Fact] public async Task LinkedAccountCanOnlyBelongToOneBarber()

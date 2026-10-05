@@ -5,6 +5,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using Kinsmen.Api;
 using Kinsmen.Api.Domain;
 using Kinsmen.Api.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
@@ -36,16 +37,33 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 builder.Services.AddSingleton(TimeProvider.System);
 var policy = builder.Configuration.GetSection("Booking").Get<BookingPolicy>() ?? new();
 if (policy.SlotMinutes is < 1 or > 60 || 60 % policy.SlotMinutes != 0 || policy.HorizonDays is < 1 or > 365
-    || policy.MinimumNoticeMinutes < 0 || policy.CancellationNoticeMinutes < 0)
+    || policy.MinimumNoticeMinutes < 0 || policy.CancellationNoticeMinutes < 0 || policy.MaxActiveBookingsPerCustomer is < 1 or > 50)
     throw new InvalidOperationException("Invalid booking policy configuration.");
 builder.Services.AddSingleton(policy);
 builder.Services.AddSingleton(_ => new MongoBookingStore(
     builder.Configuration["Mongo:ConnectionString"] ?? throw new InvalidOperationException("Mongo connection required."),
     builder.Configuration["Mongo:Database"] ?? "kinsmen_dev"));
 builder.Services.AddSingleton<IBookingStore>(s => s.GetRequiredService<MongoBookingStore>());
-builder.Services.AddSingleton<BookingService>();
 builder.Services.AddSingleton<CatalogueService>();
+builder.Services.AddStaffManagement(builder.Configuration);
 
+
+// Booking emails. Without Email:BrevoApiKey the app uses a no-op sender, so nothing else needs configuring.
+var brevoKey = builder.Configuration["Email:BrevoApiKey"];
+if (string.IsNullOrWhiteSpace(brevoKey))
+{
+    builder.Services.AddSingleton<IEmailSender, NullEmailSender>();
+}
+else
+{
+    var fromAddress = builder.Configuration["Email:FromAddress"]
+        ?? throw new InvalidOperationException("Email:FromAddress is required when Email:BrevoApiKey is set.");
+    var fromName = builder.Configuration["Email:FromName"] ?? "Kinsmen";
+    builder.Services.AddHttpClient();
+    builder.Services.AddSingleton<IEmailSender>(sp => new BrevoEmailSender(
+        sp.GetRequiredService<IHttpClientFactory>().CreateClient(), brevoKey, fromAddress, fromName));
+}
+builder.Services.AddSingleton<BookingService>();
 var authority = builder.Configuration["Auth:Authority"];
 var localKey = builder.Configuration["Auth:DevelopmentSigningKey"];
 var audience = builder.Configuration["Auth:Audience"] ?? "kinsmen-api";
@@ -69,10 +87,16 @@ else if (builder.Environment.IsDevelopment() && !string.IsNullOrWhiteSpace(local
         o.MapInboundClaims = false;
         o.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true, ValidIssuer = issuer, ValidateAudience = true, ValidAudience = audience,
-            ValidateLifetime = true, ValidateIssuerSigningKey = true,
+            ValidateIssuer = true,
+            ValidIssuer = issuer,
+            ValidateAudience = true,
+            ValidAudience = audience,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(localKey)),
-            NameClaimType = "sub", RoleClaimType = "role", ClockSkew = TimeSpan.FromSeconds(15),
+            NameClaimType = "sub",
+            RoleClaimType = "role",
+            ClockSkew = TimeSpan.FromSeconds(15),
             ValidAlgorithms = [SecurityAlgorithms.HmacSha256]
         };
     });
@@ -84,12 +108,24 @@ else
     builder.Services.AddAuthentication("Bearer").AddScheme<AuthenticationSchemeOptions, RejectAuthentication>("Bearer", _ => { });
 }
 builder.Services.AddAuthorization();
+// Browsers never call the API directly: Kinsmen.Web does, from one server address. Limiting per IP alone would
+// put every visitor in one shared bucket, so signed-in calls are limited per user, and anonymous calls the web
+// app vouches for (shared Proxy:Key) per visitor. Anything else, e.g. direct calls to the public API, per IP.
+var proxyKey = builder.Configuration["Proxy:Key"];
+if (!string.IsNullOrEmpty(proxyKey) && proxyKey.Length < 32)
+    throw new InvalidOperationException("Proxy:Key must be at least 32 characters.");
+var permitPerMinute = builder.Configuration.GetValue("RateLimit:PermitPerMinute", 120);
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = 429;
+    o.OnRejected = (context, _) =>
+    {
+        context.HttpContext.Response.Headers.RetryAfter = "60";
+        return ValueTask.CompletedTask;
+    };
     o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
-        RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions
-        { PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+        RateLimitPartition.GetFixedWindowLimiter(RateLimitKeys.For(ctx, proxyKey), _ => new FixedWindowRateLimiterOptions
+        { PermitLimit = permitPerMinute, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
 
 var app = builder.Build();
@@ -146,16 +182,22 @@ app.Use(async (context, next) =>
             extensions: new Dictionary<string, object?> { ["traceId"] = context.TraceIdentifier }).ExecuteAsync(context);
     }
 });
-app.UseRateLimiter();
+// Authenticate first so the rate limiter can partition by the token's subject.
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
-app.MapGet("/health/live", () => Results.Ok(new { status = "alive" }));
-app.MapGet("/health/ready", async (MongoBookingStore store, CancellationToken ct) => { await store.Ping(ct); return Results.Ok(new { status = "ready" }); });
+// Render's health checks must never be throttled into a failed deploy.
+app.MapGet("/health/live", () => Results.Ok(new { status = "alive" })).DisableRateLimiting();
+app.MapGet("/health/ready", async (MongoBookingStore store, CancellationToken ct) => { await store.Ping(ct); return Results.Ok(new { status = "ready" }); })
+    .DisableRateLimiting();
 app.MapGet("/api/services", (BookingService service, CancellationToken ct) => service.Services(ct));
 app.MapGet("/api/barbers", async (BookingService service, CancellationToken ct) =>
     (await service.Barbers(ct)).Select(b => new { b.Id, b.Name, b.Hours }));
 app.MapGet("/api/availability", (DateOnly date, string[] serviceIds, string? barberId, BookingService service, CancellationToken ct)
     => service.Availability(date, serviceIds, barberId, ct));
+// Public, like the barber list. Projected so a review never exposes who wrote it or which booking it was.
+app.MapGet("/api/barbers/{barberId}/reviews", async (string barberId, BookingService service, CancellationToken ct) =>
+    (await service.ReviewsForBarber(barberId, ct)).Select(r => new { r.Rating, r.Comment, r.CreatedUtc }));
 
 var secure = app.MapGroup("/api").RequireAuthorization();
 secure.MapPost("/bookings", async (CreateBookingRequest input, HttpContext ctx, BookingService service, CancellationToken ct) =>
@@ -177,8 +219,10 @@ secure.MapPatch("/bookings/{id}/reschedule", (string id, RescheduleRequest input
     => service.Reschedule(CurrentActor(ctx), id, input, ct));
 secure.MapPost("/bookings/{id}/cancel", (string id, VersionRequest input, HttpContext ctx, BookingService service, CancellationToken ct)
     => service.Cancel(CurrentActor(ctx), id, input.Version, ct));
-secure.MapPatch("/bookings/{id}/status", (string id, StatusRequest input, HttpContext ctx, BookingService service, CancellationToken ct)
+secure.MapPatch("/bookings/{id}/status", (string id, StatusChangeRequest input, HttpContext ctx, BookingService service, CancellationToken ct)
     => service.ChangeStatus(CurrentActor(ctx), id, input, ct));
+secure.MapPost("/bookings/{id}/review", async (string id, SubmitReviewRequest input, HttpContext ctx, BookingService service, CancellationToken ct)
+    => Results.Json(await service.SubmitReview(CurrentActor(ctx), id, input, ct), statusCode: 201));
 secure.MapGet("/barbers/{barberId}/blocks", (string barberId, DateTimeOffset from, DateTimeOffset to, HttpContext ctx, BookingService service, CancellationToken ct)
     => service.ListBlocks(CurrentActor(ctx), barberId, from, to, ct));
 secure.MapPost("/barbers/{barberId}/blocks", async (string barberId, BlockRequest input, HttpContext ctx, BookingService service, CancellationToken ct)
@@ -207,6 +251,7 @@ admin.MapPut("/barbers/{id}", (string id, BarberRequest input, HttpContext ctx, 
     => catalogue.UpdateBarber(CurrentActor(ctx), id, input, ct));
 admin.MapPatch("/barbers/{id}/active", (string id, ActiveRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
     => catalogue.SetBarberActive(CurrentActor(ctx), id, input.Active, ct));
+app.MapStaffEndpoints(CurrentActor);
 app.Run();
 
 static Actor CurrentActor(HttpContext context)
@@ -214,7 +259,9 @@ static Actor CurrentActor(HttpContext context)
     var sub = context.User.FindFirstValue("sub"); var role = context.User.FindFirstValue("role");
     if (string.IsNullOrWhiteSpace(sub) || sub.Length > 128) throw new DomainError(401, "invalid_identity", "A subject claim is required.");
     if (role is not ("Customer" or "Barber" or "Admin")) throw DomainError.Forbidden();
-    return new Actor(sub, role);
+    // The Auth0 Action adds the email under a namespaced claim; plain "email" is the fallback.
+    var email = context.User.FindFirstValue("https://kinsmen.app/email") ?? context.User.FindFirstValue("email");
+    return new Actor(sub, role, string.IsNullOrWhiteSpace(email) || email.Length > 254 ? null : email);
 }
 
 public sealed class RejectAuthentication(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)

@@ -7,8 +7,11 @@ namespace Kinsmen.Api.Infrastructure;
 
 public sealed class MongoBookingStore : IBookingStore
 {
+    private static readonly string[] CollectionNames = ["services", "barbers", "bookings", "timeBlocks", "reviews"];
     private readonly IMongoClient client;
     private readonly IMongoDatabase db;
+    private volatile bool customerLocksReady;
+    internal IMongoDatabase Database => db;
     static MongoBookingStore()
     {
         ConventionRegistry.Register("kinsmen", new ConventionPack
@@ -28,6 +31,13 @@ public sealed class MongoBookingStore : IBookingStore
 
     public async Task<T> Write<T>(Func<IBookingSession, Task<T>> action, CancellationToken ct = default)
     {
+        // Lock documents are upserted inside transactions, so their collection must exist beforehand.
+        // Creating it here (once per process) means existing databases need no re-initialisation.
+        if (!customerLocksReady)
+        {
+            await EnsureCollection(MongoSession.CustomerLocks, ct);
+            customerLocksReady = true;
+        }
         using var session = await client.StartSessionAsync(cancellationToken: ct);
         return await session.WithTransactionAsync((s, token) => action(new MongoSession(db, s, token)),
             new TransactionOptions(ReadConcern.Snapshot, ReadPreference.Primary, WriteConcern.WMajority), ct);
@@ -36,7 +46,7 @@ public sealed class MongoBookingStore : IBookingStore
     public async Task Initialize(CancellationToken ct = default)
     {
         // Pre-create collections outside transactions, with server-side JSON-schema validation.
-        foreach (var name in new[] { "services", "barbers", "bookings", "timeBlocks", "reviews" })
+        foreach (var name in CollectionNames)
         {
             var names = await (await db.ListCollectionNamesAsync(cancellationToken: ct)).ToListAsync(ct);
             if (!names.Contains(name))
@@ -47,7 +57,8 @@ public sealed class MongoBookingStore : IBookingStore
                     await db.CreateCollectionAsync(name, new CreateCollectionOptions<BsonDocument>
                     {
                         Validator = new BsonDocument("$jsonSchema", BsonDocument.Parse(schema)),
-                        ValidationAction = DocumentValidationAction.Error, ValidationLevel = DocumentValidationLevel.Strict
+                        ValidationAction = DocumentValidationAction.Error,
+                        ValidationLevel = DocumentValidationLevel.Strict
                     }, ct);
                 }
                 catch (MongoCommandException e) when (e.Code == 48) { /* Another initializer created it. */ }
@@ -69,8 +80,21 @@ public sealed class MongoBookingStore : IBookingStore
             Builders<TimeBlock>.IndexKeys.Ascending(x => x.BarberId).Ascending(x => x.StartUtc).Ascending(x => x.EndUtc)), cancellationToken: ct);
         await db.GetCollection<Barber>("barbers").Indexes.CreateOneAsync(new CreateIndexModel<Barber>(
             Builders<Barber>.IndexKeys.Ascending(x => x.UserId), new CreateIndexOptions { Unique = true }), cancellationToken: ct);
-        await db.GetCollection<Review>("reviews").Indexes.CreateOneAsync(new CreateIndexModel<Review>(
-    Builders<Review>.IndexKeys.Ascending(x => x.BookingId), new CreateIndexOptions { Unique = true }), cancellationToken: ct);
+        // One review per booking is enforced here, not just in code, so a race can't create two.
+        await db.GetCollection<Review>("reviews").Indexes.CreateManyAsync([
+            new CreateIndexModel<Review>(Builders<Review>.IndexKeys.Ascending(x => x.BookingId), new CreateIndexOptions { Unique = true }),
+            new CreateIndexModel<Review>(Builders<Review>.IndexKeys.Ascending(x => x.BarberId).Descending(x => x.CreatedUtc))
+        ], ct);
+        await EnsureCollection(MongoSession.CustomerLocks, ct);
+    }
+
+    // Lock-only collection: documents hold a counter and nothing else, so it has no schema validator.
+    private async Task EnsureCollection(string name, CancellationToken ct)
+    {
+        var names = await (await db.ListCollectionNamesAsync(cancellationToken: ct)).ToListAsync(ct);
+        if (names.Contains(name)) return;
+        try { await db.CreateCollectionAsync(name, cancellationToken: ct); }
+        catch (MongoCommandException e) when (e.Code == 48) { /* Another process created it. */ }
     }
 
     public async Task SeedDemo(CancellationToken ct = default)
@@ -86,7 +110,8 @@ public sealed class MongoBookingStore : IBookingStore
         foreach (var barber in DemoData.Barbers)
         {
             var update = Builders<Barber>.Update.SetOnInsert(x => x.Name, barber.Name).SetOnInsert(x => x.UserId, barber.UserId)
-                .SetOnInsert(x => x.Hours, barber.Hours).SetOnInsert(x => x.Active, true).SetOnInsert(x => x.Revision, 0);
+                .SetOnInsert(x => x.Hours, barber.Hours).SetOnInsert(x => x.ServiceIds, barber.ServiceIds)
+                .SetOnInsert(x => x.Active, true).SetOnInsert(x => x.Revision, 0);
             await db.GetCollection<Barber>("barbers").UpdateOneAsync(x => x.Id == barber.Id, update, new UpdateOptions { IsUpsert = true }, ct);
         }
     }
@@ -97,7 +122,7 @@ public sealed class MongoBookingStore : IBookingStore
         if (!hello.Contains("setName") && hello.GetValue("msg", "").AsString != "isdbgrid")
             throw new DomainError(503, "database_not_ready", "MongoDB must support transactions (replica set or sharded cluster).");
         var names = await (await db.ListCollectionNamesAsync(cancellationToken: ct)).ToListAsync(ct);
-        if (new[] { "services", "barbers", "bookings", "timeBlocks", "reviews" }.Any(n => !names.Contains(n)))
+        if (CollectionNames.Any(n => !names.Contains(n)))
             throw new DomainError(503, "database_not_ready", "Initialize the application database before accepting bookings.");
     }
 }
@@ -123,6 +148,10 @@ internal sealed class MongoSession(IMongoDatabase db, IClientSessionHandle? sess
             if (result.MatchedCount != 1) throw DomainError.Missing();
         }
     }
+    internal const string CustomerLocks = "customerLocks";
+    public Task TouchCustomer(string customerId)
+        => db.GetCollection<BsonDocument>(CustomerLocks).UpdateOneAsync(WriteSession, new BsonDocument("_id", customerId),
+            new BsonDocument("$inc", new BsonDocument("revision", 1L)), new UpdateOptions { IsUpsert = true }, ct);
     public async Task<Booking?> BookingById(string id) => (await Find("bookings", Builders<Booking>.Filter.Eq(x => x.Id, id))).SingleOrDefault();
     public Task<List<Booking>> Bookings(string? customerId, string? barberId, DateTime from, DateTime to)
     {
@@ -171,7 +200,7 @@ internal sealed class MongoSession(IMongoDatabase db, IClientSessionHandle? sess
             if (insert) { await collection.InsertOneAsync(WriteSession, barber with { Revision = 0 }, cancellationToken: ct); return; }
             // Update profile fields only; the revision is incremented, never overwritten, to keep schedule locking intact.
             var result = await collection.UpdateOneAsync(WriteSession, x => x.Id == barber.Id, Builders<Barber>.Update
-                .Set(x => x.Name, barber.Name).Set(x => x.UserId, barber.UserId).Set(x => x.Hours, barber.Hours)
+                .Set(x => x.Name, barber.Name).Set(x => x.UserId, barber.UserId).Set(x => x.Hours, barber.Hours).Set(x => x.ServiceIds, barber.ServiceIds)
                 .Set(x => x.Active, barber.Active).Inc(x => x.Revision, 1), cancellationToken: ct);
             if (result.MatchedCount != 1) throw DomainError.Missing();
         }
@@ -179,8 +208,10 @@ internal sealed class MongoSession(IMongoDatabase db, IClientSessionHandle? sess
         { throw new DuplicateBarberUserException(); }
     }
 
-    public async Task<Review?> ReviewByBookingId(string bookingId) => (await Find("reviews", Builders<Review>.Filter.Eq(x => x.BookingId, bookingId))).SingleOrDefault();
-    public Task<List<Review>> ReviewsForBarber(string barberId) => Find("reviews", Builders<Review>.Filter.Eq(x => x.BarberId, barberId));
+    public async Task<Review?> ReviewByBookingId(string bookingId)
+        => (await Find("reviews", Builders<Review>.Filter.Eq(x => x.BookingId, bookingId))).SingleOrDefault();
+    public Task<List<Review>> ReviewsForBarber(string barberId)
+        => Find("reviews", Builders<Review>.Filter.Eq(x => x.BarberId, barberId));
     public async Task SaveReview(Review review)
     {
         try { await db.GetCollection<Review>("reviews").InsertOneAsync(WriteSession, review, cancellationToken: ct); }
@@ -193,7 +224,7 @@ public static class DemoData
 {
     public static readonly ServiceItem[] Services = [new("haircut", "Demo haircut", 20000, 30), new("beard", "Demo beard trim", 10000, 15)];
     public static readonly Barber[] Barbers = [
-        new("barber-a", "Demo barber A", "staff-a", Enumerable.Range(1, 6).Select(d => new WorkingPeriod(d, 540, 1020)).ToArray()),
-        new("barber-b", "Demo barber B", "staff-b", Enumerable.Range(1, 6).Select(d => new WorkingPeriod(d, 540, 1020)).ToArray())
+        new("barber-a", "Demo barber A", "staff-a", Enumerable.Range(1, 6).Select(d => new WorkingPeriod(d, 540, 1020)).ToArray(), ServiceIds: ["haircut", "beard"]),
+        new("barber-b", "Demo barber B", "staff-b", Enumerable.Range(1, 6).Select(d => new WorkingPeriod(d, 540, 1020)).ToArray(), ServiceIds: ["haircut", "beard"])
     ];
 }

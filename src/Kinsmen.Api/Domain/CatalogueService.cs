@@ -62,13 +62,13 @@ public sealed class CatalogueService(IBookingStore store, TimeProvider clock, Bo
     public async Task<BarberProfile> CreateBarber(Actor actor, BarberRequest input, CancellationToken ct = default)
     {
         RequireAdmin(actor);
-        var (name, userId, hours) = ValidateBarber(input);
+        var (name, userId, hours, requestedSkills) = ValidateBarber(input);
         try
         {
             return await store.Write(async s =>
             {
                 if ((await s.Barbers()).Any(b => b.UserId == userId)) throw DuplicateUser();
-                var barber = new Barber(Guid.NewGuid().ToString("N"), name, userId, hours);
+                var barber = new Barber(Guid.NewGuid().ToString("N"), name, userId, hours, ServiceIds: await ResolveSkills(s, requestedSkills));
                 await s.SaveBarber(barber, true);
                 return Profile(barber);
             }, ct);
@@ -79,18 +79,20 @@ public sealed class CatalogueService(IBookingStore store, TimeProvider clock, Bo
     public async Task<BarberProfile> UpdateBarber(Actor actor, string id, BarberRequest input, CancellationToken ct = default)
     {
         RequireAdmin(actor);
-        var (name, userId, hours) = ValidateBarber(input);
+        var (name, userId, hours, requestedSkills) = ValidateBarber(input);
         try
         {
             return await store.Write(async s =>
             {
                 var existing = (await s.Barbers()).SingleOrDefault(b => b.Id == id) ?? throw DomainError.Missing();
                 if ((await s.Barbers()).Any(b => b.Id != id && b.UserId == userId)) throw DuplicateUser();
-                var updated = existing with { Name = name, UserId = userId, Hours = hours };
+                var skills = await ResolveSkills(s, requestedSkills);
+                var updated = existing with { Name = name, UserId = userId, Hours = hours, ServiceIds = skills };
                 // Lock the schedule before reading bookings so a concurrent booking cannot land outside the new hours.
                 await s.TouchBarbers([id]);
-                if (existing.Active && (await Upcoming(s, id)).Any(b => !BookingService.WithinHours(updated, b.StartUtc, b.EndUtc)))
-                    throw DomainError.Conflict("Upcoming bookings fall outside the new working hours. Move or cancel them first.");
+                if (existing.Active && (await Upcoming(s, id)).Any(b => !BookingService.WithinHours(updated, b.StartUtc, b.EndUtc)
+                    || b.Services.Any(service => !skills.Contains(service.ServiceId, StringComparer.Ordinal))))
+                    throw DomainError.Conflict("Upcoming bookings fall outside the new hours or require a service this barber cannot perform. Move or cancel them first.");
                 await s.SaveBarber(updated);
                 return Profile(updated);
             }, ct);
@@ -133,7 +135,7 @@ public sealed class CatalogueService(IBookingStore store, TimeProvider clock, Bo
         return name;
     }
 
-    private static (string Name, string UserId, WorkingPeriod[] Hours) ValidateBarber(BarberRequest input)
+    private static (string Name, string UserId, WorkingPeriod[] Hours, string[]? ServiceIds) ValidateBarber(BarberRequest input)
     {
         var name = input.Name?.Trim();
         if (string.IsNullOrEmpty(name) || name.Length > 80) throw DomainError.Invalid("Barber name must be 1 to 80 characters.");
@@ -149,10 +151,22 @@ public sealed class CatalogueService(IBookingStore store, TimeProvider clock, Bo
             for (var i = 1; i < ordered.Length; i++)
                 if (ordered[i].StartMinute < ordered[i - 1].EndMinute) throw DomainError.Invalid("Working periods on the same day must not overlap.");
         }
-        return (name, userId, hours.OrderBy(p => p.Weekday).ThenBy(p => p.StartMinute).ToArray());
+        var skills = input.ServiceIds?.Select(id => id?.Trim() ?? string.Empty).ToArray();
+        if (skills is not null && (skills.Length is < 1 or > 10 || skills.Any(string.IsNullOrEmpty) || skills.Distinct(StringComparer.Ordinal).Count() != skills.Length))
+            throw DomainError.Invalid("Select 1 to 10 distinct services this barber can perform.");
+        return (name, userId, hours.OrderBy(p => p.Weekday).ThenBy(p => p.StartMinute).ToArray(), skills);
     }
 
-    private static BarberProfile Profile(Barber b) => new(b.Id, b.Name, b.UserId, b.Hours, b.Active);
+    private static async Task<string[]> ResolveSkills(IBookingSession session, string[]? requestedSkills)
+    {
+        var activeIds = (await session.Services()).Where(service => service.Active).Select(service => service.Id).ToHashSet(StringComparer.Ordinal);
+        var skills = requestedSkills ?? [.. activeIds.Order(StringComparer.Ordinal)];
+        if (skills.Any(skill => !activeIds.Contains(skill)))
+            throw DomainError.Invalid("Every barber skill must reference an active service.");
+        return skills.Order(StringComparer.Ordinal).ToArray();
+    }
+
+    private static BarberProfile Profile(Barber b) => new(b.Id, b.Name, b.UserId, b.Hours, b.Active, b.ServiceIds);
     private static DomainError DuplicateUser() => new(409, "duplicate_user", "This account is already linked to another barber.");
     private static void RequireAdmin(Actor actor)
     {
