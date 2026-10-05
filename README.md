@@ -220,8 +220,7 @@ demonstration:
 - **Loyalty:** shown in the prototype, but listed as out of scope in the Task 1 report. Not built.
 - **Guest booking:** the report describes a Guest role; the system currently requires an account to book.
 - **Shop and checkout:** the report's cart/checkout flow and the prototype's Barber POS are not built.
-- **Email and review delivery:** the implementation must be merged, then configured and tested with the
-  Brevo variables in Render before it is treated as live functionality.
+- **Email and review delivery:** live. Booking emails are sent through Brevo from a dedicated project mailbox; reviews are available on completed bookings. Check the mailbox spam folder when testing.
 - **Staff role changes:** require the limited Auth0 Management API machine-to-machine credentials in Render.
   Until they are configured, the Staff page remains safely disabled.
 - **Barber account linking:** each real barber must sign in and have their Auth0 user ID linked to their
