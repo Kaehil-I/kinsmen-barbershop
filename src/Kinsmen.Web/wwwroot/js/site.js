@@ -64,16 +64,31 @@ window.kinsmenConfirm = function (message, options) {
     dialog.appendChild(actions);
     document.body.appendChild(dialog);
 
-    let answer = false;
-    cancelBtn.addEventListener('click', function () { answer = false; dialog.close(); });
-    okBtn.addEventListener('click', function () { answer = true; dialog.close(); });
-    // Clicking the dimmed backdrop counts as cancelling.
-    dialog.addEventListener('click', function (e) { if (e.target === dialog) dialog.close(); });
-    dialog.addEventListener('close', function () {
+    // Every way out (either button, Escape, the backdrop, or the browser closing the dialog
+    // itself) goes through finish(), which runs once. The buttons and Escape call it directly
+    // rather than waiting for the dialog's 'close' event, which browsers can delay.
+    let done = false;
+    function finish(answer) {
+      if (done) return;
+      done = true;
+      document.removeEventListener('keydown', onKeydown, true);
+      if (dialog.open) dialog.close();
       dialog.remove();
       if (returnFocus && typeof returnFocus.focus === 'function') returnFocus.focus();
       resolve(answer);
-    });
+    }
+
+    cancelBtn.addEventListener('click', function () { finish(false); });
+    okBtn.addEventListener('click', function () { finish(true); });
+    // Listen on the whole document so Escape works wherever focus happens to be.
+    function onKeydown(e) {
+      if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+    }
+    document.addEventListener('keydown', onKeydown, true);
+    dialog.addEventListener('cancel', function (e) { e.preventDefault(); finish(false); });
+    // Clicking the dimmed backdrop counts as cancelling.
+    dialog.addEventListener('click', function (e) { if (e.target === dialog) finish(false); });
+    dialog.addEventListener('close', function () { finish(false); });
 
     dialog.showModal();
     // Start on the safe choice so a stray Enter doesn't confirm a destructive action.
