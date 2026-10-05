@@ -8,8 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Kinsmen.Web.Controllers;
 
-/// <summary>Serves the customer's own-bookings page plus its two AJAX actions
-/// (RescheduleAvailability, Reschedule, Cancel). Same reasoning as BookingController
+/// <summary>Serves the customer's own-bookings page plus its AJAX actions
+/// (RescheduleAvailability, Reschedule, Cancel, SubmitReview). Same reasoning as BookingController
 /// for why this proxies through the server rather than the page's JS calling
 /// src/Kinsmen.Api directly (CORS, keeping the bearer token server-side).</summary>
 
@@ -27,15 +27,24 @@ public sealed class MyBookingsController(IKinsmenApiClient apiClient) : Controll
 
         try
         {
-            var from = DateTimeOffset.UtcNow;
-            var to = from.AddDays(31);
+            var now = DateTimeOffset.UtcNow;
 
-            var bookings = await apiClient.GetBookingsAsync(from, to, barberId: null, cancellationToken);
+            var upcoming = await apiClient.GetBookingsAsync(now, now.AddDays(31), barberId: null, cancellationToken);
+            // A finished visit's own start time is in the past, so it falls outside the window
+            // above. Ask for the last 30 days too, but only keep Completed bookings from it -
+            // that's the one status a customer can still act on (leaving a review) after the fact.
+            var past = await apiClient.GetBookingsAsync(now.AddDays(-30), now, barberId: null, cancellationToken);
+            var bookings = upcoming
+                .Concat(past.Where(b => b.Status == BookingStatus.Completed))
+                .GroupBy(b => b.Id).Select(g => g.First())
+                .OrderBy(b => b.StartUtc)
+                .ToList();
+
             var barbers = await apiClient.GetBarbersAsync(cancellationToken);
 
             return View(new MyBookingsPageViewModel
             {
-                Bookings = [.. bookings.OrderBy(b => b.StartUtc)],
+                Bookings = bookings,
                 BarberNamesById = barbers.ToDictionary(b => b.Id, b => b.Name)
             });
         }
@@ -125,6 +134,29 @@ public sealed class MyBookingsController(IKinsmenApiClient apiClient) : Controll
         catch (HttpRequestException)
         {
             return StatusCode(503, new { message = ApiErrorMessages.ForConnectionFailure() });
+        }
+    }
+
+    /// <summary>Customer-only, once per booking, and only after the API confirms it's
+    /// Completed - all enforced server-side in BookingService.SubmitReview, not here.</summary>
+    [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.Writes)]
+    public async Task<IActionResult> SubmitReview(
+        string id, [FromBody] SubmitReviewRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await apiClient.SubmitReviewAsync(id, request, cancellationToken);
+            return Json(new { success = true });
+        }
+        catch (KinsmenApiException ex)
+        {
+            // 409 covers "not completed yet" and "already reviewed" - the message is safe to show as-is.
+            return StatusCode(ex.StatusCode, new { errorCode = ex.ErrorCode, message = ex.Message });
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(503, new { message = "Couldn't reach the booking service." });
         }
     }
 

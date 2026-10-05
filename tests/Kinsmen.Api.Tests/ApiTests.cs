@@ -28,6 +28,7 @@ public sealed class ApiFactory(IReadOnlyDictionary<string, string>? settings = n
         {
             services.RemoveAll<IBookingStore>(); services.AddSingleton<IBookingStore, TestStore>();
             services.RemoveAll<TimeProvider>(); services.AddSingleton<TimeProvider, TestClock>();
+            services.RemoveAll<IEmailSender>(); services.AddSingleton<IEmailSender, RecordingEmailSender>();
             services.RemoveAll<IAuditLog>(); services.AddSingleton<IAuditLog, InMemoryAuditLog>();
         });
     }

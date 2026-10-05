@@ -81,3 +81,15 @@ public sealed class TestClock : TimeProvider
     public DateTimeOffset Now { get; set; } = DateTimeOffset.Parse("2026-09-18T06:00:00Z");
     public override DateTimeOffset GetUtcNow() => Now;
 }
+
+public sealed record SentEmail(string To, string Subject, string Body);
+// Captures emails instead of sending them, so tests never touch a real provider.
+public sealed class RecordingEmailSender : IEmailSender
+{
+    public List<SentEmail> Sent { get; } = [];
+    public Task SendAsync(string toEmail, string subject, string htmlBody, CancellationToken ct = default)
+    {
+        lock (Sent) Sent.Add(new SentEmail(toEmail, subject, htmlBody));
+        return Task.CompletedTask;
+    }
+}

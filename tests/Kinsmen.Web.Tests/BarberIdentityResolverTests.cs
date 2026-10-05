@@ -134,5 +134,9 @@ public sealed class BarberIdentityResolverTests
         public Task<AdminBarber> SetAdminBarberActiveAsync(
             string id, bool active, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
+
+        public Task<Review> SubmitReviewAsync(
+    string bookingId, SubmitReviewRequest request, CancellationToken cancellationToken = default)
+    => throw new NotImplementedException();
     }
 }
