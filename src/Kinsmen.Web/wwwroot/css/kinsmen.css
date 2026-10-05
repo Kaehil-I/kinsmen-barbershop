@@ -55,6 +55,7 @@
   /* Inline error/notice text. JS reveals it with style.display = 'block'. Replaces the
      same inline style that was repeated on every page. */
   .form-error{ display:none; color:var(--accent); font-family:var(--mono); font-size:13px; margin-top:10px; }
+  .reschedule-success{ color:var(--teal); font-family:var(--mono); font-size:13px; margin-top:10px; }
 
   /* Shared confirm dialog (site.js kinsmenConfirm) - replaces window.confirm. */
   .confirm-dialog{
@@ -437,7 +438,7 @@
 
   .loc-grid{ display:grid; grid-template-columns:1fr 1fr; gap:20px; padding-bottom:80px; }
   .loc-panel{ padding:32px; }
-  .loc-panel h3{
+  .loc-panel h2, .loc-panel h3{
     font-family:var(--display); font-weight:600; font-size:17px; color:var(--heading); margin-bottom:20px;
   }
   .hours-row{

@@ -33,7 +33,7 @@
     <div class="wrap">
         <div class="tag">Your Appointments</div>
         <h1>My Bookings</h1>
-        <p>Showing your next 31 days, plus visits completed in the last 30 days &mdash; the furthest the booking system can list in one go right now.</p>
+        <p>Your bookings for the next 31 days, plus visits from the last 30 days.</p>
     </div>
 </section>
 
@@ -54,6 +54,8 @@
                 <button class="filter-tab" data-filter="completed" type="button">Completed</button>
                 <button class="filter-tab" data-filter="cancelled" type="button">Cancelled / No-Show</button>
             </div>
+
+            <p id="filter-empty" class="price-note" role="status" style="display:none;"></p>
 
             <div id="bookings-list">
                 @foreach (var booking in Model.Bookings)

@@ -9,10 +9,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- Filter tabs ---------------------------------------------------------
 
+    var filterEmpty = document.getElementById('filter-empty');
+    var EMPTY_MESSAGES = {
+        upcoming: 'No upcoming bookings. ',
+        completed: 'No completed visits in the last 30 days.',
+        cancelled: 'No cancelled or missed bookings.'
+    };
+
     function applyFilter(filter) {
+        var shown = 0;
         bookingRows.forEach(function (row) {
-            row.style.display = (row.dataset.filterGroup === filter) ? '' : 'none';
+            var match = row.dataset.filterGroup === filter;
+            row.style.display = match ? '' : 'none';
+            if (match) shown++;
         });
+        updateEmptyState(filter, shown);
+    }
+
+    // A tab with nothing in it says so, instead of showing a blank page.
+    function updateEmptyState(filter, shown) {
+        if (!filterEmpty) return;
+        if (shown > 0) { filterEmpty.style.display = 'none'; return; }
+        filterEmpty.textContent = EMPTY_MESSAGES[filter] || 'Nothing here yet.';
+        if (filter === 'upcoming') {
+            var link = document.createElement('a');
+            link.href = '/Booking';
+            link.className = 'link-btn';
+            link.style.color = 'var(--teal)';
+            link.textContent = 'Book a chair';
+            filterEmpty.appendChild(link);
+        }
+        filterEmpty.style.display = 'block';
     }
 
     filterTabs.forEach(function (tab) {
@@ -236,6 +263,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     applyBookingUpdate(row, result.body);
                     panel.style.display = 'none';
                     toggleBtn.textContent = 'Reschedule';
+                    showRescheduled(row, result.body);
                 })
                 .catch(function () {
                     errorText.textContent = "Couldn't reach the booking service \u2014 please try again.";
@@ -244,6 +272,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
         });
     });
+
+    // Short confirmation under the booking so the change doesn't happen silently.
+    function showRescheduled(row, booking) {
+        var note = row.querySelector('.reschedule-success');
+        if (!note) {
+            note = document.createElement('p');
+            note.className = 'reschedule-success';
+            note.setAttribute('role', 'status');
+            row.appendChild(note);
+        }
+        note.textContent = 'Rescheduled to ' + booking.date + ' at ' + booking.time + '.';
+    }
 
     function handleRescheduleFailure(result, errorText, confirmBtn, refreshTimes) {
         if (result.status === 409 && result.body.errorCode === 'stale_version') {
@@ -335,10 +375,10 @@ document.addEventListener('DOMContentLoaded', function () {
             : (booking.status === 'Completed') ? 'completed' : 'cancelled';
         row.dataset.filterGroup = group;
 
+        // Re-apply the active tab so a booking that just moved (e.g. cancelled) leaves the
+        // current list, and the empty message appears if it was the last one.
         var activeTab = document.querySelector('.filter-tab.active');
-        if (activeTab) {
-            row.style.display = (row.dataset.filterGroup === activeTab.dataset.filter) ? '' : 'none';
-        }
+        if (activeTab) applyFilter(activeTab.dataset.filter);
     }
 
     function statusBadgeClass(status) {
