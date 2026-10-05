@@ -5,7 +5,7 @@ becomes `main`. Tick items in a pull request as they're done, so the history sho
 
 ## 1. Code and configuration
 
-- [ ] All feature pull requests merged into `integration-part2` (open at time of writing: #23 README, Greg's accessibility branch). **Owner: Kaehil**
+- [ ] All agreed feature and documentation pull requests merged into `integration-part2`. **Owner: Kaehil**
 - [ ] **Code freeze agreed:** after this date only bug fixes merge. **Owner: everyone**
 - [ ] CI green on the latest `integration-part2` commit (Build and test + Container images). **Owner: Kaehil**
 - [ ] Render: both services show `Proxy__Key` (environment group `kinsmen-internal`) and deploy without errors. **Owner: Kaehil**
@@ -39,7 +39,7 @@ Record who ran it and when, with screenshots (they double as evidence).
 - [ ] `docs/backend/VALIDATION.md` updated with current test results (CI run link). **Owner: Zario**
 - [ ] Security, testing and auth section, including emails and reviews. **Owner: Kyra**
 - [ ] Front-end screenshots (desktop and mobile, each role). **Owner: Greg**
-- [ ] Meeting minutes and attendance for Part 2 meetings in `Documentation/Meeting Minutes/`. **Owner: everyone**
+- [ ] Meeting minutes and attendance for Part 2 meetings in `Documentation/Part 2/Meeting Minutes/`. **Owner: everyone**
 - [ ] AI-tool use declared as the module requires. **Owner: everyone**
 - [ ] README reflects the final system (#23) and links to this checklist. **Owner: Zario, Kaehil**
 
