@@ -384,7 +384,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     row.innerHTML =
                         '<div><div class="aname">' + escapeHtml(result.body.dateLabel) + '</div>' +
                         '<div class="adesc">' + escapeHtml(result.body.timeLabel) + ' &middot; ' + escapeHtml(result.body.reason) + '</div></div>' +
-                        '<button class="row-link brick delete-block-btn" type="button">Remove</button>';
+                        '<button class="row-link brick delete-block-btn" type="button" aria-label="Remove block on ' +
+                        escapeHtml(result.body.dateLabel) + ', ' + escapeHtml(result.body.timeLabel) + '">Remove</button>';
                     blocksList.appendChild(row);
 
                     reasonInput.value = '';
@@ -413,6 +414,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 .then(function (response) {
                     if (!response.ok) throw new Error('delete_failed');
                     row.remove();
+                    // Removing the last block shouldn't leave a blank list.
+                    if (!blocksList.querySelector('.admin-row')) {
+                        var empty = document.createElement('p');
+                        empty.className = 'no-date-msg';
+                        empty.textContent = 'No time blocks in the next four weeks.';
+                        blocksList.appendChild(empty);
+                    }
                 })
                 .catch(function () {
                     btn.disabled = false;

@@ -231,7 +231,7 @@
                                     <div class="aname">@LocalDay(block.StartUtc)</div>
                                     <div class="adesc">@LocalTime(block.StartUtc)&ndash;@LocalTime(block.EndUtc) &middot; @block.Reason</div>
                                 </div>
-                                <button class="row-link brick delete-block-btn" type="button">Remove</button>
+                                <button class="row-link brick delete-block-btn" type="button" aria-label="Remove block on @LocalDay(block.StartUtc), @LocalTime(block.StartUtc) to @LocalTime(block.EndUtc)">Remove</button>
                             </div>
                         }
                     </div>
