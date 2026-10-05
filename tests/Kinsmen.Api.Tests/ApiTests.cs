@@ -28,6 +28,7 @@ public sealed class ApiFactory(IReadOnlyDictionary<string, string>? settings = n
         {
             services.RemoveAll<IBookingStore>(); services.AddSingleton<IBookingStore, TestStore>();
             services.RemoveAll<TimeProvider>(); services.AddSingleton<TimeProvider, TestClock>();
+            services.RemoveAll<IEmailSender>(); services.AddSingleton<IEmailSender, RecordingEmailSender>();
         });
     }
     public HttpClient Client(string? user = null, string role = "Customer", bool expired = false, string audience = "kinsmen-api", bool includeSubject = true)

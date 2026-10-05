@@ -140,6 +140,7 @@ public sealed class MyBookingsController(IKinsmenApiClient apiClient) : Controll
     /// <summary>Customer-only, once per booking, and only after the API confirms it's
     /// Completed - all enforced server-side in BookingService.SubmitReview, not here.</summary>
     [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.Writes)]
     public async Task<IActionResult> SubmitReview(
         string id, [FromBody] SubmitReviewRequest request, CancellationToken cancellationToken)
     {
