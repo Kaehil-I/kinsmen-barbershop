@@ -10,11 +10,13 @@ profiles, barber service skills and staff access.
 | | Link |
 |---|---|
 | **Live system** | https://kinsmen-web.onrender.com |
+| **Demo video** | https://youtu.be/lZX7ETwlSG4 (walkthrough of the customer, barber and admin features) |
 | **Booking API** | https://kinsmen-api.onrender.com (health: [`/health/ready`](https://kinsmen-api.onrender.com/health/ready)) |
 | **Part 1 prototype** | https://kaehil-i.github.io/kinsmen-barbershop/kinsmen_prototype.html |
 
 The live system runs on Render's free tier: after about 15 minutes without visitors it sleeps, and the
-first page load can take up to a minute. Open it shortly before a demo.
+first page load can take up to a minute. Open it shortly before a demo. If it's unavailable, the demo video
+shows the full walkthrough.
 
 ## How it works
 
