@@ -1,0 +1,261 @@
+{
+  "verifiedOn": "2026-09-20",
+  "configuration": "Release",
+  "passed": 60,
+  "failed": 0,
+  "skipped": 0,
+  "groups": {
+    "BookingTests": 36,
+    "ApiTests": 15,
+    "MongoTests": 9
+  },
+  "environment": {
+    "dotnetSdk": "10.0.401",
+    "dotnetRuntime": "10.0.12",
+    "mongoServer": "8.0.15",
+    "mongoDriver": "3.12.0",
+    "topology": "local single-node replica set"
+  },
+  "tests": [
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.CustomerCannotBookForAnotherUser",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.ApiTests.AnonymousBookingIsDenied",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.TimeBlockAffectsAvailabilityAndCannotOverwriteAppointments",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.NoticeHorizonAndSlotAlignmentAreEnforced(start: \"2026-11-19T08:00:00Z\")",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.ApiTests.PublicCatalogueDoesNotExposeStaffIdentity",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.ReschedulePreservesPriceSnapshotAndReleasesOldTime",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.MongoTests.TenSimultaneousRetriesProduceOneAnyBarberBooking",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.BarberSeesBookedServicesAndCustomerNotes",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.InvalidIdempotencyKeysAreRejected(key: \"header key with spaces\")",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.ApiTests.ExpiredTokenIsDenied",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.MongoTests.DatabaseSchemaRejectsNegativePriceEvenOutsideApplication",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.ClosedDayAndAppointmentsExtendingPastClosingAreRejected(start: \"2026-09-20T08:00:00Z\")",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.AdjacentBookingsAreAllowedButPartialOverlapIsRejected",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.ReplayAfterCancellationDoesNotCreateAnotherAppointment",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.DisabledBarberCannotManageTheirSchedule",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.MongoTests.InitializationCanBeRepeatedAndReadinessRequiresCollections",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.BarberCannotBlockAnotherBarber",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.LateCancellationIsRejected",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.ApiTests.OtherCustomerCannotCancelThroughApi",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.MultiServiceTotalsAndUtcAreComputedOnServer",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.MongoTests.FreshConnectionCanReplayACommittedRequest",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.ApiTests.InvalidIdempotencyHeaderReturnsBadRequest",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.RemovingTimeBlockRestoresAvailability",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.ReusedKeyWithDifferentPayloadIsRejected",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.MongoTests.CancellationReleasesSlotAndSeedIsRepeatable",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.FailedReschedulePreservesOriginalAppointment",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.InvalidIdempotencyKeysAreRejected(key: \"short\")",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.ExcessiveListRangeIsRejected",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.ApiTests.ApiCreatesBookingAndReturnsConflictOnOverlap",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.ApiTests.AvailabilityAcceptsRepeatedServiceQueryParameters",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.ApiTests.IdempotencyHeaderPreventsDuplicatesAndInternalFingerprintIsPrivate",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.ApiTests.MissingSubjectIsDenied",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.MongoTests.BlockAndBookingRaceCannotBothSucceed",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.AnyBarberSelectsAnotherAvailableBarber",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.ExcessiveNotesAreRejected",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.KeysAreScopedToTheAuthenticatedAccount",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.InvalidIdempotencyKeysAreRejected(key: \"\")",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.StatusTransitionsRequireCorrectStaffAndAppointmentTime",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.CancellationFreesTheTimeAndRejectsStaleUpdates",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.ApiTests.ApiRejectsClientPriceTampering",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.ExtremeDatesAreValidationErrors(date: \"9999-12-31\")",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.ExtremeDatesAreValidationErrors(date: \"0001-01-01\")",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.MongoTests.IndependentStoreInstancesCannotDoubleBook",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.NoticeHorizonAndSlotAlignmentAreEnforced(start: \"2026-09-18T06:30:00Z\")",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.ClosedDayAndAppointmentsExtendingPastClosingAreRejected(start: \"2026-09-19T14:30:00Z\")",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.MongoTests.FailedMoveRollsBackAndNewConnectionReadsOriginal",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.UnknownServiceIsRejected",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.ApiTests.UnknownRoleIsDenied",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.NoticeHorizonAndSlotAlignmentAreEnforced(start: \"2026-09-19T08:01:00Z\")",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.ApiTests.InvalidBodyAndMissingServicesReturnBadRequest",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.RetriedAnyBarberRequestReturnsSameBookingEvenAfterCatalogueChanges",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.MongoTests.SameKeyRacingDifferentBarbersCannotCreateTwoBookings",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.ApiTests.TimestampWithoutOffsetIsRejected",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.CustomerCannotModifyOrListOthersBookings",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.DuplicateServiceIsRejected",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.DetailsEndpointRulesRestrictAccessToOwnerAssignedBarberOrAdmin",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.ApiTests.BookingApiReturnsPendingThenStaffCanConfirm",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.ApiTests.WrongAudienceIsDenied",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.PeriodEndingAtMidnightAllowsAnAppointmentEndingExactlyThen",
+      "outcome": "Passed"
+    },
+    {
+      "name": "Kinsmen.Api.Tests.BookingTests.InactiveServiceIsRejected",
+      "outcome": "Passed"
+    }
+  ]
+}

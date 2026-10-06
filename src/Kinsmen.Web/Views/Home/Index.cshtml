@@ -1,0 +1,45 @@
+@{
+    ViewData["Title"] = "Home";
+}
+
+<section class="hero">
+    <div class="wrap">
+        <div class="tag">Durban North &middot; Classic Barbershop</div>
+        <h1>A proper cut, a proper shave, no fuss about it.</h1>
+        <p>
+            Kinsmen is a classic barbershop on Mackeurtan Ave &mdash; blade &amp; tapered
+            fades, hot-towel prep and a traditional straight-razor finish. Pick a barber,
+            pick a time, and we'll have the chair warm for you.
+        </p>
+
+        @if (User.IsStaff())
+        {
+            <a asp-controller="BarberSchedule" asp-action="Index" class="scroll-cue">
+                <span>Go to My Schedule</span>
+                <svg width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1l5 5 5-5" stroke="#7C3626" stroke-width="1.6" /></svg>
+            </a>
+        }
+        else
+        {
+            <a asp-controller="Booking" asp-action="Index" class="scroll-cue">
+                <span>Book a Chair</span>
+                <svg width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1l5 5 5-5" stroke="#7C3626" stroke-width="1.6" /></svg>
+            </a>
+        }
+
+        <div class="quick-facts">
+            <div class="neo-raised-sm">
+                <strong><span class="dot" style="background:var(--accent)"></span>Mon &ndash; Sat</strong>
+                <span>09:00 &ndash; 18:00</span>
+            </div>
+            <div class="neo-raised-sm">
+                <strong><span class="dot" style="background:var(--teal)"></span>Sunday</strong>
+                <span>09:00 &ndash; 15:00</span>
+            </div>
+            <div class="neo-raised-sm">
+                <strong><span class="dot" style="background:var(--teal)"></span>Accounts</strong>
+                <span>Sign in to book</span>
+            </div>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,24 @@
+@{
+    ViewData["Title"] = "No access";
+}
+
+<section class="page-intro">
+    <div class="wrap">
+        <div class="tag">Access denied</div>
+        <h1>You don't have access to this page</h1>
+        <p>
+            This page is for staff accounts, and the account you're signed in with doesn't
+            have access. If you should have it, ask an admin to check your account's role,
+            then log out and back in &mdash; role changes only take effect at login.
+        </p>
+    </div>
+</section>
+
+<section>
+    <div class="wrap" style="padding-bottom: 80px;">
+        <div class="cta-row" style="justify-content: flex-start; gap: 16px; flex-wrap: wrap;">
+            <a asp-controller="Home" asp-action="Index" class="neo-pill-raised">Back to home</a>
+            <a asp-controller="Booking" asp-action="Index" class="neo-pill-raised">Book a Chair</a>
+        </div>
+    </div>
+</section>
