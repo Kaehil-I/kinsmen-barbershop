@@ -17,6 +17,9 @@ public static class ApiErrorMessages
         403 => "You don't have permission to do that with the current account.",
         404 => "That couldn't be found.",
         429 => "Too many requests - wait a moment and try again.",
+        // What Render's proxy returns while the API is waking from its free-tier sleep. ColdStartRetryHandler
+        // has already waited up to a minute for read-only calls, so this mostly reaches people when it's slow.
+        502 or 503 or 504 => WakingUp,
         >= 500 => "The booking service hit a problem on its end. Try again shortly.",
         // 400/409/anything else: the API's own message is usually specific enough to
         // act on directly (e.g. exact validation problems, or the 409 conflict codes
@@ -24,6 +27,11 @@ public static class ApiErrorMessages
         _ => ex.Message
     };
 
+    // Locally the cause is usually that the API isn't running (docs/backend/GETTING-STARTED.md); on the live
+    // site it's the API still waking up. The wording has to make sense to a customer, so it covers the latter.
     public static string ForConnectionFailure() =>
-        "Couldn't reach the booking service - make sure the API is running (see docs/backend/GETTING-STARTED.md) and refresh.";
+        "Couldn't reach the booking service. " + WakingUp;
+
+    private const string WakingUp =
+        "If the site hasn't been used for a while, the booking service takes up to a minute to start - please refresh shortly.";
 }

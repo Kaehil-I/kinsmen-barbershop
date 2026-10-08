@@ -3,6 +3,7 @@ using Kinsmen.Web.ApiClient;
 using Kinsmen.Web.Auth;
 using Kinsmen.Web.Helpers;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
@@ -71,6 +72,14 @@ builder.Services.AddScoped<ITokenProvider, Auth0TokenProvider>();
 builder.Services.AddTransient<BearerTokenHandler>();
 builder.Services.AddTransient<ProxyHeadersHandler>();
 
+// Render's free tier puts the API to sleep when idle: read-only calls wait for it to wake instead of failing,
+// and the API is woken as soon as someone is on the site (see ColdStartRetryHandler and ApiWarmer).
+builder.Services.TryAddSingleton(TimeProvider.System);
+builder.Services.Configure<ColdStartRetryOptions>(builder.Configuration.GetSection("Api:ColdStart"));
+builder.Services.AddTransient<ColdStartRetryHandler>();
+builder.Services.AddSingleton<ApiWarmer>();
+builder.Services.AddHostedService<ApiWarmupOnStartup>();
+
 // Maps Auth0's plain "role" claim to the standard role claim type, so
 // [Authorize(Roles = "...")] and User.IsInRole(...) work normally — see
 // RoleClaimsTransformation for why this is needed at all.
@@ -115,7 +124,8 @@ builder.Services.AddHttpClient<IKinsmenApiClient, KinsmenApiClient>((serviceProv
     }
 })
     .AddHttpMessageHandler<BearerTokenHandler>()
-    .AddHttpMessageHandler<ProxyHeadersHandler>();
+    .AddHttpMessageHandler<ProxyHeadersHandler>()
+    .AddHttpMessageHandler<ColdStartRetryHandler>();
 
 builder.Services.AddHttpClient<IStaffApiClient, StaffApiClient>((serviceProvider, client) =>
 {
@@ -123,7 +133,15 @@ builder.Services.AddHttpClient<IStaffApiClient, StaffApiClient>((serviceProvider
     if (!string.IsNullOrWhiteSpace(apiOptions.BaseUrl)) client.BaseAddress = new Uri(apiOptions.BaseUrl);
 })
     .AddHttpMessageHandler<BearerTokenHandler>()
-    .AddHttpMessageHandler<ProxyHeadersHandler>();
+    .AddHttpMessageHandler<ProxyHeadersHandler>()
+    .AddHttpMessageHandler<ColdStartRetryHandler>();
+
+// No auth or retry handlers: the warm-up ping only needs the API to receive a request.
+builder.Services.AddHttpClient(ApiWarmer.ClientName, (serviceProvider, client) =>
+{
+    var apiOptions = serviceProvider.GetRequiredService<IOptions<ApiClientOptions>>().Value;
+    if (!string.IsNullOrWhiteSpace(apiOptions.BaseUrl)) client.BaseAddress = new Uri(apiOptions.BaseUrl);
+});
 
 var app = builder.Build();
 
@@ -143,6 +161,14 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+// Page requests only (static files have already been served above). Never waits on the ping.
+var apiWarmer = app.Services.GetRequiredService<ApiWarmer>();
+app.Use((context, next) =>
+{
+    apiWarmer.PingIfDue();
+    return next(context);
+});
 
 app.UseRouting();
 app.UseAuthentication();
