@@ -19,7 +19,7 @@
 {
     <section>
         <div class="wrap" style="padding-bottom: 80px;">
-            <p class="price-note">@Model.ErrorMessage</p>
+            <p class="price-note" data-api-waking="@(ApiErrorMessages.IsWakingUp(Model.ErrorMessage) ? "" : null)">@Model.ErrorMessage</p>
         </div>
     </section>
 }

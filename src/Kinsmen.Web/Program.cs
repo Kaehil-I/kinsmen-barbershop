@@ -177,6 +177,13 @@ app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
 
+// Polled by api-wake.js while a page shows the "booking service is starting" notice.
+app.MapGet("/status/api", async (ApiWarmer warmer, HttpContext context, CancellationToken cancellationToken) =>
+{
+    context.Response.Headers.CacheControl = "no-store";
+    return await warmer.IsAwakeAsync(cancellationToken) ? Results.NoContent() : Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+});
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

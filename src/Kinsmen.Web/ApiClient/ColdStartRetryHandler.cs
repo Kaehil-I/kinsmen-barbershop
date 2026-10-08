@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 namespace Kinsmen.Web.ApiClient;
 
 /// <summary>On Render's free tier the API sleeps after 15 minutes without traffic. The first call after that
-/// wakes it, but while it starts (roughly 25-60 seconds) Render answers with a 502/503/504 or the connection
+/// wakes it, but while it starts (about 75 seconds from cold) Render answers with a 502/503/504 or the connection
 /// fails, and without this the first visitor got an error page even though the API was already waking up.
 /// Read-only requests (GET/HEAD) are retried every few seconds until the API answers or the time budget runs
 /// out. Anything that changes data is never retried here, so a booking can't be submitted twice.</summary>
@@ -54,8 +54,11 @@ public sealed class ColdStartRetryHandler(IOptions<ColdStartRetryOptions> option
 /// <summary>Bound from "Api:ColdStart". The defaults cover a Render free-tier cold start.</summary>
 public sealed class ColdStartRetryOptions
 {
-    /// <summary>How long a read-only request keeps trying while the API wakes up.</summary>
-    public TimeSpan WakeBudget { get; set; } = TimeSpan.FromSeconds(60);
+    /// <summary>How long a read-only request keeps trying while the API wakes up. A full cold start takes
+    /// about 75 seconds, longer than anyone should stare at a loading page, so this only covers the tail end of
+    /// one; after that the page shows a "starting up" notice that reloads itself when the API is ready
+    /// (api-wake.js).</summary>
+    public TimeSpan WakeBudget { get; set; } = TimeSpan.FromSeconds(20);
 
     /// <summary>Pause between attempts.</summary>
     public TimeSpan RetryDelay { get; set; } = TimeSpan.FromSeconds(3);

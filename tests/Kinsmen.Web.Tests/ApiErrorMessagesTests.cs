@@ -67,6 +67,18 @@ public sealed class ApiErrorMessagesTests
         Assert.Contains("refresh", message, StringComparison.OrdinalIgnoreCase);
     }
 
+    // These are the messages the view marks with data-api-waking, so the page reloads itself once the API is up.
+    [Fact]
+    public void StartingUpMessagesAreRecognisedAndOthersAreNot()
+    {
+        Assert.True(ApiErrorMessages.IsWakingUp(ApiErrorMessages.For(Error(503))));
+        Assert.True(ApiErrorMessages.IsWakingUp(ApiErrorMessages.ForConnectionFailure()));
+
+        Assert.False(ApiErrorMessages.IsWakingUp(ApiErrorMessages.For(Error(500))));
+        Assert.False(ApiErrorMessages.IsWakingUp(ApiErrorMessages.For(Error(401))));
+        Assert.False(ApiErrorMessages.IsWakingUp(null));
+    }
+
     [Fact]
     public void ConnectionFailureMessagePointsAtTheApiNotBeingReachable()
     {

@@ -143,6 +143,26 @@ public sealed class ApiWakeUpTests
         await (warmer.PingIfDue() ?? Task.CompletedTask);
     }
 
+    [Theory]
+    [InlineData(HttpStatusCode.OK, true)]
+    [InlineData(HttpStatusCode.ServiceUnavailable, false)]
+    [InlineData(HttpStatusCode.BadGateway, false)]
+    public async Task TheStatusCheckReportsWhetherTheApiAnswersRightNow(HttpStatusCode status, bool expected)
+    {
+        var (warmer, api, _) = Warmer(new ScriptedApi(status));
+
+        Assert.Equal(expected, await warmer.IsAwakeAsync(CancellationToken.None));
+        Assert.Equal(1, api.Calls); // One quick check; the browser decides whether to ask again.
+    }
+
+    [Fact]
+    public async Task TheStatusCheckTreatsAnUnreachableApiAsAsleep()
+    {
+        var (warmer, _, _) = Warmer(new ScriptedApi((HttpStatusCode?)null));
+
+        Assert.False(await warmer.IsAwakeAsync(CancellationToken.None));
+    }
+
     private static (ApiWarmer Warmer, RecordingApi Api, ManualClock Clock) Warmer(HttpMessageHandler? api = null)
     {
         var recording = new RecordingApi(api ?? new ScriptedApi(HttpStatusCode.OK));
