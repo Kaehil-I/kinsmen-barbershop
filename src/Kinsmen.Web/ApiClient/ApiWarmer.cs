@@ -13,6 +13,7 @@ public sealed class ApiWarmer(IHttpClientFactory httpClientFactory, TimeProvider
     public static readonly TimeSpan Interval = TimeSpan.FromMinutes(5);
 
     private static readonly TimeSpan PingTimeout = TimeSpan.FromSeconds(90);
+    private static readonly TimeSpan StatusTimeout = TimeSpan.FromSeconds(8);
 
     private long _lastPing = long.MinValue;
 
@@ -28,6 +29,26 @@ public sealed class ApiWarmer(IHttpClientFactory httpClientFactory, TimeProvider
         if (Interlocked.CompareExchange(ref _lastPing, now, last) != last) return null;
 
         return Task.Run(PingAsync);
+    }
+
+    /// <summary>Quick yes/no for api-wake.js: does the API answer right now? Deliberately not retried, so the
+    /// browser's polling decides how long to keep waiting.</summary>
+    public async Task<bool> IsAwakeAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var client = httpClientFactory.CreateClient(ClientName);
+            if (client.BaseAddress is null) return false;
+
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(StatusTimeout);
+            using var response = await client.GetAsync("/health/live", HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
+        {
+            return false;
+        }
     }
 
     private async Task PingAsync()

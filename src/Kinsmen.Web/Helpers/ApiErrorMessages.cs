@@ -33,5 +33,9 @@ public static class ApiErrorMessages
         "Couldn't reach the booking service. " + WakingUp;
 
     private const string WakingUp =
-        "If the site hasn't been used for a while, the booking service takes up to a minute to start - please refresh shortly.";
+        "If the site hasn't been used for a while, the booking service takes a minute or two to start - please refresh shortly.";
+
+    /// <summary>True for the "still starting" messages above. Views mark these with data-api-waking so
+    /// api-wake.js can reload the page by itself once the API answers.</summary>
+    public static bool IsWakingUp(string? message) => message?.Contains(WakingUp, StringComparison.Ordinal) == true;
 }
