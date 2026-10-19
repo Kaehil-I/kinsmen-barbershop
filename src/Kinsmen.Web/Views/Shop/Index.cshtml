@@ -34,28 +34,35 @@
                     var lowStock = product.StockQuantity is > 0 && product.StockQuantity <= product.LowStockThreshold;
                     var fullyStocked = product.StockQuantity >= 20;
                     <article class="panel neo-raised shop-product" data-product-name="@product.Name" data-product-category="@product.Category" data-product-description="@product.Description" data-in-stock="@(!outOfStock ? "true" : "false")">
-                        @if (!string.IsNullOrWhiteSpace(product.ImageUrl))
-                        {
-                            <img src="@product.ImageUrl" alt="@product.Name" loading="lazy" referrerpolicy="no-referrer" style="width:100%; height:130px; object-fit:cover; border-radius:12px;" />
-                        }
-                        else
-                        {
-                            <div class="shop-product-mark" aria-hidden="true">K</div>
-                        }
-                        <div>
-                            @if (!string.IsNullOrWhiteSpace(product.Category)) { <div class="tag" style="font-size:10px; margin-bottom:5px;">@product.Category</div> }
-                            <div class="name">@product.Name</div>
+                        <div class="shop-product-heading">
+                            @if (!string.IsNullOrWhiteSpace(product.ImageUrl))
+                            {
+                                <img class="shop-product-image" src="@product.ImageUrl" alt="@product.Name" loading="lazy" referrerpolicy="no-referrer" />
+                            }
+                            else
+                            {
+                                <div class="shop-product-mark" aria-hidden="true">K</div>
+                            }
+                            <div class="shop-product-identity">
+                                @if (!string.IsNullOrWhiteSpace(product.Category)) { <div class="tag shop-category">@product.Category</div> }
+                                <div class="name">@product.Name</div>
+                            </div>
+                        </div>
+                        <div class="shop-product-content">
                             <p class="shop-product-note">@(string.IsNullOrWhiteSpace(product.Description) ? "Available at Kinsmen Barbers" : product.Description)</p>
                         </div>
                         <div class="shop-product-footer">
-                            <strong class="price">@PriceFormatter.FormatZarCents(product.PriceCents)</strong>
+                            <div>
+                                <span class="shop-price-label">In-store price</span>
+                                <strong class="price">@PriceFormatter.FormatZarCents(product.PriceCents)</strong>
+                            </div>
                             <span class="stock-badge @(outOfStock ? "stock-low" : lowStock ? "stock-low" : "")">
                                 @(outOfStock ? "Out of stock" : lowStock ? $"Low stock: {product.StockQuantity} left" : fullyStocked ? "Fully stocked" : $"In stock: {product.StockQuantity}")
                             </span>
                         </div>
                         @if (!outOfStock)
                         {
-                            <a asp-controller="Booking" asp-action="Index" asp-route-productId="@product.Id" class="row-link teal">Reserve with booking</a>
+                            <a asp-controller="Booking" asp-action="Index" asp-route-productId="@product.Id" class="shop-reserve-link">Reserve with booking <span aria-hidden="true">→</span></a>
                         }
                     </article>
                 }
