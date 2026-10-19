@@ -707,6 +707,9 @@
     position:relative; min-height:255px; padding:22px; overflow:hidden; display:flex; flex-direction:column; gap:16px;
     border:1px solid rgba(114,108,94,.10); transition:transform .2s ease, box-shadow .2s ease;
   }
+  /* .shop-product sets display:flex, so the hidden attribute needs an explicit
+     rule to remove filtered cards from the catalogue grid. */
+  .shop-product[hidden]{ display:none !important; }
   .shop-product::before{
     content:""; position:absolute; inset:0 0 auto; height:4px;
     background:linear-gradient(90deg, var(--teal), #6f9d95 56%, var(--ochre)); opacity:.88;
