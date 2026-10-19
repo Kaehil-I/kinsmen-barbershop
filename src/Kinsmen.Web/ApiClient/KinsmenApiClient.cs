@@ -30,6 +30,12 @@ public sealed class KinsmenApiClient(HttpClient httpClient) : IKinsmenApiClient
         return await ReadOrThrowAsync<List<Service>>(response, cancellationToken);
     }
 
+    public async Task<List<RetailProduct>> GetProductsAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync("/api/products", cancellationToken);
+        return await ReadOrThrowAsync<List<RetailProduct>>(response, cancellationToken);
+    }
+
     public async Task<List<Barber>> GetBarbersAsync(CancellationToken cancellationToken = default)
     {
         using var response = await httpClient.GetAsync("/api/barbers", cancellationToken);

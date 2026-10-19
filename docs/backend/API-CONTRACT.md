@@ -18,6 +18,7 @@ Version 0.1, 20 September 2026. The executable source is `src/Kinsmen.Api`; [ope
 | Method and route | Access | Input | Success |
 |---|---|---|---|
 | `GET /api/services` | Public | None | `200` active services |
+| `GET /api/products` | Public | None | `200` in-store products: ID, name, price in cents and illustrative stock quantity |
 | `GET /api/barbers` | Public | None | `200` active barber IDs, names and working periods; staff account IDs omitted |
 | `GET /api/availability` | Public | `date`, repeated `serviceIds`, optional `barberId` | `200` available barber/start/end combinations |
 | `POST /api/bookings` | Customer/Admin | `barberId` or null, `serviceIds`, `start`; admin additionally supplies `customerId` | `201` persisted Pending booking |

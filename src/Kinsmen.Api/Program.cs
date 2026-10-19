@@ -191,6 +191,8 @@ app.MapGet("/health/live", () => Results.Ok(new { status = "alive" })).DisableRa
 app.MapGet("/health/ready", async (MongoBookingStore store, CancellationToken ct) => { await store.Ping(ct); return Results.Ok(new { status = "ready" }); })
     .DisableRateLimiting();
 app.MapGet("/api/services", (BookingService service, CancellationToken ct) => service.Services(ct));
+// Purchases are completed in person. The public catalogue deliberately exposes no staff or payment data.
+app.MapGet("/api/products", () => ProductCatalogue.Items);
 app.MapGet("/api/barbers", async (BookingService service, CancellationToken ct) =>
     (await service.Barbers(ct)).Select(b => new { b.Id, b.Name, b.Hours }));
 app.MapGet("/api/availability", (DateOnly date, string[] serviceIds, string? barberId, BookingService service, CancellationToken ct)

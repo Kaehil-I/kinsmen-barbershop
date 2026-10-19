@@ -1,0 +1,52 @@
+@model List<RetailProduct>
+@{
+    ViewData["Title"] = "Shop";
+    var errorMessage = ViewData["ErrorMessage"] as string;
+}
+
+<section class="page-intro">
+    <div class="wrap">
+        <div class="tag">Kinsmen Grooming</div>
+        <h1>Shop products</h1>
+        <p>Professional styling and beard-care products, available to purchase in store.</p>
+    </div>
+</section>
+
+<section>
+    <div class="wrap" style="padding-bottom:80px;">
+        @if (errorMessage is not null)
+        {
+            <p class="price-note" data-api-waking="@(ApiErrorMessages.IsWakingUp(errorMessage) ? "" : null)">@errorMessage</p>
+        }
+        else
+        {
+            <p class="price-note">Stock levels are indicative. Ask your barber to confirm availability when you visit.</p>
+            <div class="shop-grid">
+                @foreach (var product in Model)
+                {
+                    var lowStock = product.StockQuantity <= 10;
+                    <article class="panel neo-raised shop-product">
+                        <div class="shop-product-mark" aria-hidden="true">K</div>
+                        <div>
+                            <div class="name">@product.Name</div>
+                            <p class="shop-product-note">Available at Kinsmen Barbers</p>
+                        </div>
+                        <div class="shop-product-footer">
+                            <strong class="price">@PriceFormatter.FormatZarCents(product.PriceCents)</strong>
+                            <span class="stock-badge @(lowStock ? "stock-low" : "")">
+                                @(lowStock ? $"Only {product.StockQuantity} left" : $"{product.StockQuantity} in stock")
+                            </span>
+                        </div>
+                    </article>
+                }
+            </div>
+            <div class="panel neo-raised shop-callout">
+                <div>
+                    <h2>Need help choosing?</h2>
+                    <p>Ask your barber which product works best for your hair or beard routine.</p>
+                </div>
+                <a asp-controller="Location" asp-action="Index" class="book-link neo-pill-raised">Visit the shop</a>
+            </div>
+        }
+    </div>
+</section>

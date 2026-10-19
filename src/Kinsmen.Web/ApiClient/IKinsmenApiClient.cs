@@ -12,6 +12,8 @@ public interface IKinsmenApiClient
 
     Task<List<Service>> GetServicesAsync(CancellationToken cancellationToken = default);
 
+    Task<List<RetailProduct>> GetProductsAsync(CancellationToken cancellationToken = default);
+
     Task<List<Barber>> GetBarbersAsync(CancellationToken cancellationToken = default);
 
     /// <param name="date">The shop's local calendar date to check.</param>
