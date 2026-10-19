@@ -25,13 +25,21 @@
                 @foreach (var product in Model)
                 {
                     var outOfStock = product.StockQuantity == 0;
-                    var lowStock = product.StockQuantity is > 0 and <= 5;
+                    var lowStock = product.StockQuantity is > 0 && product.StockQuantity <= product.LowStockThreshold;
                     var fullyStocked = product.StockQuantity >= 20;
                     <article class="panel neo-raised shop-product">
-                        <div class="shop-product-mark" aria-hidden="true">K</div>
+                        @if (!string.IsNullOrWhiteSpace(product.ImageUrl))
+                        {
+                            <img src="@product.ImageUrl" alt="@product.Name" loading="lazy" referrerpolicy="no-referrer" style="width:100%; height:130px; object-fit:cover; border-radius:12px;" />
+                        }
+                        else
+                        {
+                            <div class="shop-product-mark" aria-hidden="true">K</div>
+                        }
                         <div>
+                            @if (!string.IsNullOrWhiteSpace(product.Category)) { <div class="tag" style="font-size:10px; margin-bottom:5px;">@product.Category</div> }
                             <div class="name">@product.Name</div>
-                            <p class="shop-product-note">Available at Kinsmen Barbers</p>
+                            <p class="shop-product-note">@(string.IsNullOrWhiteSpace(product.Description) ? "Available at Kinsmen Barbers" : product.Description)</p>
                         </div>
                         <div class="shop-product-footer">
                             <strong class="price">@PriceFormatter.FormatZarCents(product.PriceCents)</strong>

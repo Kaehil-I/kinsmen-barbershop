@@ -90,7 +90,9 @@ public sealed class AdminController(IKinsmenApiClient apiClient) : Controller
     [EnableRateLimiting(RateLimitPolicies.Writes)]
     public async Task<IActionResult> SaveProduct([FromBody] SaveProductAjaxRequest request, CancellationToken cancellationToken)
     {
-        var input = new ProductInput { Name = request.Name, PriceCents = request.PriceCents, StockQuantity = request.StockQuantity };
+        var input = new ProductInput { Name = request.Name, PriceCents = request.PriceCents, StockQuantity = request.StockQuantity,
+            Description = request.Description, Category = request.Category, ImageUrl = request.ImageUrl,
+            LowStockThreshold = request.LowStockThreshold, DisplayOrder = request.DisplayOrder };
         try
         {
             var saved = string.IsNullOrEmpty(request.Id)

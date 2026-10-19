@@ -99,7 +99,7 @@ else
                         {
                             var unavailable = product.StockQuantity == 0;
                             <div class="admin-row booking-product" data-product-id="@product.Id" data-stock="@product.StockQuantity" data-price-cents="@product.PriceCents" style="padding:12px; opacity:@(unavailable ? "0.55" : "1");">
-                                <div><div class="aname">@product.Name</div><div class="adesc">@PriceFormatter.FormatZarCents(product.PriceCents) &middot; @(unavailable ? "Out of stock" : product.StockQuantity <= 5 ? $"Low stock: {product.StockQuantity} left" : "Available")</div></div>
+                                <div><div class="aname">@product.Name</div><div class="adesc">@PriceFormatter.FormatZarCents(product.PriceCents) &middot; @(unavailable ? "Out of stock" : product.StockQuantity <= product.LowStockThreshold ? $"Low stock: {product.StockQuantity} left" : "Available")</div></div>
                                 <div style="display:flex; gap:8px; align-items:center;">
                                     <button class="neo-pill-raised product-minus" type="button" aria-label="Remove one @product.Name" @(unavailable ? "disabled" : "")>&minus;</button>
                                     <span class="product-quantity" aria-live="polite">0</span>

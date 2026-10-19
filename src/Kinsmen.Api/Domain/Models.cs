@@ -8,7 +8,8 @@ public sealed record WorkingPeriod(int Weekday, int StartMinute, int EndMinute);
 public sealed record Barber(string Id, string Name, string UserId, WorkingPeriod[] Hours, bool Active = true, long Revision = 0,
     string[]? ServiceIds = null);
 public sealed record ServiceSnapshot(string ServiceId, string Name, int PriceCents, int DurationMinutes);
-public sealed record ProductItem(string Id, string Name, int PriceCents, int StockQuantity, bool Active = true);
+public sealed record ProductItem(string Id, string Name, int PriceCents, int StockQuantity, bool Active = true,
+    string? Description = null, string? Category = null, string? ImageUrl = null, int LowStockThreshold = 5, int DisplayOrder = 0);
 public sealed record ProductSnapshot(string ProductId, string Name, int PriceCents, int Quantity);
 public sealed record ProductSelection(string ProductId, int Quantity);
 public enum BookingStatus { Pending, Confirmed, Cancelled, Completed, NoShow }
@@ -37,7 +38,8 @@ public sealed record AvailableSlot(string BarberId, DateTime StartUtc, DateTime 
 public sealed record ServiceRequest(string Name, int PriceCents, int DurationMinutes);
 public sealed record BarberRequest(string Name, string UserId, WorkingPeriod[] Hours, string[]? ServiceIds = null);
 public sealed record ActiveRequest(bool Active);
-public sealed record ProductRequest(string Name, int PriceCents, int StockQuantity);
+public sealed record ProductRequest(string Name, int PriceCents, int StockQuantity, string? Description = null,
+    string? Category = null, string? ImageUrl = null, int LowStockThreshold = 5, int DisplayOrder = 0);
 public sealed record StockAdjustmentRequest(int QuantityDelta);
 // Admin view of a barber: includes the linked identity and active flag, but not the internal revision counter.
 public sealed record BarberProfile(string Id, string Name, string UserId, WorkingPeriod[] Hours, bool Active, string[]? ServiceIds);

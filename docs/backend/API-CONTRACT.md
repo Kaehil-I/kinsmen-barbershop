@@ -162,7 +162,7 @@ Admins manage services and barber profiles. Nothing is deleted: deactivating hid
 
 ### Product inventory
 
-Admins can add products, set their price and current quantity, increment/decrement stock, and hide products from customers. Product names are 1–100 characters and unique among active products; quantities are 0–100 000 and prices are R0–R10 000. A product at zero stock remains visible as **Out of stock**, 1–5 as **Low stock**, 6–19 as **In stock**, and 20 or more as **Fully stocked**. Hiding a product prevents new reservations while keeping historical booking product snapshots intact.
+Admins can add products, set their price and current quantity, increment/decrement stock, and hide products from customers. Each product can also have a description, category, public HTTP(S) image URL, its own low-stock threshold, and display order. Product names are 1–100 characters and unique among active products; quantities are 0–100 000 and prices are R0–R10 000. A product at zero stock remains visible as **Out of stock**, at or below its configured threshold as **Low stock**, 6–19 as **In stock**, and 20 or more as **Fully stocked**. Hiding a product prevents new reservations while keeping historical booking product snapshots intact.
 
 ## Staff management
 

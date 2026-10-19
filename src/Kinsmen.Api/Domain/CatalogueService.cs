@@ -14,7 +14,7 @@ public sealed class CatalogueService(IBookingStore store, TimeProvider clock, Bo
 
     public Task<List<ProductItem>> PublicProducts(CancellationToken ct = default)
         => store.Read(async s => (await s.Products()).Where(x => x.Active)
-            .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToList(), ct);
+            .OrderBy(x => x.DisplayOrder).ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToList(), ct);
 
     public Task<List<ProductItem>> AllProducts(Actor actor, CancellationToken ct = default)
     {
@@ -25,11 +25,13 @@ public sealed class CatalogueService(IBookingStore store, TimeProvider clock, Bo
     public Task<ProductItem> CreateProduct(Actor actor, ProductRequest input, CancellationToken ct = default)
     {
         RequireAdmin(actor);
-        var name = ValidateProduct(input);
+        var productDetails = ValidateProduct(input);
         return store.Write(async s =>
         {
-            await RequireUniqueProductName(s, name, null);
-            var product = new ProductItem(Guid.NewGuid().ToString("N"), name, input.PriceCents, input.StockQuantity);
+            await RequireUniqueProductName(s, productDetails.Name, null);
+            var product = new ProductItem(Guid.NewGuid().ToString("N"), productDetails.Name, input.PriceCents, input.StockQuantity,
+                Description: productDetails.Description, Category: productDetails.Category, ImageUrl: productDetails.ImageUrl,
+                LowStockThreshold: input.LowStockThreshold, DisplayOrder: input.DisplayOrder);
             await s.SaveProduct(product, true);
             return product;
         }, ct);
@@ -38,12 +40,14 @@ public sealed class CatalogueService(IBookingStore store, TimeProvider clock, Bo
     public Task<ProductItem> UpdateProduct(Actor actor, string id, ProductRequest input, CancellationToken ct = default)
     {
         RequireAdmin(actor);
-        var name = ValidateProduct(input);
+        var productDetails = ValidateProduct(input);
         return store.Write(async s =>
         {
             var existing = (await s.Products()).SingleOrDefault(x => x.Id == id) ?? throw DomainError.Missing();
-            await RequireUniqueProductName(s, name, id);
-            var updated = existing with { Name = name, PriceCents = input.PriceCents, StockQuantity = input.StockQuantity };
+            await RequireUniqueProductName(s, productDetails.Name, id);
+            var updated = existing with { Name = productDetails.Name, PriceCents = input.PriceCents, StockQuantity = input.StockQuantity,
+                Description = productDetails.Description, Category = productDetails.Category, ImageUrl = productDetails.ImageUrl,
+                LowStockThreshold = input.LowStockThreshold, DisplayOrder = input.DisplayOrder };
             await s.SaveProduct(updated);
             return updated;
         }, ct);
@@ -198,13 +202,22 @@ public sealed class CatalogueService(IBookingStore store, TimeProvider clock, Bo
             throw new DomainError(409, "duplicate_name", "An active product already uses this name.");
     }
 
-    private static string ValidateProduct(ProductRequest input)
+    private static (string Name, string? Description, string? Category, string? ImageUrl) ValidateProduct(ProductRequest input)
     {
         var name = input.Name?.Trim();
         if (string.IsNullOrEmpty(name) || name.Length > 100) throw DomainError.Invalid("Product name must be 1 to 100 characters.");
         if (input.PriceCents is < 0 or > 1000000) throw DomainError.Invalid("Price must be between R0 and R10 000.");
         if (input.StockQuantity is < 0 or > 100000) throw DomainError.Invalid("Stock must be between 0 and 100 000.");
-        return name;
+        if (input.LowStockThreshold is < 1 or > 1000) throw DomainError.Invalid("Low-stock threshold must be between 1 and 1 000.");
+        if (input.DisplayOrder is < -10000 or > 10000) throw DomainError.Invalid("Display order must be between -10 000 and 10 000.");
+        var description = string.IsNullOrWhiteSpace(input.Description) ? null : input.Description.Trim();
+        var category = string.IsNullOrWhiteSpace(input.Category) ? null : input.Category.Trim();
+        var imageUrl = string.IsNullOrWhiteSpace(input.ImageUrl) ? null : input.ImageUrl.Trim();
+        if (description?.Length > 500) throw DomainError.Invalid("Product description must be at most 500 characters.");
+        if (category?.Length > 60) throw DomainError.Invalid("Product category must be at most 60 characters.");
+        if (imageUrl is not null && (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri) || uri.Scheme is not ("https" or "http") || imageUrl.Length > 2048))
+            throw DomainError.Invalid("Product image must be a valid http or https image URL.");
+        return (name, description, category, imageUrl);
     }
 
     private static string ValidateService(ServiceRequest input)

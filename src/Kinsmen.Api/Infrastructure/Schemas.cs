@@ -15,7 +15,10 @@ public static class Schemas
         {"bsonType":"object","required":["_id","name","priceCents","stockQuantity","active"],"properties":{
           "_id":{"bsonType":"string"},"name":{"bsonType":"string","minLength":1},
           "priceCents":{"bsonType":"int","minimum":0,"maximum":1000000},
-          "stockQuantity":{"bsonType":"int","minimum":0,"maximum":100000},"active":{"bsonType":"bool"}}}
+          "stockQuantity":{"bsonType":"int","minimum":0,"maximum":100000},"active":{"bsonType":"bool"},
+          "description":{"bsonType":["string","null"],"maxLength":500},"category":{"bsonType":["string","null"],"maxLength":60},
+          "imageUrl":{"bsonType":["string","null"],"maxLength":2048},"lowStockThreshold":{"bsonType":"int","minimum":1,"maximum":1000},
+          "displayOrder":{"bsonType":"int","minimum":-10000,"maximum":10000}}}
         """,
         "barbers" => """
         {"bsonType":"object","required":["_id","name","userId","hours","active","revision"],"properties":{
