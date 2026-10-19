@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function () {
         selectedTime: null,      // "HH:mm" shop-local, for display
         selectedStartUtc: null,  // ISO string from the availability slot, for submission
         selectedServiceIds: (initialServiceId ? [initialServiceId] : []),
-        productQuantities: {},
+        productQuantities: window.kinsmenBooking.preselectedProductId ? { [window.kinsmenBooking.preselectedProductId]: 1 } : {},
         idempotencyKey: null,
         idempotencyKeySignature: null
     };
@@ -400,6 +400,11 @@ document.addEventListener('DOMContentLoaded', function () {
         row.querySelector('.product-quantity').textContent = String(current);
         updateSummary();
     });
+
+    if (productRows && window.kinsmenBooking.preselectedProductId) {
+        var selectedProductRow = productRows.querySelector('[data-product-id="' + window.kinsmenBooking.preselectedProductId + '"]');
+        if (selectedProductRow) selectedProductRow.querySelector('.product-quantity').textContent = '1';
+    }
 
     // If we arrived with a barber preselected (server-rendered <option selected>), make
     // sure the note text and the rest of the UI reflect that on first paint too.

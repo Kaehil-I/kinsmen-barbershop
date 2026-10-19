@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var search = document.getElementById('shop-search');
     var filters = document.getElementById('shop-category-filters');
     var resultCount = document.getElementById('shop-result-count');
+    var inStockOnly = document.getElementById('shop-in-stock-only');
     if (!grid || !search || !filters || !resultCount) return;
 
     var cards = Array.prototype.slice.call(grid.querySelectorAll('.shop-product'));
@@ -28,7 +29,8 @@ document.addEventListener('DOMContentLoaded', function () {
         var visible = 0;
         cards.forEach(function (card) {
             var haystack = [card.dataset.productName, card.dataset.productCategory, card.dataset.productDescription].join(' ').toLocaleLowerCase();
-            var matches = (!selectedCategory || card.dataset.productCategory === selectedCategory) && (!query || haystack.indexOf(query) !== -1);
+            var matches = (!selectedCategory || card.dataset.productCategory === selectedCategory) && (!query || haystack.indexOf(query) !== -1)
+                && (!inStockOnly.checked || card.dataset.inStock === 'true');
             card.hidden = !matches;
             if (matches) visible++;
         });
@@ -39,5 +41,6 @@ document.addEventListener('DOMContentLoaded', function () {
         resultCount.textContent = visible === cards.length ? cards.length + ' products available' : visible + ' product' + (visible === 1 ? '' : 's') + ' found';
     }
     search.addEventListener('input', render);
+    inStockOnly.addEventListener('change', render);
     render();
 });

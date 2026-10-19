@@ -24,6 +24,7 @@
             <div class="shop-tools panel neo-raised">
                 <div class="input-shell neo-pressed"><input id="shop-search" type="search" maxlength="100" placeholder="Search products" aria-label="Search products" /></div>
                 <div id="shop-category-filters" class="service-chip-row" aria-label="Filter products by category"></div>
+                <label class="shop-availability-filter"><input id="shop-in-stock-only" type="checkbox" /> Show in-stock only</label>
             </div>
             <p id="shop-result-count" class="price-note" style="margin:14px 0 0;" aria-live="polite"></p>
             <div class="shop-grid" id="shop-products">
@@ -32,7 +33,7 @@
                     var outOfStock = product.StockQuantity == 0;
                     var lowStock = product.StockQuantity is > 0 && product.StockQuantity <= product.LowStockThreshold;
                     var fullyStocked = product.StockQuantity >= 20;
-                    <article class="panel neo-raised shop-product" data-product-name="@product.Name" data-product-category="@product.Category" data-product-description="@product.Description">
+                    <article class="panel neo-raised shop-product" data-product-name="@product.Name" data-product-category="@product.Category" data-product-description="@product.Description" data-in-stock="@(!outOfStock ? "true" : "false")">
                         @if (!string.IsNullOrWhiteSpace(product.ImageUrl))
                         {
                             <img src="@product.ImageUrl" alt="@product.Name" loading="lazy" referrerpolicy="no-referrer" style="width:100%; height:130px; object-fit:cover; border-radius:12px;" />
@@ -52,6 +53,10 @@
                                 @(outOfStock ? "Out of stock" : lowStock ? $"Low stock: {product.StockQuantity} left" : fullyStocked ? "Fully stocked" : $"In stock: {product.StockQuantity}")
                             </span>
                         </div>
+                        @if (!outOfStock)
+                        {
+                            <a asp-controller="Booking" asp-action="Index" asp-route-productId="@product.Id" class="row-link teal">Reserve with booking</a>
+                        }
                     </article>
                 }
             </div>

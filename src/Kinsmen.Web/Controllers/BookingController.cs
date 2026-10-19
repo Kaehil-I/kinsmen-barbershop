@@ -19,7 +19,7 @@ public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
     private static readonly TimeZoneInfo ShopTimeZone = ShopTimeZoneProvider.Instance;
 
     public async Task<IActionResult> Index(
-        [FromQuery] string? serviceId, [FromQuery] string? barberId, CancellationToken cancellationToken)
+        [FromQuery] string? serviceId, [FromQuery] string? barberId, [FromQuery] string? productId, CancellationToken cancellationToken)
     {
         // Staff don't book appointments (a barber's booking attempt is refused outright, and
         // an admin has no customer to book for), so this page is no use to them.
@@ -40,7 +40,8 @@ public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
                 // tampered-with link shouldn't silently point at a service/barber that
                 // no longer exists.
                 PreselectedServiceId = services.Any(s => s.Id == serviceId) ? serviceId : null,
-                PreselectedBarberId = barbers.Any(b => b.Id == barberId) ? barberId : null
+                PreselectedBarberId = barbers.Any(b => b.Id == barberId) ? barberId : null,
+                PreselectedProductId = products.Any(p => p.Id == productId && p.StockQuantity > 0) ? productId : null
             });
         }
         catch (KinsmenApiException ex)

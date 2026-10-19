@@ -118,7 +118,9 @@ public sealed class MongoBookingStore : IBookingStore
         {
             var update = Builders<ProductItem>.Update.SetOnInsert(x => x.Name, product.Name)
                 .SetOnInsert(x => x.PriceCents, product.PriceCents).SetOnInsert(x => x.StockQuantity, product.StockQuantity)
-                .SetOnInsert(x => x.Active, true);
+                .SetOnInsert(x => x.Active, true).SetOnInsert(x => x.Description, product.Description)
+                .SetOnInsert(x => x.Category, product.Category).SetOnInsert(x => x.LowStockThreshold, product.LowStockThreshold)
+                .SetOnInsert(x => x.DisplayOrder, product.DisplayOrder);
             await db.GetCollection<ProductItem>("products").UpdateOneAsync(x => x.Id == product.Id, update, new UpdateOptions { IsUpsert = true }, ct);
         }
     }
@@ -243,9 +245,11 @@ public static class DemoData
         new("barber-b", "Demo barber B", "staff-b", Enumerable.Range(1, 6).Select(d => new WorkingPeriod(d, 540, 1020)).ToArray(), ServiceIds: ["haircut", "beard"])
     ];
     public static readonly ProductItem[] Products = [
-        new("sea-salts", "Sea Salts", 40000, 18), new("texture-powder", "Texture Powder", 40000, 24),
-        new("ruck-clay-wax", "Lock Stock & Barrel Ruck Clay/Wax", 45000, 11),
-        new("pucka-clay-wax", "Lock Stock & Barrel Pucka Clay/Wax", 45000, 16),
-        new("matify", "Matify", 45000, 9), new("beard-oil", "Beard Oil", 25000, 21)
+        new("sea-salts", "Sea Salts", 40000, 18, Description: "Adds natural texture and volume with a clean matte finish.", Category: "Styling", DisplayOrder: 1),
+        new("texture-powder", "Texture Powder", 40000, 24, Description: "Lightweight lift and strong texture for everyday styling.", Category: "Styling", DisplayOrder: 2),
+        new("ruck-clay-wax", "Lock Stock & Barrel Ruck Clay/Wax", 45000, 11, Description: "A firm, workable clay for defined styles and reliable hold.", Category: "Styling", DisplayOrder: 3),
+        new("pucka-clay-wax", "Lock Stock & Barrel Pucka Clay/Wax", 45000, 16, Description: "Flexible clay wax for a polished finish that stays touchable.", Category: "Styling", DisplayOrder: 4),
+        new("matify", "Matify", 45000, 9, Description: "A matte styling product for texture without shine.", Category: "Styling", DisplayOrder: 5),
+        new("beard-oil", "Beard Oil", 25000, 21, Description: "Conditions beard hair and helps soften dry skin underneath.", Category: "Beard Care", DisplayOrder: 6)
     ];
 }

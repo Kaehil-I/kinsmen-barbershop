@@ -697,6 +697,8 @@
   .shop-tools{ padding:16px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
   .shop-tools .input-shell{ flex:1 1 240px; }
   .shop-tools input{ width:100%; border:0; background:transparent; padding:11px 14px; color:var(--text); font:14px var(--body); }
+  .shop-availability-filter{ display:flex; align-items:center; gap:7px; color:var(--text-dim); font:13px var(--mono); cursor:pointer; }
+  .shop-product .row-link{ margin-top:2px; align-self:flex-start; }
   .shop-product{ min-height:220px; padding:22px; display:flex; flex-direction:column; gap:16px; }
   .shop-product-mark{
     width:42px; height:42px; display:grid; place-items:center; border-radius:50%;

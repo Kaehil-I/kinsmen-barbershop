@@ -17,4 +17,5 @@ public sealed class BookingPageViewModel
     /// choice already made instead of the customer re-picking what they just clicked.</summary>
     public string? PreselectedServiceId { get; set; }
     public string? PreselectedBarberId { get; set; }
+    public string? PreselectedProductId { get; set; }
 }
