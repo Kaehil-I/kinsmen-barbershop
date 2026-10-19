@@ -12,6 +12,72 @@ public sealed class CatalogueService(IBookingStore store, TimeProvider clock, Bo
         return store.Read(async s => (await s.Services()).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToList(), ct);
     }
 
+    public Task<List<ProductItem>> PublicProducts(CancellationToken ct = default)
+        => store.Read(async s => (await s.Products()).Where(x => x.Active)
+            .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToList(), ct);
+
+    public Task<List<ProductItem>> AllProducts(Actor actor, CancellationToken ct = default)
+    {
+        RequireAdmin(actor);
+        return store.Read(async s => (await s.Products()).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToList(), ct);
+    }
+
+    public Task<ProductItem> CreateProduct(Actor actor, ProductRequest input, CancellationToken ct = default)
+    {
+        RequireAdmin(actor);
+        var name = ValidateProduct(input);
+        return store.Write(async s =>
+        {
+            await RequireUniqueProductName(s, name, null);
+            var product = new ProductItem(Guid.NewGuid().ToString("N"), name, input.PriceCents, input.StockQuantity);
+            await s.SaveProduct(product, true);
+            return product;
+        }, ct);
+    }
+
+    public Task<ProductItem> UpdateProduct(Actor actor, string id, ProductRequest input, CancellationToken ct = default)
+    {
+        RequireAdmin(actor);
+        var name = ValidateProduct(input);
+        return store.Write(async s =>
+        {
+            var existing = (await s.Products()).SingleOrDefault(x => x.Id == id) ?? throw DomainError.Missing();
+            await RequireUniqueProductName(s, name, id);
+            var updated = existing with { Name = name, PriceCents = input.PriceCents, StockQuantity = input.StockQuantity };
+            await s.SaveProduct(updated);
+            return updated;
+        }, ct);
+    }
+
+    public Task<ProductItem> AdjustProductStock(Actor actor, string id, int quantityDelta, CancellationToken ct = default)
+    {
+        RequireAdmin(actor);
+        if (quantityDelta is < -10000 or > 10000 || quantityDelta == 0)
+            throw DomainError.Invalid("Stock adjustment must be between -10 000 and 10 000 and cannot be zero.");
+        return store.Write(async s =>
+        {
+            var existing = (await s.Products()).SingleOrDefault(x => x.Id == id) ?? throw DomainError.Missing();
+            var next = existing.StockQuantity + quantityDelta;
+            if (next < 0) throw DomainError.Conflict("Stock cannot be reduced below zero.");
+            var updated = existing with { StockQuantity = next };
+            await s.SaveProduct(updated);
+            return updated;
+        }, ct);
+    }
+
+    public Task<ProductItem> SetProductActive(Actor actor, string id, bool active, CancellationToken ct = default)
+    {
+        RequireAdmin(actor);
+        return store.Write(async s =>
+        {
+            var existing = (await s.Products()).SingleOrDefault(x => x.Id == id) ?? throw DomainError.Missing();
+            if (active) await RequireUniqueProductName(s, existing.Name, id);
+            var updated = existing with { Active = active };
+            await s.SaveProduct(updated);
+            return updated;
+        }, ct);
+    }
+
     public Task<ServiceItem> CreateService(Actor actor, ServiceRequest input, CancellationToken ct = default)
     {
         RequireAdmin(actor);
@@ -124,6 +190,21 @@ public sealed class CatalogueService(IBookingStore store, TimeProvider clock, Bo
     {
         if ((await s.Services()).Any(x => x.Active && x.Id != excludingId && string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))
             throw new DomainError(409, "duplicate_name", "An active service already uses this name.");
+    }
+
+    private static async Task RequireUniqueProductName(IBookingSession s, string name, string? excludingId)
+    {
+        if ((await s.Products()).Any(x => x.Active && x.Id != excludingId && string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))
+            throw new DomainError(409, "duplicate_name", "An active product already uses this name.");
+    }
+
+    private static string ValidateProduct(ProductRequest input)
+    {
+        var name = input.Name?.Trim();
+        if (string.IsNullOrEmpty(name) || name.Length > 100) throw DomainError.Invalid("Product name must be 1 to 100 characters.");
+        if (input.PriceCents is < 0 or > 1000000) throw DomainError.Invalid("Price must be between R0 and R10 000.");
+        if (input.StockQuantity is < 0 or > 100000) throw DomainError.Invalid("Stock must be between 0 and 100 000.");
+        return name;
     }
 
     private static string ValidateService(ServiceRequest input)

@@ -47,3 +47,13 @@ public sealed class ActiveInput
 {
     public bool Active { get; set; }
 }
+public sealed class ProductInput
+{
+    public string Name { get; set; } = string.Empty;
+    public int PriceCents { get; set; }
+    public int StockQuantity { get; set; }
+}
+public sealed class StockAdjustmentInput
+{
+    public int QuantityDelta { get; set; }
+}

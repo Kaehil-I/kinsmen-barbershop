@@ -20,11 +20,13 @@
         }
         else
         {
-            <p class="price-note">Stock levels are indicative. Ask your barber to confirm availability when you visit.</p>
+            <p class="price-note">Reserve in-stock products with your appointment. You will collect and pay for them at Kinsmen.</p>
             <div class="shop-grid">
                 @foreach (var product in Model)
                 {
-                    var lowStock = product.StockQuantity <= 10;
+                    var outOfStock = product.StockQuantity == 0;
+                    var lowStock = product.StockQuantity is > 0 and <= 5;
+                    var fullyStocked = product.StockQuantity >= 20;
                     <article class="panel neo-raised shop-product">
                         <div class="shop-product-mark" aria-hidden="true">K</div>
                         <div>
@@ -33,8 +35,8 @@
                         </div>
                         <div class="shop-product-footer">
                             <strong class="price">@PriceFormatter.FormatZarCents(product.PriceCents)</strong>
-                            <span class="stock-badge @(lowStock ? "stock-low" : "")">
-                                @(lowStock ? $"Only {product.StockQuantity} left" : $"{product.StockQuantity} in stock")
+                            <span class="stock-badge @(outOfStock ? "stock-low" : lowStock ? "stock-low" : "")">
+                                @(outOfStock ? "Out of stock" : lowStock ? $"Low stock: {product.StockQuantity} left" : fullyStocked ? "Fully stocked" : $"In stock: {product.StockQuantity}")
                             </span>
                         </div>
                     </article>
@@ -45,7 +47,7 @@
                     <h2>Need help choosing?</h2>
                     <p>Ask your barber which product works best for your hair or beard routine.</p>
                 </div>
-                <a asp-controller="Location" asp-action="Index" class="book-link neo-pill-raised">Visit the shop</a>
+                <a asp-controller="Booking" asp-action="Index" class="book-link neo-pill-raised">Book and reserve products</a>
             </div>
         }
     </div>

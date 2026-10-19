@@ -11,6 +11,12 @@ public static class Schemas
           "priceCents":{"bsonType":"int","minimum":0,"maximum":1000000},
           "durationMinutes":{"bsonType":"int","minimum":1,"maximum":480},"active":{"bsonType":"bool"}}}
         """,
+        "products" => """
+        {"bsonType":"object","required":["_id","name","priceCents","stockQuantity","active"],"properties":{
+          "_id":{"bsonType":"string"},"name":{"bsonType":"string","minLength":1},
+          "priceCents":{"bsonType":"int","minimum":0,"maximum":1000000},
+          "stockQuantity":{"bsonType":"int","minimum":0,"maximum":100000},"active":{"bsonType":"bool"}}}
+        """,
         "barbers" => """
         {"bsonType":"object","required":["_id","name","userId","hours","active","revision"],"properties":{
           "_id":{"bsonType":"string"},"name":{"bsonType":"string"},"userId":{"bsonType":"string","minLength":1},
@@ -31,7 +37,10 @@ public static class Schemas
           "services":{"bsonType":"array","minItems":1,"maxItems":10,"items":{"bsonType":"object",
             "required":["serviceId","name","priceCents","durationMinutes"],"properties":{
               "serviceId":{"bsonType":"string"},"name":{"bsonType":"string"},"priceCents":{"bsonType":"int","minimum":0},
-              "durationMinutes":{"bsonType":"int","minimum":1,"maximum":480}}}}}}
+              "durationMinutes":{"bsonType":"int","minimum":1,"maximum":480}}}},
+          "products":{"bsonType":["array","null"],"maxItems":10,"items":{"bsonType":"object",
+            "required":["productId","name","priceCents","quantity"],"properties":{"productId":{"bsonType":"string"},
+              "name":{"bsonType":"string"},"priceCents":{"bsonType":"int","minimum":0},"quantity":{"bsonType":"int","minimum":1,"maximum":10}}}}}}
         """,
         "timeBlocks" => """
         {"bsonType":"object","required":["_id","barberId","startUtc","endUtc","reason"],"properties":{

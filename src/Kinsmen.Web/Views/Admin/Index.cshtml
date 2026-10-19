@@ -93,6 +93,36 @@
                 }
             </div>
 
+            @* ------------------------------ Products ------------------------------ *@
+            <h2 style="font-family:var(--display); font-weight:600; font-size:20px; color:var(--heading); margin-bottom:14px;">Shop inventory</h2>
+            <p class="price-note" style="margin-top:0;">Stock is reserved when a customer adds an item to a booking and automatically returned if that booking is cancelled.</p>
+            <p id="products-message" class="form-error" style="margin:0 0 12px;"></p>
+            <button id="add-product-btn" class="add-toggle-btn neo-raised" type="button">+ Add a product</button>
+            <div id="product-form" class="panel neo-raised" style="display:none; padding:24px; margin-bottom:20px;">
+                <input type="hidden" id="product-id" />
+                <div class="field-row">
+                    <div class="form-field"><label>Name</label><div class="input-shell neo-pressed"><input id="product-name" maxlength="100" placeholder="e.g. Styling cream" /></div></div>
+                    <div class="form-field"><label>Price (R)</label><div class="input-shell neo-pressed"><input id="product-price" type="number" min="0" max="10000" step="0.01" placeholder="250" /></div></div>
+                </div>
+                <div class="field-row"><div class="form-field"><label>Current stock</label><div class="input-shell neo-pressed"><input id="product-stock" type="number" min="0" max="100000" step="1" placeholder="20" /></div></div><div></div></div>
+                <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;"><button id="product-save-btn" class="btn-confirm neo-pill-raised" type="button">Save product</button><button id="product-cancel-btn" class="row-link" type="button">Cancel</button></div>
+                <p id="product-error" class="form-error" style="margin-top:12px;"></p>
+            </div>
+            <div id="products-list" class="panel neo-raised" style="padding:8px 18px; margin-bottom:48px;">
+                @foreach (var product in Model.Products)
+                {
+                    var status = product.StockQuantity == 0 ? "Out of stock" : product.StockQuantity <= 5 ? $"Low: {product.StockQuantity} left" : product.StockQuantity >= 20 ? "Fully stocked" : $"In stock: {product.StockQuantity}";
+                    <div class="admin-row product-item" data-id="@product.Id" data-name="@product.Name" data-price-cents="@product.PriceCents" data-stock="@product.StockQuantity" data-active="@(product.Active ? "true" : "false")" style="margin-bottom:0; padding:16px 0; border-bottom:1px solid var(--sh-dark-soft);@(product.Active ? "" : " opacity:0.6;")">
+                        <div><div class="aname">@product.Name</div><div class="adesc">@status &middot; @PriceFormatter.FormatZarCents(product.PriceCents)</div></div>
+                        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end;">
+                            <button class="row-link teal stock-adjust-btn" data-delta="1" type="button">+ Stock</button><button class="row-link brick stock-adjust-btn" data-delta="-1" type="button">- Stock</button>
+                            <button class="row-link teal edit-product-btn" type="button">Edit</button><button class="row-link @(product.Active ? "brick" : "teal") toggle-product-btn" type="button">@(product.Active ? "Hide" : "Show")</button>
+                        </div>
+                    </div>
+                }
+                @if (Model.Products.Count == 0) { <p class="no-date-msg" style="padding:16px 0;">No products yet.</p> }
+            </div>
+
             @* ------------------------------ Barbers ------------------------------- *@
             <h2 style="font-family:var(--display); font-weight:600; font-size:20px; color:var(--heading); margin-bottom:14px;">Barbers</h2>
 

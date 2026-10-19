@@ -10,6 +10,7 @@ public interface IBookingStore
 public interface IBookingSession
 {
     Task<List<ServiceItem>> Services();
+    Task<List<ProductItem>> Products();
     Task<List<Barber>> Barbers();
     Task TouchBarbers(IEnumerable<string> ids);
     // Same idea per customer: concurrent creates for one customer conflict, so the active-booking cap can't be raced.
@@ -22,6 +23,7 @@ public interface IBookingSession
     Task SaveBlock(TimeBlock block);
     Task DeleteBlock(string id);
     Task SaveService(ServiceItem service, bool insert = false);
+    Task SaveProduct(ProductItem product, bool insert = false);
     // Inserts start at revision 0; updates increment the revision so concurrent schedule transactions conflict and retry.
     Task SaveBarber(Barber barber, bool insert = false);
     Task<Review?> ReviewByBookingId(string bookingId);

@@ -7,4 +7,5 @@ public sealed class RetailProduct
     public string Name { get; set; } = string.Empty;
     public int PriceCents { get; set; }
     public int StockQuantity { get; set; }
+    public bool Active { get; set; }
 }

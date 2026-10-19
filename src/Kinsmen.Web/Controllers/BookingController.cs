@@ -29,11 +29,13 @@ public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
         {
             var services = await apiClient.GetServicesAsync(cancellationToken);
             var barbers = await apiClient.GetBarbersAsync(cancellationToken);
+            var products = await apiClient.GetProductsAsync(cancellationToken);
 
             return View(new BookingPageViewModel
             {
                 Services = services,
                 Barbers = barbers,
+                Products = products,
                 // Only honour these if they actually match something real - an old or
                 // tampered-with link shouldn't silently point at a service/barber that
                 // no longer exists.
@@ -125,6 +127,7 @@ public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
         {
             BarberId = string.IsNullOrEmpty(request.BarberId) ? null : request.BarberId,
             ServiceIds = request.ServiceIds,
+            Products = request.Products,
             Start = start,
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes
         };

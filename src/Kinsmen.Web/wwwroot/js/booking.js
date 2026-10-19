@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var barbersById = {};
     (window.kinsmenBooking.barbers || []).forEach(function (b) { barbersById[b.id] = b; });
+    var productsById = {};
+    (window.kinsmenBooking.products || []).forEach(function (p) { productsById[p.id] = p; });
 
     var calGrid = document.getElementById('cal-grid');
     var calMonthLabel = document.getElementById('cal-month-label');
@@ -35,6 +37,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var successText = document.getElementById('success-text');
     var bookAnotherLink = document.getElementById('book-another');
     var notesInput = document.getElementById('booking-notes');
+    var productRows = document.getElementById('booking-products');
 
     if (!calGrid) return; // API was unavailable / nothing to book — view didn't render the form.
 
@@ -53,6 +56,7 @@ document.addEventListener('DOMContentLoaded', function () {
         selectedTime: null,      // "HH:mm" shop-local, for display
         selectedStartUtc: null,  // ISO string from the availability slot, for submission
         selectedServiceIds: (initialServiceId ? [initialServiceId] : []),
+        productQuantities: {},
         idempotencyKey: null,
         idempotencyKeySignature: null
     };
@@ -234,6 +238,17 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 0);
     }
 
+    function selectedProductsTotal() {
+        return Object.keys(state.productQuantities).reduce(function (sum, id) {
+            var product = productsById[id];
+            return sum + (product ? product.priceCents * state.productQuantities[id] : 0);
+        }, 0);
+    }
+    function selectedProductNames() {
+        return Object.keys(state.productQuantities).filter(function (id) { return state.productQuantities[id] > 0; })
+            .map(function (id) { return state.productQuantities[id] + ' × ' + productsById[id].name; }).join(', ');
+    }
+
     function selectedServiceNames() {
         return state.selectedServiceIds
             .map(function (id) { return servicesById[id] ? servicesById[id].name : id; })
@@ -247,8 +262,9 @@ document.addEventListener('DOMContentLoaded', function () {
             var barber = barbersById[barberSelect.value];
             var barberLabel = barber ? barber.name : 'any available barber';
             var dateStr = state.selectedDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-            summaryText.innerHTML = '<strong>' + escapeHtml(selectedServiceNames()) + '</strong> (' +
-                escapeHtml(formatZarCents(selectedServicesTotal())) + ') with <strong>' + escapeHtml(barberLabel) +
+            var productLine = selectedProductNames() ? ' + ' + escapeHtml(selectedProductNames()) : '';
+            summaryText.innerHTML = '<strong>' + escapeHtml(selectedServiceNames()) + '</strong>' + productLine + ' (' +
+                escapeHtml(formatZarCents(selectedServicesTotal() + selectedProductsTotal())) + ') with <strong>' + escapeHtml(barberLabel) +
                 '</strong> \u2014 ' + escapeHtml(dateStr) + ' at <strong>' + escapeHtml(state.selectedTime) + '</strong>';
             confirmBtn.disabled = false;
         } else {
@@ -261,6 +277,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return JSON.stringify({
             barberId: barberSelect.value || null,
             serviceIds: state.selectedServiceIds,
+            products: Object.keys(state.productQuantities).filter(function (id) { return state.productQuantities[id] > 0; }).map(function (id) { return { productId: id, quantity: state.productQuantities[id] }; }),
             startUtc: state.selectedStartUtc
         });
     }
@@ -297,6 +314,7 @@ document.addEventListener('DOMContentLoaded', function () {
             body: JSON.stringify({
                 barberId: barberSelect.value || null,
                 serviceIds: state.selectedServiceIds,
+                products: Object.keys(state.productQuantities).filter(function (id) { return state.productQuantities[id] > 0; }).map(function (id) { return { productId: id, quantity: state.productQuantities[id] }; }),
                 startUtc: state.selectedStartUtc,
                 notes: notesInput.value.trim() || null
             })
@@ -330,7 +348,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 var assignedBarber = barbersById[result.body.barberId];
                 var confirmedBarberLabel = assignedBarber ? assignedBarber.name : barberLabel;
 
-                successText.innerHTML = '<strong>' + escapeHtml(selectedServiceNames()) + '</strong> with <strong>' +
+                var chosenProducts = selectedProductNames();
+                successText.innerHTML = '<strong>' + escapeHtml(selectedServiceNames()) + (chosenProducts ? ' + ' + escapeHtml(chosenProducts) : '') + '</strong> with <strong>' +
                     escapeHtml(confirmedBarberLabel) + '</strong> \u2014 ' + escapeHtml(dateStr) + ' at <strong>' + escapeHtml(state.selectedTime) +
                     '</strong>. Total <strong>' + escapeHtml(formatZarCents(result.body.totalCents)) + '</strong>.';
                 summaryPanel.style.display = 'none';
@@ -353,6 +372,8 @@ document.addEventListener('DOMContentLoaded', function () {
         state.idempotencyKey = null;
         state.idempotencyKeySignature = null;
         notesInput.value = '';
+        state.productQuantities = {};
+        if (productRows) productRows.querySelectorAll('.product-quantity').forEach(function (quantity) { quantity.textContent = '0'; });
 
         successCard.classList.remove('show');
         summaryPanel.style.display = '';
@@ -366,6 +387,19 @@ document.addEventListener('DOMContentLoaded', function () {
     renderCalendar();
     fetchAndRenderTimes();
     updateSummary();
+
+    if (productRows) productRows.addEventListener('click', function (e) {
+        var row = e.target.closest('.booking-product');
+        if (!row) return;
+        var id = row.dataset.productId;
+        var current = state.productQuantities[id] || 0;
+        var stock = parseInt(row.dataset.stock, 10);
+        if (e.target.closest('.product-plus') && current < Math.min(stock, 10)) current++;
+        if (e.target.closest('.product-minus') && current > 0) current--;
+        if (current) state.productQuantities[id] = current; else delete state.productQuantities[id];
+        row.querySelector('.product-quantity').textContent = String(current);
+        updateSummary();
+    });
 
     // If we arrived with a barber preselected (server-rendered <option selected>), make
     // sure the note text and the rest of the UI reflect that on first paint too.

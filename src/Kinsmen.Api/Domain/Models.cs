@@ -8,13 +8,17 @@ public sealed record WorkingPeriod(int Weekday, int StartMinute, int EndMinute);
 public sealed record Barber(string Id, string Name, string UserId, WorkingPeriod[] Hours, bool Active = true, long Revision = 0,
     string[]? ServiceIds = null);
 public sealed record ServiceSnapshot(string ServiceId, string Name, int PriceCents, int DurationMinutes);
+public sealed record ProductItem(string Id, string Name, int PriceCents, int StockQuantity, bool Active = true);
+public sealed record ProductSnapshot(string ProductId, string Name, int PriceCents, int Quantity);
+public sealed record ProductSelection(string ProductId, int Quantity);
 public enum BookingStatus { Pending, Confirmed, Cancelled, Completed, NoShow }
 public sealed record Booking(string Id, string CustomerId, string BarberId, DateTime StartUtc, DateTime EndUtc,
     ServiceSnapshot[] Services, int TotalCents, BookingStatus Status, DateTime CreatedUtc, long Version = 1, string? Notes = null,
     [property: JsonIgnore] string? CreationFingerprint = null,
     // Captured once when the customer books, so a later staff action (confirm, complete) can still email them.
     // Never serialised to API clients.
-    [property: JsonIgnore] string? CustomerEmail = null);
+    [property: JsonIgnore] string? CustomerEmail = null,
+    ProductSnapshot[]? Products = null);
 public sealed record TimeBlock(string Id, string BarberId, DateTime StartUtc, DateTime EndUtc, string Reason);
 public sealed record Actor(string UserId, string Role, string? Email = null)
 {
@@ -22,7 +26,8 @@ public sealed record Actor(string UserId, string Role, string? Email = null)
     public bool IsBarber => Role == "Barber";
     public bool IsCustomer => Role == "Customer";
 }
-public sealed record CreateBookingRequest(string? BarberId, string[] ServiceIds, DateTimeOffset Start, string? CustomerId = null, string? Notes = null);
+public sealed record CreateBookingRequest(string? BarberId, string[] ServiceIds, DateTimeOffset Start, string? CustomerId = null, string? Notes = null,
+    ProductSelection[]? Products = null);
 public sealed record RescheduleRequest(DateTimeOffset Start, long Version);
 public sealed record VersionRequest(long Version);
 public sealed record StatusChangeRequest(BookingStatus Status, long Version);
@@ -32,6 +37,8 @@ public sealed record AvailableSlot(string BarberId, DateTime StartUtc, DateTime 
 public sealed record ServiceRequest(string Name, int PriceCents, int DurationMinutes);
 public sealed record BarberRequest(string Name, string UserId, WorkingPeriod[] Hours, string[]? ServiceIds = null);
 public sealed record ActiveRequest(bool Active);
+public sealed record ProductRequest(string Name, int PriceCents, int StockQuantity);
+public sealed record StockAdjustmentRequest(int QuantityDelta);
 // Admin view of a barber: includes the linked identity and active flag, but not the internal revision counter.
 public sealed record BarberProfile(string Id, string Name, string UserId, WorkingPeriod[] Hours, bool Active, string[]? ServiceIds);
 // MaxActiveBookingsPerCustomer caps Pending/Confirmed bookings that haven't finished yet, so one account

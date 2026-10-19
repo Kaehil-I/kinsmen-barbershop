@@ -18,10 +18,10 @@ Version 0.1, 20 September 2026. The executable source is `src/Kinsmen.Api`; [ope
 | Method and route | Access | Input | Success |
 |---|---|---|---|
 | `GET /api/services` | Public | None | `200` active services |
-| `GET /api/products` | Public | None | `200` in-store products: ID, name, price in cents and illustrative stock quantity |
+| `GET /api/products` | Public | None | `200` active products: ID, name, price in cents, current stock and active flag |
 | `GET /api/barbers` | Public | None | `200` active barber IDs, names and working periods; staff account IDs omitted |
 | `GET /api/availability` | Public | `date`, repeated `serviceIds`, optional `barberId` | `200` available barber/start/end combinations |
-| `POST /api/bookings` | Customer/Admin | `barberId` or null, `serviceIds`, `start`; admin additionally supplies `customerId` | `201` persisted Pending booking |
+| `POST /api/bookings` | Customer/Admin | `barberId` or null, `serviceIds`, `start`, optional `products`; admin additionally supplies `customerId` | `201` persisted Pending booking and reserved stock |
 | `GET /api/bookings` | Authenticated | `from`, `to`, optional `barberId` | `200`; customer sees own bookings, barber sees own schedule, admin sees matching records |
 | `GET /api/bookings/{id}` | Owning Customer/assigned active Barber/Admin | Booking ID | `200` one booking including its current status/version |
 | `PATCH /api/bookings/{id}/reschedule` | Owning Customer/Admin | `start`, `version` | `200` updated booking; same barber and service/price snapshots |
@@ -34,6 +34,11 @@ Version 0.1, 20 September 2026. The executable source is `src/Kinsmen.Api`; [ope
 | `POST /api/admin/services` | Admin | `name`, `priceCents`, `durationMinutes` | `201` new active service |
 | `PUT /api/admin/services/{id}` | Admin | `name`, `priceCents`, `durationMinutes` | `200` updated service |
 | `PATCH /api/admin/services/{id}/active` | Admin | `active` | `200` updated service |
+| `GET /api/admin/products` | Admin | None | `200` all products, including inactive and stock |
+| `POST /api/admin/products` | Admin | `name`, `priceCents`, `stockQuantity` | `201` new active product |
+| `PUT /api/admin/products/{id}` | Admin | `name`, `priceCents`, `stockQuantity` | `200` updated product |
+| `PATCH /api/admin/products/{id}/stock` | Admin | `quantityDelta` | `200` adjusted stock; cannot go below zero |
+| `PATCH /api/admin/products/{id}/active` | Admin | `active` | `200` shown/hidden product |
 | `GET /api/admin/barbers` | Admin | None | `200` all barber profiles, including linked `userId` and `active` |
 | `POST /api/admin/barbers` | Admin | `name`, `userId`, `hours` | `201` new active barber profile |
 | `PUT /api/admin/barbers/{id}` | Admin | `name`, `userId`, `hours` | `200` updated barber profile |
@@ -58,6 +63,7 @@ The frontend uses repeated array parameters, not a comma-separated string:
 {
   "barberId": "barber-a",
   "serviceIds": ["haircut", "beard"],
+  "products": [{"productId":"beard-oil","quantity":1}],
   "start": "2026-09-23T10:00:00+02:00"
 }
 ```
@@ -85,7 +91,7 @@ Example response with the synthetic catalogue (IDs/times illustrated):
 }
 ```
 
-Only 1-10 distinct active services are accepted, up to a total of 480 minutes. New appointments must fit one working period without crossing a break, booking or time block. Adjacent appointments are allowed: an appointment ending at 10:00 does not block one starting at 10:00.
+Only 1-10 distinct active services are accepted, up to a total of 480 minutes. A booking may also include up to 10 distinct active products, each quantity 1-10. Product prices and quantities are snapshotted in the booking, included in `totalCents`, and stock is reserved in the same MongoDB transaction. Insufficient stock returns `409 insufficient_stock`; cancellation returns the reserved quantity. New appointments must fit one working period without crossing a break, booking or time block. Adjacent appointments are allowed: an appointment ending at 10:00 does not block one starting at 10:00.
 
 ### Safe retries
 
@@ -153,6 +159,10 @@ Admins manage services and barber profiles. Nothing is deleted: deactivating hid
 - Changing hours is refused with `409 booking_conflict` when an upcoming Pending/Confirmed booking would fall outside the new hours. Deactivating a barber is refused while they have upcoming Pending/Confirmed bookings. Move or cancel those bookings first.
 - Barber edits and deactivation lock the barber's schedule in the same way as booking writes, so a booking made at the same moment either lands before the change (and the change is checked against it) or sees the new profile.
 - Catalogue edits are last-write-wins; there is no version field on services or barbers.
+
+### Product inventory
+
+Admins can add products, set their price and current quantity, increment/decrement stock, and hide products from customers. Product names are 1–100 characters and unique among active products; quantities are 0–100 000 and prices are R0–R10 000. A product at zero stock remains visible as **Out of stock**, 1–5 as **Low stock**, 6–19 as **In stock**, and 20 or more as **Fully stocked**. Hiding a product prevents new reservations while keeping historical booking product snapshots intact.
 
 ## Staff management
 
