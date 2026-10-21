@@ -9,6 +9,7 @@ public sealed class BookingPageViewModel
 {
     public List<Service> Services { get; set; } = [];
     public List<Barber> Barbers { get; set; } = [];
+    public List<RetailProduct> Products { get; set; } = [];
     public string? ErrorMessage { get; set; }
 
     /// <summary>Set when arriving via a "Book" link from the Services or Team page
@@ -16,4 +17,5 @@ public sealed class BookingPageViewModel
     /// choice already made instead of the customer re-picking what they just clicked.</summary>
     public string? PreselectedServiceId { get; set; }
     public string? PreselectedBarberId { get; set; }
+    public string? PreselectedProductId { get; set; }
 }

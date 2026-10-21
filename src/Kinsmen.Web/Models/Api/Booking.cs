@@ -20,6 +20,13 @@ public sealed class ServiceSnapshot
     public int PriceCents { get; set; }
     public int DurationMinutes { get; set; }
 }
+public sealed class ProductSnapshot
+{
+    public string ProductId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public int PriceCents { get; set; }
+    public int Quantity { get; set; }
+}
 
 /// <summary>A booking record, as returned by every booking endpoint.</summary>
 public sealed class Booking
@@ -34,6 +41,7 @@ public sealed class Booking
     public DateTimeOffset StartUtc { get; set; }
     public DateTimeOffset EndUtc { get; set; }
     public List<ServiceSnapshot> Services { get; set; } = [];
+    public List<ProductSnapshot> Products { get; set; } = [];
     public int TotalCents { get; set; }
     public BookingStatus Status { get; set; }
     public DateTimeOffset CreatedUtc { get; set; }

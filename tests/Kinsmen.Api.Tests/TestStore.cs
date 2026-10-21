@@ -8,6 +8,7 @@ public sealed class TestStore : IBookingStore, IBookingSession
 {
     private readonly SemaphoreSlim gate = new(1);
     public List<ServiceItem> Catalog { get; } = [.. DemoData.Services];
+    public List<ProductItem> Inventory { get; } = [.. DemoData.Products];
     public List<Barber> Staff { get; } = [.. DemoData.Barbers];
     public List<Booking> Saved { get; private set; } = [];
     public List<TimeBlock> Blocked { get; private set; } = [];
@@ -20,17 +21,18 @@ public sealed class TestStore : IBookingStore, IBookingSession
     public async Task<T> Write<T>(Func<IBookingSession, Task<T>> action, CancellationToken ct = default)
     {
         await gate.WaitAsync(ct);
-        var saved = Saved.ToList(); var blocks = Blocked.ToList(); var catalog = Catalog.ToList(); var staff = Staff.ToList(); var reviews = Reviews.ToList();
+        var saved = Saved.ToList(); var blocks = Blocked.ToList(); var catalog = Catalog.ToList(); var inventory = Inventory.ToList(); var staff = Staff.ToList(); var reviews = Reviews.ToList();
         try { return await action(this); }
         catch
         {
             Saved = saved; Blocked = blocks; Reviews = reviews;
-            Catalog.Clear(); Catalog.AddRange(catalog); Staff.Clear(); Staff.AddRange(staff);
+            Catalog.Clear(); Catalog.AddRange(catalog); Inventory.Clear(); Inventory.AddRange(inventory); Staff.Clear(); Staff.AddRange(staff);
             throw;
         }
         finally { gate.Release(); }
     }
     public Task<List<ServiceItem>> Services() => Task.FromResult(Catalog.ToList());
+    public Task<List<ProductItem>> Products() => Task.FromResult(Inventory.ToList());
     public Task<List<Barber>> Barbers() => Task.FromResult(Staff.ToList());
     public Task TouchBarbers(IEnumerable<string> ids) => Task.CompletedTask;
     public Task TouchCustomer(string customerId) => Task.CompletedTask;
@@ -54,6 +56,14 @@ public sealed class TestStore : IBookingStore, IBookingSession
         if (insert) Catalog.Add(service);
         else if (index < 0) throw DomainError.Missing();
         else Catalog[index] = service;
+        return Task.CompletedTask;
+    }
+    public Task SaveProduct(ProductItem product, bool insert = false)
+    {
+        var index = Inventory.FindIndex(x => x.Id == product.Id);
+        if (insert) Inventory.Add(product);
+        else if (index < 0) throw DomainError.Missing();
+        else Inventory[index] = product;
         return Task.CompletedTask;
     }
     public Task SaveBarber(Barber barber, bool insert = false)

@@ -76,6 +76,10 @@
                         <div class="mmeta">
                             with @barberName &middot; <span class="booking-date">@LocalDate(booking.StartUtc)</span> at <span class="booking-time">@LocalTime(booking.StartUtc)</span> &middot; @PriceFormatter.FormatZarCents(booking.TotalCents)
                         </div>
+                        @if (booking.Products.Count > 0)
+                        {
+                            <div class="mmeta" style="margin-top:3px;">Products reserved: @string.Join(", ", booking.Products.Select(product => $"{product.Quantity} × {product.Name}"))</div>
+                        }
 
                         @if (canManage)
                         {

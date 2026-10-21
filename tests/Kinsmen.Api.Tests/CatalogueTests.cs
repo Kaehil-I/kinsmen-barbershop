@@ -39,6 +39,21 @@ public sealed class CatalogueTests
         Assert.Equal(TimeSpan.FromMinutes(45), booking.EndUtc - booking.StartUtc);
     }
 
+    [Fact] public async Task AdminCanCustomiseProductsAndPublicCatalogueHidesInactiveItems()
+    {
+        var product = await Catalogue.CreateProduct(Admin, new("  Styling Cream ", 27500, 12,
+            "Light hold for a natural finish.", "Styling", "https://images.example.com/cream.jpg", 3, 2));
+        Assert.Equal("Styling Cream", product.Name);
+        Assert.Equal("Styling", product.Category);
+        Assert.Equal(3, product.LowStockThreshold);
+        Assert.Contains(await Catalogue.PublicProducts(), item => item.Id == product.Id && item.ImageUrl == product.ImageUrl);
+
+        await Catalogue.AdjustProductStock(Admin, product.Id, -2);
+        Assert.Equal(10, (await Catalogue.AllProducts(Admin)).Single(item => item.Id == product.Id).StockQuantity);
+        await Catalogue.SetProductActive(Admin, product.Id, false);
+        Assert.DoesNotContain(await Catalogue.PublicProducts(), item => item.Id == product.Id);
+    }
+
     [Fact] public async Task PriceChangeDoesNotAlterExistingBookings()
     {
         var before = await Bookings.Create(Customer, Booking());
