@@ -12,9 +12,11 @@ public enum BookingStatus { Pending, Confirmed, Cancelled, Completed, NoShow }
 public sealed record Booking(string Id, string CustomerId, string BarberId, DateTime StartUtc, DateTime EndUtc,
     ServiceSnapshot[] Services, int TotalCents, BookingStatus Status, DateTime CreatedUtc, long Version = 1, string? Notes = null,
     [property: JsonIgnore] string? CreationFingerprint = null,
-    // Captured once when the customer books, so a later staff action (confirm, complete) can still email them.
-    // Never serialised to API clients.
-    [property: JsonIgnore] string? CustomerEmail = null);
+        // Captured once when the customer books, so a later staff action (confirm, complete) can still email them.
+        // Never serialised to API clients.
+        [property: JsonIgnore] string? CustomerEmail = null,
+    // Set once the 24-hour reminder has been claimed, so it is never sent twice. Reset when rescheduled.
+    [property: JsonIgnore] DateTime? ReminderSentUtc = null);
 public sealed record TimeBlock(string Id, string BarberId, DateTime StartUtc, DateTime EndUtc, string Reason);
 public sealed record Actor(string UserId, string Role, string? Email = null)
 {

@@ -27,4 +27,6 @@ public interface IBookingSession
     Task<Review?> ReviewByBookingId(string bookingId);
     Task<List<Review>> ReviewsForBarber(string barberId);
     Task SaveReview(Review review);
+    // True only for the one caller that marks a confirmed booking's reminder as sent.
+    Task<bool> ClaimReminder(string bookingId, DateTime whenUtc);
 }
