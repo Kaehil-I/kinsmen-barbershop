@@ -46,6 +46,7 @@ builder.Services.AddSingleton(_ => new MongoBookingStore(
 builder.Services.AddSingleton<IBookingStore>(s => s.GetRequiredService<MongoBookingStore>());
 builder.Services.AddSingleton<CatalogueService>();
 builder.Services.AddStaffManagement(builder.Configuration);
+builder.Services.AddCustomerProfiles();
 
 
 // Booking emails. Without Email:BrevoApiKey the app uses a no-op sender, so nothing else needs configuring.
@@ -252,6 +253,7 @@ admin.MapPut("/barbers/{id}", (string id, BarberRequest input, HttpContext ctx, 
 admin.MapPatch("/barbers/{id}/active", (string id, ActiveRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
     => catalogue.SetBarberActive(CurrentActor(ctx), id, input.Active, ct));
 app.MapStaffEndpoints(CurrentActor);
+app.MapProfileEndpoints(CurrentActor);
 app.Run();
 
 static Actor CurrentActor(HttpContext context)

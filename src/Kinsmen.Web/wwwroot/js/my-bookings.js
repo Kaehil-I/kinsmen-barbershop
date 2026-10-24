@@ -273,6 +273,22 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    // A cancelled booking can be booked again straight away with the same barber and services.
+    function addBookAgainLink(row) {
+        if (!row.dataset.bookAgainUrl || row.querySelector('.book-again-link')) return;
+        var wrap = document.createElement('div');
+        wrap.className = 'my-booking-actions';
+        var link = document.createElement('a');
+        link.className = 'neo-pill-raised book-again-link';
+        link.href = row.dataset.bookAgainUrl;
+        link.textContent = 'Book again';
+        var name = row.querySelector('.mname');
+        if (name) link.setAttribute('aria-label', 'Book again: ' + name.textContent.trim());
+        wrap.appendChild(link);
+        var meta = row.querySelector('.mmeta');
+        if (meta) meta.insertAdjacentElement('afterend', wrap); else row.appendChild(wrap);
+    }
+
     // Short confirmation under the booking so the change doesn't happen silently.
     function showRescheduled(row, booking) {
         var note = row.querySelector('.reschedule-success');
@@ -347,6 +363,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (actions) actions.remove();
                 if (panel) panel.remove();
                 cancelError.remove();
+                addBookAgainLink(row);
             })
             .catch(function () {
                 showCancelError(cancelError, "Couldn't reach the booking service \u2014 please try again.");
