@@ -23,14 +23,6 @@
         _ => "cancelled"
     };
 
-    // "Book again" opens the booking page with this visit's barber and services already picked.
-    string BookAgainUrl(Booking booking)
-    {
-        var query = new List<string> { "barberId=" + Uri.EscapeDataString(booking.BarberId) };
-        query.AddRange(booking.Services.Select(s => "serviceIds=" + Uri.EscapeDataString(s.ServiceId)));
-        return Url.Action("Index", "Booking") + "?" + string.Join("&", query);
-    }
-
     string LocalDate(DateTimeOffset utc) =>
         TimeZoneInfo.ConvertTime(utc, ShopTimeZoneProvider.Instance).ToString("ddd d MMM");
     string LocalTime(DateTimeOffset utc) =>
@@ -77,7 +69,7 @@
                          data-version="@booking.Version"
                          data-barber-id="@booking.BarberId"
                          data-service-ids="@string.Join(",", booking.Services.Select(s => s.ServiceId))"
-                         data-book-again-url="@BookAgainUrl(booking)">
+                         data-book-again-url="@BookAgainLink.For(Url, booking)">
                         <div class="mtop">
                             <div class="mname">@string.Join(", ", booking.Services.Select(s => s.Name))</div>
                             <span class="badge-pill @StatusBadgeClass(booking.Status)">@StatusLabel(booking.Status)</span>
@@ -115,7 +107,7 @@
                         else
                         {
                             <div class="my-booking-actions">
-                                <a class="neo-pill-raised book-again-link" href="@BookAgainUrl(booking)"
+                                <a class="neo-pill-raised book-again-link" href="@BookAgainLink.For(Url, booking)"
                                    aria-label="Book again: @string.Join(", ", booking.Services.Select(s => s.Name)) with @barberName">Book again</a>
                             </div>
                         }

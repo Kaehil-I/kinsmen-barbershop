@@ -683,6 +683,12 @@
   .my-booking-actions .danger{ color:var(--accent); }
   .my-booking-actions .book-again-link{ display:inline-block; text-decoration:none; color:var(--teal); }
   .rebook-notice{ margin-bottom:18px; }
+  /* Profile page */
+  .profile-section-title{ font-family:var(--display); font-weight:600; font-size:20px; color:var(--heading); margin-bottom:14px; }
+  .profile-form{ padding:24px; }
+  .profile-hint{ font-size:13px; color:var(--text-dim); margin-top:8px; }
+  .profile-saved{ color:var(--teal); font-family:var(--mono); font-size:13px; margin-bottom:16px; }
+  .profile-error{ margin:0 0 16px; }
   .my-booking-actions .not-yet-eligible{ opacity:0.45; }
   .my-booking-actions .not-yet-eligible:hover{ box-shadow:none; }
   .badge-grey{ background:rgba(114,108,94,0.10); color:var(--text-dim); }

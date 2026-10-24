@@ -14,7 +14,7 @@ namespace Kinsmen.Web.Controllers;
 /// origins (API-CONTRACT.md, "Error handling for Greg"), and this keeps the bearer
 /// token out of browser-visible code entirely - BearerTokenHandler attaches it
 /// server-side via the same IKinsmenApiClient every other controller uses.</summary>
-public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
+public sealed class BookingController(IKinsmenApiClient apiClient, IProfileApiClient profiles) : Controller
 {
     private static readonly TimeZoneInfo ShopTimeZone = ShopTimeZoneProvider.Instance;
 
@@ -45,6 +45,10 @@ public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
             // Only honour ids that match something currently offered - an old or
             // tampered-with link shouldn't point at a service/barber that's gone.
             var keptServiceIds = requestedServiceIds.Where(id => services.Any(s => s.Id == id)).ToList();
+
+            // No barber in the link: start with the customer's preferred barber, if they've set one.
+            var linkNamedBarber = !string.IsNullOrEmpty(barberId);
+            if (!linkNamedBarber) barberId = await PreferredBarberId(cancellationToken);
             var barberStillOffered = barbers.Any(b => b.Id == barberId);
 
             return View(new BookingPageViewModel
@@ -55,7 +59,7 @@ public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
                 PreselectedBarberId = barberStillOffered ? barberId : null,
                 RebookNotice = RebookNoticeFor(
                     droppedServices: requestedServiceIds.Count - keptServiceIds.Count,
-                    barberDropped: !string.IsNullOrEmpty(barberId) && !barberStillOffered)
+                    barberDropped: linkNamedBarber && !barberStillOffered)
             });
         }
         catch (KinsmenApiException ex)
@@ -66,6 +70,16 @@ public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
         {
             return View(new BookingPageViewModel { ErrorMessage = ApiErrorMessages.ForConnectionFailure() });
         }
+    }
+
+    // Best effort: the booking page must still work if the profile can't be read, and anonymous
+    // visitors have no profile at all.
+    private async Task<string?> PreferredBarberId(CancellationToken cancellationToken)
+    {
+        if (User.Identity?.IsAuthenticated != true) return null;
+        try { return (await profiles.GetAsync(cancellationToken)).PreferredBarberId; }
+        catch (KinsmenApiException) { return null; }
+        catch (HttpRequestException) { return null; }
     }
 
     private static string? RebookNoticeFor(int droppedServices, bool barberDropped)
