@@ -41,10 +41,13 @@ document.addEventListener('DOMContentLoaded', function () {
     var today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    var preselectedServiceId = window.kinsmenBooking.preselectedServiceId;
-    var initialServiceId = (preselectedServiceId && servicesById[preselectedServiceId])
-        ? preselectedServiceId
-        : (window.kinsmenBooking.services[0] ? window.kinsmenBooking.services[0].id : null);
+    // Services chosen by the link that opened the page ("Book" on Services/Team, or
+    // "Book again" on My Bookings); otherwise start with the first service.
+    var initialServiceIds = (window.kinsmenBooking.preselectedServiceIds || [])
+        .filter(function (id) { return servicesById[id]; });
+    if (initialServiceIds.length === 0 && window.kinsmenBooking.services[0]) {
+        initialServiceIds = [window.kinsmenBooking.services[0].id];
+    }
 
     var state = {
         viewYear: today.getFullYear(),
@@ -52,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function () {
         selectedDate: null,      // Date, local calendar date only
         selectedTime: null,      // "HH:mm" shop-local, for display
         selectedStartUtc: null,  // ISO string from the availability slot, for submission
-        selectedServiceIds: (initialServiceId ? [initialServiceId] : []),
+        selectedServiceIds: initialServiceIds,
         idempotencyKey: null,
         idempotencyKeySignature: null
     };

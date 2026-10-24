@@ -19,7 +19,10 @@ public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
     private static readonly TimeZoneInfo ShopTimeZone = ShopTimeZoneProvider.Instance;
 
     public async Task<IActionResult> Index(
-        [FromQuery] string? serviceId, [FromQuery] string? barberId, CancellationToken cancellationToken)
+        [FromQuery] string? serviceId,
+        [FromQuery(Name = "serviceIds")] List<string>? serviceIds,
+        [FromQuery] string? barberId,
+        CancellationToken cancellationToken)
     {
         // Staff don't book appointments (a barber's booking attempt is refused outright, and
         // an admin has no customer to book for), so this page is no use to them.
@@ -30,15 +33,29 @@ public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
             var services = await apiClient.GetServicesAsync(cancellationToken);
             var barbers = await apiClient.GetBarbersAsync(cancellationToken);
 
+            // ?serviceId= (single, from Services/Team) and ?serviceIds= (several, from
+            // "Book again") both feed the same list.
+            var requestedServiceIds = (serviceIds ?? [])
+                .Append(serviceId)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Select(id => id!)
+                .Distinct()
+                .ToList();
+
+            // Only honour ids that match something currently offered - an old or
+            // tampered-with link shouldn't point at a service/barber that's gone.
+            var keptServiceIds = requestedServiceIds.Where(id => services.Any(s => s.Id == id)).ToList();
+            var barberStillOffered = barbers.Any(b => b.Id == barberId);
+
             return View(new BookingPageViewModel
             {
                 Services = services,
                 Barbers = barbers,
-                // Only honour these if they actually match something real - an old or
-                // tampered-with link shouldn't silently point at a service/barber that
-                // no longer exists.
-                PreselectedServiceId = services.Any(s => s.Id == serviceId) ? serviceId : null,
-                PreselectedBarberId = barbers.Any(b => b.Id == barberId) ? barberId : null
+                PreselectedServiceIds = keptServiceIds,
+                PreselectedBarberId = barberStillOffered ? barberId : null,
+                RebookNotice = RebookNoticeFor(
+                    droppedServices: requestedServiceIds.Count - keptServiceIds.Count,
+                    barberDropped: !string.IsNullOrEmpty(barberId) && !barberStillOffered)
             });
         }
         catch (KinsmenApiException ex)
@@ -49,6 +66,17 @@ public sealed class BookingController(IKinsmenApiClient apiClient) : Controller
         {
             return View(new BookingPageViewModel { ErrorMessage = ApiErrorMessages.ForConnectionFailure() });
         }
+    }
+
+    private static string? RebookNoticeFor(int droppedServices, bool barberDropped)
+    {
+        if (droppedServices == 0 && !barberDropped) return null;
+        var parts = new List<string>();
+        if (droppedServices > 0)
+            parts.Add(droppedServices == 1 ? "one of those services isn't offered any more" : "some of those services aren't offered any more");
+        if (barberDropped) parts.Add("that barber isn't taking bookings right now");
+        var sentence = string.Join(", and ", parts);
+        return char.ToUpperInvariant(sentence[0]) + sentence[1..] + " \u2014 pick a replacement below.";
     }
 
     /// <summary>JSON endpoint the booking page's JS calls whenever the customer's
