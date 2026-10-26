@@ -33,6 +33,7 @@
             <nav class="nav-links" id="nav-links">
                 @if (isAdmin)
                 {
+                    <a asp-controller="Dashboard" asp-action="Index">Dashboard</a>
                     <a asp-controller="Admin" asp-action="Index">Admin</a>
                     <a asp-controller="Staff" asp-action="Index">Staff accounts</a>
                 }
@@ -77,6 +78,7 @@
         <div class="mobile-menu" id="mobile-menu">
             @if (isAdmin)
             {
+                <a asp-controller="Dashboard" asp-action="Index">Dashboard</a>
                 <a asp-controller="Admin" asp-action="Index">Admin</a>
                 <a asp-controller="Staff" asp-action="Index">Staff accounts</a>
             }

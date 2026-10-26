@@ -143,6 +143,15 @@ builder.Services.AddHttpClient(ApiWarmer.ClientName, (serviceProvider, client) =
     if (!string.IsNullOrWhiteSpace(apiOptions.BaseUrl)) client.BaseAddress = new Uri(apiOptions.BaseUrl);
 });
 
+builder.Services.AddHttpClient<IDashboardApiClient, DashboardApiClient>((serviceProvider, client) =>
+{
+    var apiOptions = serviceProvider.GetRequiredService<IOptions<ApiClientOptions>>().Value;
+    if (!string.IsNullOrWhiteSpace(apiOptions.BaseUrl)) client.BaseAddress = new Uri(apiOptions.BaseUrl);
+})
+    .AddHttpMessageHandler<BearerTokenHandler>()
+    .AddHttpMessageHandler<ProxyHeadersHandler>()
+    .AddHttpMessageHandler<ColdStartRetryHandler>();
+
 var app = builder.Build();
 
 // First, so every response gets them, including errors and static files.
