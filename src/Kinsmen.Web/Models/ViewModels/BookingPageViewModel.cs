@@ -9,6 +9,7 @@ public sealed class BookingPageViewModel
 {
     public List<Service> Services { get; set; } = [];
     public List<Barber> Barbers { get; set; } = [];
+    public List<RetailProduct> Products { get; set; } = [];
     public string? ErrorMessage { get; set; }
 
     /// <summary>Set when arriving via a "Book" link from the Services or Team page
@@ -21,4 +22,8 @@ public sealed class BookingPageViewModel
     /// <summary>Shown above the form when a "Book again" link asked for a service or
     /// barber that is no longer offered, so the customer knows why it isn't selected.</summary>
     public string? RebookNotice { get; set; }
+
+    /// <summary>Set when arriving from the Shop's "Reserve with booking" link, so that product
+    /// starts with a quantity of one. Only ever a product that exists and is in stock.</summary>
+    public string? PreselectedProductId { get; set; }
 }

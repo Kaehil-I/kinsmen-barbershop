@@ -22,6 +22,7 @@ public sealed class BookingController(IKinsmenApiClient apiClient, IProfileApiCl
         [FromQuery] string? serviceId,
         [FromQuery(Name = "serviceIds")] List<string>? serviceIds,
         [FromQuery] string? barberId,
+        [FromQuery] string? productId,
         CancellationToken cancellationToken)
     {
         // Staff don't book appointments (a barber's booking attempt is refused outright, and
@@ -32,6 +33,7 @@ public sealed class BookingController(IKinsmenApiClient apiClient, IProfileApiCl
         {
             var services = await apiClient.GetServicesAsync(cancellationToken);
             var barbers = await apiClient.GetBarbersAsync(cancellationToken);
+            var products = await apiClient.GetProductsAsync(cancellationToken);
 
             // ?serviceId= (single, from Services/Team) and ?serviceIds= (several, from
             // "Book again") both feed the same list.
@@ -55,8 +57,12 @@ public sealed class BookingController(IKinsmenApiClient apiClient, IProfileApiCl
             {
                 Services = services,
                 Barbers = barbers,
+                Products = products,
                 PreselectedServiceIds = keptServiceIds,
                 PreselectedBarberId = barberStillOffered ? barberId : null,
+                // Same rule as services and barbers: a stale or tampered-with link can't preselect
+                // a product that is gone or sold out.
+                PreselectedProductId = products.Any(p => p.Id == productId && p.StockQuantity > 0) ? productId : null,
                 RebookNotice = RebookNoticeFor(
                     droppedServices: requestedServiceIds.Count - keptServiceIds.Count,
                     barberDropped: linkNamedBarber && !barberStillOffered)
@@ -167,6 +173,7 @@ public sealed class BookingController(IKinsmenApiClient apiClient, IProfileApiCl
         {
             BarberId = string.IsNullOrEmpty(request.BarberId) ? null : request.BarberId,
             ServiceIds = request.ServiceIds,
+            Products = request.Products,
             Start = start,
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes
         };

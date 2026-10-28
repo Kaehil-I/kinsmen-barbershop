@@ -8,6 +8,7 @@ public sealed class CreateBookingRequest
     public string? BarberId { get; set; }
 
     public List<string> ServiceIds { get; set; } = [];
+    public List<ProductSelection> Products { get; set; } = [];
 
     public DateTimeOffset Start { get; set; }
 
@@ -17,6 +18,11 @@ public sealed class CreateBookingRequest
 
     /// <summary>Up to 500 chars for the barber. Never render this back as HTML.</summary>
     public string? Notes { get; set; }
+}
+public sealed class ProductSelection
+{
+    public string ProductId { get; set; } = string.Empty;
+    public int Quantity { get; set; }
 }
 
 /// <summary>Body for PATCH /api/bookings/{id}/reschedule. Only the time changes —

@@ -192,6 +192,8 @@ app.MapGet("/health/live", () => Results.Ok(new { status = "alive" })).DisableRa
 app.MapGet("/health/ready", async (MongoBookingStore store, CancellationToken ct) => { await store.Ping(ct); return Results.Ok(new { status = "ready" }); })
     .DisableRateLimiting();
 app.MapGet("/api/services", (BookingService service, CancellationToken ct) => service.Services(ct));
+// Stock is reserved only when it is attached to a successful booking; payment and collection happen in store.
+app.MapGet("/api/products", (CatalogueService catalogue, CancellationToken ct) => catalogue.PublicProducts(ct));
 app.MapGet("/api/barbers", async (BookingService service, CancellationToken ct) =>
     (await service.Barbers(ct)).Select(b => new { b.Id, b.Name, b.Hours }));
 app.MapGet("/api/availability", (DateOnly date, string[] serviceIds, string? barberId, BookingService service, CancellationToken ct)
@@ -244,6 +246,16 @@ admin.MapPut("/services/{id}", (string id, ServiceRequest input, HttpContext ctx
     => catalogue.UpdateService(CurrentActor(ctx), id, input, ct));
 admin.MapPatch("/services/{id}/active", (string id, ActiveRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
     => catalogue.SetServiceActive(CurrentActor(ctx), id, input.Active, ct));
+admin.MapGet("/products", (HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => catalogue.AllProducts(CurrentActor(ctx), ct));
+admin.MapPost("/products", async (ProductRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => Results.Json(await catalogue.CreateProduct(CurrentActor(ctx), input, ct), statusCode: 201));
+admin.MapPut("/products/{id}", (string id, ProductRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => catalogue.UpdateProduct(CurrentActor(ctx), id, input, ct));
+admin.MapPatch("/products/{id}/stock", (string id, StockAdjustmentRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => catalogue.AdjustProductStock(CurrentActor(ctx), id, input.QuantityDelta, ct));
+admin.MapPatch("/products/{id}/active", (string id, ActiveRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
+    => catalogue.SetProductActive(CurrentActor(ctx), id, input.Active, ct));
 admin.MapGet("/barbers", (HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
     => catalogue.AllBarbers(CurrentActor(ctx), ct));
 admin.MapPost("/barbers", async (BarberRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)

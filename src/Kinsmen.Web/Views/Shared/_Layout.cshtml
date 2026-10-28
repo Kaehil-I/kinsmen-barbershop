@@ -16,6 +16,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light" />
     <title>@ViewData["Title"] - Kinsmen Barbers</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="~/img/favicon-32.png" asp-append-version="true" />
+    <link rel="apple-touch-icon" href="~/img/apple-touch-icon.png" asp-append-version="true" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/kinsmen.css" asp-append-version="true" />
@@ -43,6 +45,7 @@
                     <a asp-controller="Booking" asp-action="Index">Book a Chair</a>
                 }
                 <a asp-controller="Services" asp-action="Index">Services</a>
+                <a asp-controller="Shop" asp-action="Index">Shop</a>
                 @if (!isBarber)
                 {
                     <a asp-controller="Team" asp-action="Index">Team</a>
@@ -90,6 +93,7 @@
                 <a asp-controller="Booking" asp-action="Index">Book a Chair</a>
             }
             <a asp-controller="Services" asp-action="Index">Services</a>
+            <a asp-controller="Shop" asp-action="Index">Shop</a>
             @if (!isBarber)
             {
                 <a asp-controller="Team" asp-action="Index">Team</a>
@@ -130,6 +134,7 @@
 
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/a11y.js" asp-append-version="true"></script>
+    <script src="~/js/api-wake.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

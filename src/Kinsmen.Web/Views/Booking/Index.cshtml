@@ -19,7 +19,7 @@
 {
     <section>
         <div class="wrap" style="padding-bottom: 80px;">
-            <p class="price-note">@Model.ErrorMessage</p>
+            <p class="price-note" data-api-waking="@(ApiErrorMessages.IsWakingUp(Model.ErrorMessage) ? "" : null)">@Model.ErrorMessage</p>
         </div>
     </section>
 }
@@ -96,6 +96,25 @@ else
                 </div>
 
                 <div class="panel neo-raised">
+                    <label class="accent-ochre">Add grooming products <span style="text-transform:none; letter-spacing:0;">&mdash; optional, collect and pay when you visit</span></label>
+                    <p class="price-note" style="margin:6px 0 14px;">Stock is reserved when your booking is confirmed. Low-stock products can sell out while another customer is booking.</p>
+                    <div id="booking-products" class="shop-grid" style="margin:0;">
+                        @foreach (var product in Model.Products)
+                        {
+                            var unavailable = product.StockQuantity == 0;
+                            <div class="admin-row booking-product" data-product-id="@product.Id" data-stock="@product.StockQuantity" data-price-cents="@product.PriceCents" style="padding:12px; opacity:@(unavailable ? "0.55" : "1");">
+                                <div><div class="aname">@product.Name</div><div class="adesc">@PriceFormatter.FormatZarCents(product.PriceCents) &middot; @(unavailable ? "Out of stock" : product.StockQuantity <= product.LowStockThreshold ? $"Low stock: {product.StockQuantity} left" : "Available")</div></div>
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <button class="neo-pill-raised product-minus" type="button" aria-label="Remove one @product.Name" @(unavailable ? "disabled" : "")>&minus;</button>
+                                    <span class="product-quantity" aria-live="polite">0</span>
+                                    <button class="neo-pill-raised product-plus" type="button" aria-label="Add one @product.Name" @(unavailable ? "disabled" : "")>+</button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="panel neo-raised">
                     <label class="accent-teal">Note for your barber <span style="text-transform:none; letter-spacing:0;">&mdash; optional</span></label>
                     <div class="input-shell neo-pressed review-box">
                         <textarea id="booking-notes" maxlength="500" placeholder="e.g. a style reference, or anything they should know"></textarea>
@@ -129,7 +148,9 @@ else
         {
             Services = Model.Services,
             Barbers = Model.Barbers,
-            PreselectedServiceIds = Model.PreselectedServiceIds
+            Products = Model.Products,
+            PreselectedServiceIds = Model.PreselectedServiceIds,
+            PreselectedProductId = Model.PreselectedProductId
         }, jsonOptions))</script>
     <script src="~/js/auth-fetch.js" asp-append-version="true"></script>
     <script src="~/js/booking.js" asp-append-version="true"></script>

@@ -58,6 +58,17 @@ public sealed class ApiTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.DoesNotContain("staff-a", await response.Content.ReadAsStringAsync());
     }
+    [Fact] public async Task PublicProductCatalogueListsProductsWithPricesAndStock()
+    {
+        var response = await factory.Client().GetAsync("/api/products");
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Sea Salts", json);
+        Assert.Contains("Beard Oil", json);
+        Assert.Contains("\"priceCents\":40000", json);
+        Assert.Contains("stockQuantity", json);
+        Assert.DoesNotContain("staff", json, StringComparison.OrdinalIgnoreCase);
+    }
     [Fact] public async Task AnonymousBookingIsDenied()
         => Assert.Equal(HttpStatusCode.Unauthorized, (await factory.Client().PostAsJsonAsync("/api/bookings", Request)).StatusCode);
     [Fact] public async Task ExpiredTokenIsDenied()

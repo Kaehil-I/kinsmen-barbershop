@@ -41,7 +41,7 @@
     <div class="wrap" style="padding-bottom: 80px;">
         @if (Model.ErrorMessage is not null)
         {
-            <p class="price-note">@Model.ErrorMessage</p>
+            <p class="price-note" data-api-waking="@(ApiErrorMessages.IsWakingUp(Model.ErrorMessage) ? "" : null)">@Model.ErrorMessage</p>
         }
         else if (Model.Bookings.Count == 0)
         {
@@ -77,6 +77,10 @@
                         <div class="mmeta">
                             with @barberName &middot; <span class="booking-date">@LocalDate(booking.StartUtc)</span> at <span class="booking-time">@LocalTime(booking.StartUtc)</span> &middot; @PriceFormatter.FormatZarCents(booking.TotalCents)
                         </div>
+                        @if (booking.Products.Count > 0)
+                        {
+                            <div class="mmeta" style="margin-top:3px;">Products reserved: @string.Join(", ", booking.Products.Select(product => $"{product.Quantity} × {product.Name}"))</div>
+                        }
 
                         @if (canManage)
                         {

@@ -20,6 +20,9 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
     public Task<List<Barber>> Barbers(CancellationToken ct) => store.Read(async s =>
         (await s.Barbers()).Where(x => x.Active).ToList(), ct);
 
+    public Task<List<ProductItem>> Products(CancellationToken ct) => store.Read(async s =>
+        (await s.Products()).Where(x => x.Active).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToList(), ct);
+
     private static ServiceSnapshot[] SelectServices(List<ServiceItem> catalog, string[]? ids)
     {
         ValidateServiceIds(ids);
@@ -35,6 +38,22 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
     {
         if (ids is null || ids.Length is < 1 or > 10 || ids.Any(string.IsNullOrWhiteSpace) || ids.Distinct().Count() != ids.Length)
             throw DomainError.Invalid("Select 1 to 10 distinct service IDs.");
+    }
+
+    private static ProductSnapshot[] SelectProducts(List<ProductItem> catalogue, ProductSelection[]? selections)
+    {
+        if (selections is null || selections.Length == 0) return [];
+        if (selections.Length > 10 || selections.Any(x => string.IsNullOrWhiteSpace(x.ProductId) || x.Quantity is < 1 or > 10)
+            || selections.Select(x => x.ProductId).Distinct(StringComparer.Ordinal).Count() != selections.Length)
+            throw DomainError.Invalid("Select up to 10 distinct products with quantities from 1 to 10.");
+        return selections.Select(selection =>
+        {
+            var product = catalogue.SingleOrDefault(x => x.Id == selection.ProductId && x.Active)
+                ?? throw DomainError.Invalid("A selected product is unavailable.");
+            if (product.StockQuantity < selection.Quantity)
+                throw new DomainError(409, "insufficient_stock", $"{product.Name} does not have enough stock. Refresh the page and try again.");
+            return new ProductSnapshot(product.Id, product.Name, product.PriceCents, selection.Quantity);
+        }).ToArray();
     }
 
     private static string Hash(object value) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(value))));
@@ -98,6 +117,7 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
             CustomerId = customer,
             input.BarberId,
             Services = input.ServiceIds.Order(StringComparer.Ordinal).ToArray(),
+            Products = (input.Products ?? []).OrderBy(x => x.ProductId, StringComparer.Ordinal).Select(x => new { x.ProductId, x.Quantity }).ToArray(),
             StartUtcTicks = start.Ticks,
             Notes = notes
         });
@@ -117,6 +137,7 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
                     return Replay(previous, fingerprint);
                 ValidateStart(start);
                 var services = SelectServices(await s.Services(), input.ServiceIds);
+                var products = SelectProducts(await s.Products(), input.Products);
                 await s.TouchCustomer(customer);
                 var active = (await s.Bookings(customer, null, Now, Now.AddDays(policy.HorizonDays + 1)))
                     .Count(b => b.Status is BookingStatus.Pending or BookingStatus.Confirmed);
@@ -134,9 +155,14 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
                 foreach (var barber in candidates)
                 {
                     if (!await Free(s, barber, start, end)) continue;
+                    foreach (var product in products)
+                    {
+                        var item = (await s.Products()).Single(x => x.Id == product.ProductId);
+                        await s.SaveProduct(item with { StockQuantity = item.StockQuantity - product.Quantity });
+                    }
                     var booking = new Booking(bookingId, customer, barber.Id, start, end,
-                        services, services.Sum(x => x.PriceCents), BookingStatus.Pending, Now,
-                        Notes: notes, CreationFingerprint: fingerprint, CustomerEmail: customerEmail);
+                        services, services.Sum(x => x.PriceCents) + products.Sum(x => x.PriceCents * x.Quantity), BookingStatus.Pending, Now,
+                        Notes: notes, CreationFingerprint: fingerprint, CustomerEmail: customerEmail, Products: products);
                     await s.SaveBooking(booking, true);
                     created = true;
                     return booking;
@@ -210,6 +236,11 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
             CanManage(actor, original);
             CanChange(original, version);
             await s.TouchBarbers([original.BarberId]);
+            foreach (var product in original.Products ?? [])
+            {
+                var item = (await s.Products()).SingleOrDefault(x => x.Id == product.ProductId);
+                if (item is not null) await s.SaveProduct(item with { StockQuantity = item.StockQuantity + product.Quantity });
+            }
             var updated = original with { Status = BookingStatus.Cancelled, Version = original.Version + 1 };
             await s.SaveBooking(updated);
             return updated;
