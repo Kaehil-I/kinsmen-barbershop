@@ -1,0 +1,127 @@
+@model ProfilePageViewModel
+@{
+    ViewData["Title"] = "My Profile";
+
+    string StatusLabel(BookingStatus status) => status switch
+    {
+        BookingStatus.NoShow => "No-Show",
+        _ => status.ToString()
+    };
+
+    string StatusBadgeClass(BookingStatus status) => status switch
+    {
+        BookingStatus.Pending => "badge-ochre",
+        BookingStatus.Confirmed => "badge-teal",
+        BookingStatus.NoShow => "badge-brick",
+        _ => "badge-grey"
+    };
+
+    string LocalDate(DateTimeOffset utc) =>
+        TimeZoneInfo.ConvertTime(utc, ShopTimeZoneProvider.Instance).ToString("ddd d MMM yyyy");
+    string LocalTime(DateTimeOffset utc) =>
+        TimeZoneInfo.ConvertTime(utc, ShopTimeZoneProvider.Instance).ToString("HH:mm");
+}
+
+<section class="page-intro">
+    <div class="wrap">
+        <div class="tag">Your Account</div>
+        <h1>My Profile</h1>
+        <p>Your details make booking quicker: your preferred barber is picked for you when you book.</p>
+    </div>
+</section>
+
+<section>
+    <div class="wrap" style="padding-bottom: 80px;">
+        @if (Model.ErrorMessage is not null)
+        {
+            <p class="price-note">@Model.ErrorMessage</p>
+        }
+        else
+        {
+            <h2 class="profile-section-title">Your details</h2>
+            <form asp-action="Save" method="post" class="panel neo-raised profile-form" novalidate>
+                @if (Model.Saved)
+                {
+                    <p class="profile-saved" role="status">Your details are saved.</p>
+                }
+                @if (Model.SaveError is not null)
+                {
+                    <p class="form-error profile-error" role="alert" style="display:block;">@Model.SaveError</p>
+                }
+
+                <div class="field-row">
+                    <div class="form-field">
+                        <label for="display-name">Name</label>
+                        <div class="input-shell neo-pressed">
+                            <input type="text" id="display-name" name="DisplayName" value="@Model.Form.DisplayName"
+                                   maxlength="60" autocomplete="name" placeholder="What should we call you?" />
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label for="phone">Phone number</label>
+                        <div class="input-shell neo-pressed">
+                            <input type="tel" id="phone" name="Phone" value="@Model.Form.Phone"
+                                   maxlength="20" autocomplete="tel" inputmode="tel" placeholder="082 123 4567"
+                                   aria-describedby="phone-hint" />
+                        </div>
+                        <p class="profile-hint" id="phone-hint">South African number, e.g. 082 123 4567.</p>
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label for="preferred-barber">Preferred barber</label>
+                    <div class="select-shell neo-pressed">
+                        <select id="preferred-barber" name="PreferredBarberId" class="barber-select">
+                            <option value="">No preference</option>
+                            @foreach (var barber in Model.Barbers)
+                            {
+                                <option value="@barber.Id" selected="@(barber.Id == Model.Form.PreferredBarberId)">@barber.Name</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.Email))
+                {
+                    <p class="profile-hint">Signed in as <strong>@Model.Email</strong>. Your email and password are managed through your sign-in account.</p>
+                }
+
+                <button type="submit" class="btn-confirm neo-pill-raised" style="margin-top:14px;">Save details</button>
+            </form>
+        }
+
+        <h2 class="profile-section-title" style="margin-top:48px;">Recent visits</h2>
+        @if (Model.HistoryError is not null)
+        {
+            <p class="price-note">Your recent visits couldn't load: @Model.HistoryError</p>
+        }
+        else if (Model.History.Count == 0)
+        {
+            <p class="price-note">No visits in the last three months. <a asp-controller="Booking" asp-action="Index" class="link-btn" style="color:var(--teal);">Book a chair</a></p>
+        }
+        else
+        {
+            <p class="profile-hint" style="margin-bottom:14px;">The last three months. Upcoming bookings are in <a asp-controller="MyBookings" asp-action="Index" class="link-btn" style="color:var(--teal);">My Bookings</a>.</p>
+            <div id="profile-history">
+                @foreach (var booking in Model.History)
+                {
+                    var barberName = Model.BarberNamesById.TryGetValue(booking.BarberId, out var name) ? name : "your barber";
+                    var serviceNames = string.Join(", ", booking.Services.Select(s => s.Name));
+                    <div class="panel neo-raised my-booking-row">
+                        <div class="mtop">
+                            <div class="mname">@serviceNames</div>
+                            <span class="badge-pill @StatusBadgeClass(booking.Status)">@StatusLabel(booking.Status)</span>
+                        </div>
+                        <div class="mmeta">
+                            with @barberName &middot; @LocalDate(booking.StartUtc) at @LocalTime(booking.StartUtc) &middot; @PriceFormatter.FormatZarCents(booking.TotalCents)
+                        </div>
+                        <div class="my-booking-actions">
+                            <a class="neo-pill-raised book-again-link" href="@BookAgainLink.For(Url, booking)"
+                               aria-label="Book again: @serviceNames with @barberName">Book again</a>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
