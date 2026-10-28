@@ -7,7 +7,7 @@ namespace Kinsmen.Api.Infrastructure;
 
 public sealed class MongoBookingStore : IBookingStore
 {
-    private static readonly string[] CollectionNames = ["services", "barbers", "bookings", "timeBlocks", "reviews"];
+    private static readonly string[] CollectionNames = ["services", "products", "barbers", "bookings", "timeBlocks", "reviews"];
     private readonly IMongoClient client;
     private readonly IMongoDatabase db;
     private volatile bool customerLocksReady;
@@ -114,6 +114,15 @@ public sealed class MongoBookingStore : IBookingStore
                 .SetOnInsert(x => x.Active, true).SetOnInsert(x => x.Revision, 0);
             await db.GetCollection<Barber>("barbers").UpdateOneAsync(x => x.Id == barber.Id, update, new UpdateOptions { IsUpsert = true }, ct);
         }
+        foreach (var product in DemoData.Products)
+        {
+            var update = Builders<ProductItem>.Update.SetOnInsert(x => x.Name, product.Name)
+                .SetOnInsert(x => x.PriceCents, product.PriceCents).SetOnInsert(x => x.StockQuantity, product.StockQuantity)
+                .SetOnInsert(x => x.Active, true).SetOnInsert(x => x.Description, product.Description)
+                .SetOnInsert(x => x.Category, product.Category).SetOnInsert(x => x.LowStockThreshold, product.LowStockThreshold)
+                .SetOnInsert(x => x.DisplayOrder, product.DisplayOrder);
+            await db.GetCollection<ProductItem>("products").UpdateOneAsync(x => x.Id == product.Id, update, new UpdateOptions { IsUpsert = true }, ct);
+        }
     }
     public async Task Ping(CancellationToken ct)
     {
@@ -138,6 +147,7 @@ internal sealed class MongoSession(IMongoDatabase db, IClientSessionHandle? sess
     }
     private IClientSessionHandle WriteSession => session ?? throw new InvalidOperationException("Writes require a transaction.");
     public Task<List<ServiceItem>> Services() => Find("services", Builders<ServiceItem>.Filter.Empty);
+    public Task<List<ProductItem>> Products() => Find("products", Builders<ProductItem>.Filter.Empty);
     public Task<List<Barber>> Barbers() => Find("barbers", Builders<Barber>.Filter.Empty);
     public async Task TouchBarbers(IEnumerable<string> ids)
     {
@@ -192,6 +202,13 @@ internal sealed class MongoSession(IMongoDatabase db, IClientSessionHandle? sess
         var result = await collection.ReplaceOneAsync(WriteSession, x => x.Id == service.Id, service, cancellationToken: ct);
         if (result.MatchedCount != 1) throw DomainError.Missing();
     }
+    public async Task SaveProduct(ProductItem product, bool insert = false)
+    {
+        var collection = db.GetCollection<ProductItem>("products");
+        if (insert) { await collection.InsertOneAsync(WriteSession, product, cancellationToken: ct); return; }
+        var result = await collection.ReplaceOneAsync(WriteSession, x => x.Id == product.Id, product, cancellationToken: ct);
+        if (result.MatchedCount != 1) throw DomainError.Missing();
+    }
     public async Task SaveBarber(Barber barber, bool insert = false)
     {
         var collection = db.GetCollection<Barber>("barbers");
@@ -226,5 +243,13 @@ public static class DemoData
     public static readonly Barber[] Barbers = [
         new("barber-a", "Demo barber A", "staff-a", Enumerable.Range(1, 6).Select(d => new WorkingPeriod(d, 540, 1020)).ToArray(), ServiceIds: ["haircut", "beard"]),
         new("barber-b", "Demo barber B", "staff-b", Enumerable.Range(1, 6).Select(d => new WorkingPeriod(d, 540, 1020)).ToArray(), ServiceIds: ["haircut", "beard"])
+    ];
+    public static readonly ProductItem[] Products = [
+        new("sea-salts", "Sea Salts", 40000, 18, Description: "Adds natural texture and volume with a clean matte finish.", Category: "Styling", DisplayOrder: 1),
+        new("texture-powder", "Texture Powder", 40000, 24, Description: "Lightweight lift and strong texture for everyday styling.", Category: "Styling", DisplayOrder: 2),
+        new("ruck-clay-wax", "Lock Stock & Barrel Ruck Clay/Wax", 45000, 11, Description: "A firm, workable clay for defined styles and reliable hold.", Category: "Styling", DisplayOrder: 3),
+        new("pucka-clay-wax", "Lock Stock & Barrel Pucka Clay/Wax", 45000, 16, Description: "Flexible clay wax for a polished finish that stays touchable.", Category: "Styling", DisplayOrder: 4),
+        new("matify", "Matify", 45000, 9, Description: "A matte styling product for texture without shine.", Category: "Styling", DisplayOrder: 5),
+        new("beard-oil", "Beard Oil", 25000, 21, Description: "Conditions beard hair and helps soften dry skin underneath.", Category: "Beard Care", DisplayOrder: 6)
     ];
 }
