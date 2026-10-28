@@ -39,6 +39,7 @@ Version 0.1, 20 September 2026. The executable source is `src/Kinsmen.Api`; [ope
 | `PUT /api/admin/products/{id}` | Admin | `name`, `priceCents`, `stockQuantity` | `200` updated product |
 | `PATCH /api/admin/products/{id}/stock` | Admin | `quantityDelta` | `200` adjusted stock; cannot go below zero |
 | `PATCH /api/admin/products/{id}/active` | Admin | `active` | `200` shown/hidden product |
+| `GET /api/admin/dashboard` | Admin | `from`, `to` (shop-local dates, both included, at most 366 days) | `200` `{ from, to, totals, topServices, lowStock }`: counts of bookings starting in the period by outcome, revenue from completed ones, the five most booked services, and products at or below their low-stock threshold (current stock, ignores the dates) |
 | `GET /api/admin/barbers` | Admin | None | `200` all barber profiles, including linked `userId` and `active` |
 | `POST /api/admin/barbers` | Admin | `name`, `userId`, `hours` | `201` new active barber profile |
 | `PUT /api/admin/barbers/{id}` | Admin | `name`, `userId`, `hours` | `200` updated barber profile |

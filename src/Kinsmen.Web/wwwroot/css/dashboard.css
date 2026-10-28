@@ -1,0 +1,39 @@
+/* Admin dashboard. Uses the colour tokens from kinsmen.css; kept separate so it doesn't collide with other pages' styles. */
+.dash-filter{ display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:18px 28px; margin-bottom:28px; }
+.dash-custom{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; }
+.dash-custom .form-field{ margin-bottom:0; }
+.dash-custom button{ min-height:44px; }
+a.service-chip{ text-decoration:none; display:inline-block; }
+
+.dash-heading{ font-family:var(--display); font-weight:600; font-size:20px; color:var(--heading); margin:34px 0 14px; }
+.dash-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:18px; }
+.dash-stat{ padding:20px 22px; }
+.dash-label{ font-family:var(--mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); }
+.dash-value{ font-family:var(--display); font-weight:700; font-size:40px; line-height:1.15; color:var(--heading); margin:4px 0; }
+.dash-sub{ font-size:14px; color:var(--text-dim); margin:6px 0 0; }
+.dash-muted{ color:var(--text-dim); font-weight:400; }
+
+.dash-alert{ padding:22px 24px; border-left:6px solid var(--accent); }
+.dash-alert h2{ font-family:var(--display); font-size:20px; color:var(--accent); margin:0 0 4px; }
+.dash-count{ display:inline-block; min-width:26px; padding:0 8px; margin-left:6px; border-radius:13px; background:var(--accent); color:var(--accent-ink); font-size:14px; text-align:center; }
+.dash-list{ list-style:none; margin:14px 0 6px; padding:0; }
+.dash-list li{ display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 16px; padding:9px 0; border-bottom:1px solid var(--sh-dark-soft); }
+.dash-list li:last-child{ border-bottom:0; }
+.dash-name{ font-weight:600; color:var(--text); }
+.dash-stock{ color:var(--ochre); font-weight:600; }
+.dash-stock.out{ color:var(--accent); }
+.dash-ok{ color:var(--teal); font-family:var(--mono); font-size:13px; margin:0; }
+
+.dash-top{ padding:22px 24px; }
+.dash-bars{ list-style:none; margin:0 0 14px; padding:0; }
+.dash-bars li{ margin-bottom:16px; }
+.dash-bar-row{ display:flex; justify-content:space-between; gap:12px; margin-bottom:6px; }
+.dash-bar-count{ font-family:var(--mono); font-size:13px; color:var(--text-dim); white-space:nowrap; }
+.dash-bar{ height:12px; border-radius:6px; background:var(--page); box-shadow:inset 2px 2px 4px var(--sh-dark-soft), inset -2px -2px 4px var(--sh-light-soft); overflow:hidden; }
+.dash-bar span{ display:block; height:100%; border-radius:6px; background:var(--teal); }
+
+@media (max-width: 560px){
+  .dash-value{ font-size:34px; }
+  .dash-custom{ width:100%; }
+  .dash-custom .form-field{ flex:1 1 140px; }
+}

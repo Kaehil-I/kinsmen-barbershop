@@ -45,6 +45,7 @@ builder.Services.AddSingleton(_ => new MongoBookingStore(
     builder.Configuration["Mongo:Database"] ?? "kinsmen_dev"));
 builder.Services.AddSingleton<IBookingStore>(s => s.GetRequiredService<MongoBookingStore>());
 builder.Services.AddSingleton<CatalogueService>();
+builder.Services.AddSingleton<ReportService>();
 builder.Services.AddStaffManagement(builder.Configuration);
 
 
@@ -245,6 +246,9 @@ admin.MapPut("/services/{id}", (string id, ServiceRequest input, HttpContext ctx
     => catalogue.UpdateService(CurrentActor(ctx), id, input, ct));
 admin.MapPatch("/services/{id}/active", (string id, ActiveRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
     => catalogue.SetServiceActive(CurrentActor(ctx), id, input.Active, ct));
+// Business summary for the admin dashboard. from/to are shop-local dates, both included.
+admin.MapGet("/dashboard", (DateOnly from, DateOnly to, HttpContext ctx, ReportService reports, CancellationToken ct)
+    => reports.Dashboard(CurrentActor(ctx), from, to, ct));
 admin.MapGet("/products", (HttpContext ctx, CatalogueService catalogue, CancellationToken ct)
     => catalogue.AllProducts(CurrentActor(ctx), ct));
 admin.MapPost("/products", async (ProductRequest input, HttpContext ctx, CatalogueService catalogue, CancellationToken ct)

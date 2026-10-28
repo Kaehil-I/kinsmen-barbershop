@@ -1,0 +1,146 @@
+@model DashboardPageViewModel
+@{
+    ViewData["Title"] = "Admin - Dashboard";
+    var period = Model.Period;
+    var report = Model.Report;
+    var fromText = period.From.ToString("yyyy-MM-dd");
+    var toText = period.To.ToString("yyyy-MM-dd");
+    var rangeText = period.From == period.To
+        ? period.From.ToString("d MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture)
+        : period.From.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture) + " to " + period.To.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+}
+
+<link rel="stylesheet" href="~/css/dashboard.css" asp-append-version="true" />
+
+<section class="page-intro">
+    <div class="wrap">
+        <div class="tag">Staff &middot; Admin</div>
+        <h1>Dashboard</h1>
+        <p>
+            How the shop is doing at a glance: bookings by outcome, what completed appointments earned, the
+            most booked services and which products are running low. Pick a period to change the numbers.
+        </p>
+        <p><a asp-controller="Admin" asp-action="Index" class="row-link">Manage services, barbers and products &rarr;</a></p>
+    </div>
+</section>
+
+<section>
+    <div class="wrap dash" style="padding-bottom: 80px;">
+        <nav class="dash-filter" aria-label="Choose a period">
+            <div class="service-chip-row">
+                @foreach (var (preset, label) in DashboardPeriod.Presets)
+                {
+                    var current = period.Preset == preset;
+                    <a asp-action="Index" asp-route-preset="@preset" class="service-chip neo-pill-raised @(current ? "active" : "")" aria-current="@(current ? "true" : null)">@label</a>
+                }
+            </div>
+            <form method="get" asp-action="Index" class="dash-custom">
+                <input type="hidden" name="preset" value="@DashboardPeriod.Custom" />
+                <div class="form-field">
+                    <label for="dash-from">From</label>
+                    <div class="input-shell neo-pressed"><input id="dash-from" name="from" type="date" value="@fromText" required /></div>
+                </div>
+                <div class="form-field">
+                    <label for="dash-to">To</label>
+                    <div class="input-shell neo-pressed"><input id="dash-to" name="to" type="date" value="@toText" required /></div>
+                </div>
+                <button type="submit" class="btn-confirm neo-pill-raised">Show</button>
+            </form>
+        </nav>
+
+        @if (period.Problem is not null)
+        {
+            <p class="form-error" role="alert" style="display:block;">@period.Problem Showing this month instead.</p>
+        }
+
+        @if (Model.ErrorMessage is not null)
+        {
+            <p class="price-note" data-api-waking="@(ApiErrorMessages.IsWakingUp(Model.ErrorMessage) ? "" : null)">@Model.ErrorMessage</p>
+        }
+        else if (report is not null)
+        {
+            var totals = report.Totals;
+            var cancelledShare = totals.Total == 0 ? 0 : (int)Math.Round(100.0 * totals.Cancelled / totals.Total);
+
+            @* ------------------------------ Low stock ------------------------------ *@
+            @if (report.LowStock.Count > 0)
+            {
+                <div class="panel neo-raised dash-alert" role="status">
+                    <h2>Low stock <span class="dash-count">@report.LowStock.Count</span></h2>
+                    <p class="dash-sub">These products are at or below their warning level. Current stock, not affected by the period.</p>
+                    <ul class="dash-list">
+                        @foreach (var item in report.LowStock)
+                        {
+                            <li>
+                                <span class="dash-name">@item.Name@if (!string.IsNullOrWhiteSpace(item.Category)) { <span class="dash-muted"> &middot; @item.Category</span> }</span>
+                                <span class="dash-stock @(item.StockQuantity == 0 ? "out" : "")">@(item.StockQuantity == 0 ? "Out of stock" : item.StockQuantity + " left") <span class="dash-muted">(warning at @item.LowStockThreshold)</span></span>
+                            </li>
+                        }
+                    </ul>
+                    <p class="dash-sub"><a asp-controller="Admin" asp-action="Index" class="row-link teal">Restock in the catalogue &rarr;</a></p>
+                </div>
+            }
+            else
+            {
+                <p class="dash-ok">All products are above their low-stock levels.</p>
+            }
+
+            @* ------------------------------ Totals ------------------------------ *@
+            <h2 class="dash-heading">Bookings &middot; @rangeText</h2>
+            <div class="dash-grid">
+                <div class="panel neo-raised dash-stat">
+                    <div class="dash-label">Upcoming</div>
+                    <div class="dash-value">@totals.Upcoming</div>
+                    <div class="dash-sub">Pending or confirmed, not started yet</div>
+                </div>
+                <div class="panel neo-raised dash-stat">
+                    <div class="dash-label">Completed</div>
+                    <div class="dash-value">@totals.Completed</div>
+                    <div class="dash-sub">@PriceFormatter.FormatZarCents((int)Math.Min(totals.RevenueCents, int.MaxValue)) earned</div>
+                </div>
+                <div class="panel neo-raised dash-stat">
+                    <div class="dash-label">Cancelled</div>
+                    <div class="dash-value">@totals.Cancelled</div>
+                    <div class="dash-sub">@(totals.Total == 0 ? "No bookings in this period" : cancelledShare + "% of all bookings")</div>
+                </div>
+                <div class="panel neo-raised dash-stat">
+                    <div class="dash-label">No-shows</div>
+                    <div class="dash-value">@totals.NoShow</div>
+                    <div class="dash-sub">Confirmed but didn't arrive</div>
+                </div>
+                <div class="panel neo-raised dash-stat">
+                    <div class="dash-label">All bookings</div>
+                    <div class="dash-value">@totals.Total</div>
+                    <div class="dash-sub">Starting in this period</div>
+                </div>
+            </div>
+
+            @* ------------------------------ Most booked ------------------------------ *@
+            <h2 class="dash-heading">Most booked services</h2>
+            <div class="panel neo-raised dash-top">
+                @if (report.TopServices.Count == 0)
+                {
+                    <p class="dash-sub" style="margin:0;">No bookings in this period yet.</p>
+                }
+                else
+                {
+                    var most = report.TopServices.Max(x => x.Bookings);
+                    <ol class="dash-bars">
+                        @foreach (var service in report.TopServices)
+                        {
+                            var width = most == 0 ? 0 : Math.Max(4, (int)Math.Round(100.0 * service.Bookings / most));
+                            <li>
+                                <div class="dash-bar-row">
+                                    <span class="dash-name">@service.Name</span>
+                                    <span class="dash-bar-count">@service.Bookings @(service.Bookings == 1 ? "booking" : "bookings")</span>
+                                </div>
+                                <div class="dash-bar" aria-hidden="true"><span style="width:@(width)%"></span></div>
+                            </li>
+                        }
+                    </ol>
+                    <p class="dash-sub" style="margin-bottom:0;">Cancelled bookings aren't counted.</p>
+                }
+            </div>
+        }
+    </div>
+</section>
