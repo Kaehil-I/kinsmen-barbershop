@@ -169,7 +169,11 @@ document.addEventListener('DOMContentLoaded', function () {
     var productSave = document.getElementById('product-save-btn');
     var productError = document.getElementById('product-error');
     var productsMessage = document.getElementById('products-message');
+    // Stock the form opened with. Editing something else must not write this stale number back over stock that
+    // bookings have changed since, so it is only sent when the admin actually types a different count.
+    var loadedStock = null;
     function openProductForm(item) {
+        loadedStock = item ? item.stock : null;
         productId.value = item ? item.id : ''; productName.value = item ? item.name : '';
         productPrice.value = item ? (item.priceCents / 100).toFixed(2) : '';
         productStock.value = item ? item.stock : ''; productDescription.value = item ? (item.description || '') : '';
@@ -197,10 +201,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!name) { show(productError, 'Enter a name.'); return; }
         if (isNaN(price) || price < 0 || price > 10000) { show(productError, 'Enter a price between R0 and R10 000.'); return; }
         if (isNaN(stock) || stock < 0 || stock > 100000) { show(productError, 'Enter stock between 0 and 100 000.'); return; }
+        var stockToSend = (productId.value && stock === loadedStock) ? null : stock;
         if (isNaN(lowStock) || lowStock < 1 || lowStock > 1000) { show(productError, 'Enter a low-stock warning between 1 and 1 000.'); return; }
         if (isNaN(displayOrder) || displayOrder < -10000 || displayOrder > 10000) { show(productError, 'Enter a display order between -10 000 and 10 000.'); return; }
         productSave.disabled = true;
-        postJson('/Admin/SaveProduct', { id: productId.value || null, name: name, priceCents: Math.round(price * 100), stockQuantity: stock, description: productDescription.value.trim() || null, category: productCategory.value.trim() || null, imageUrl: productImageUrl.value.trim() || null, lowStockThreshold: lowStock, displayOrder: displayOrder })
+        postJson('/Admin/SaveProduct', { id: productId.value || null, name: name, priceCents: Math.round(price * 100), stockQuantity: stockToSend, description: productDescription.value.trim() || null, category: productCategory.value.trim() || null, imageUrl: productImageUrl.value.trim() || null, lowStockThreshold: lowStock, displayOrder: displayOrder })
             .then(function (result) { productSave.disabled = false; if (!result.ok) showFailure(productError, result); else window.location.reload(); })
             .catch(function () { productSave.disabled = false; showNetworkFailure(productError); });
     });

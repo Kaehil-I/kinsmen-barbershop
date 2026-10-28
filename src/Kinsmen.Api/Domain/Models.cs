@@ -38,7 +38,9 @@ public sealed record AvailableSlot(string BarberId, DateTime StartUtc, DateTime 
 public sealed record ServiceRequest(string Name, int PriceCents, int DurationMinutes);
 public sealed record BarberRequest(string Name, string UserId, WorkingPeriod[] Hours, string[]? ServiceIds = null);
 public sealed record ActiveRequest(bool Active);
-public sealed record ProductRequest(string Name, int PriceCents, int StockQuantity, string? Description = null,
+// StockQuantity is required when creating a product. When editing, leave it out to keep the stock as it is now:
+// bookings and stock adjustments change it, so a form loaded a while ago must not overwrite their changes.
+public sealed record ProductRequest(string Name, int PriceCents, int? StockQuantity, string? Description = null,
     string? Category = null, string? ImageUrl = null, int LowStockThreshold = 5, int DisplayOrder = 0);
 public sealed record StockAdjustmentRequest(int QuantityDelta);
 // Admin view of a barber: includes the linked identity and active flag, but not the internal revision counter.
