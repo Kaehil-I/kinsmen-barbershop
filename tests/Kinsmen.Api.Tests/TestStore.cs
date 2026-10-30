@@ -75,21 +75,30 @@ public sealed class TestStore : IBookingStore, IBookingSession
         Reviews.Add(review);
         return Task.CompletedTask;
     }
-}
-public sealed class TestClock : TimeProvider
-{
-    public DateTimeOffset Now { get; set; } = DateTimeOffset.Parse("2026-09-18T06:00:00Z");
-    public override DateTimeOffset GetUtcNow() => Now;
-}
 
-public sealed record SentEmail(string To, string Subject, string Body);
-// Captures emails instead of sending them, so tests never touch a real provider.
-public sealed class RecordingEmailSender : IEmailSender
-{
-    public List<SentEmail> Sent { get; } = [];
-    public Task SendAsync(string toEmail, string subject, string htmlBody, CancellationToken ct = default)
+
+    public Task<bool> ClaimReminder(string bookingId, DateTime whenUtc)
     {
-        lock (Sent) Sent.Add(new SentEmail(toEmail, subject, htmlBody));
-        return Task.CompletedTask;
+        var i = Saved.FindIndex(b => b.Id == bookingId && b.Status == BookingStatus.Confirmed && b.ReminderSentUtc is null);
+        if (i < 0) return Task.FromResult(false);
+        Saved[i] = Saved[i] with { ReminderSentUtc = whenUtc };
+        return Task.FromResult(true);
+    }
+    public sealed class TestClock : TimeProvider
+    {
+        public DateTimeOffset Now { get; set; } = DateTimeOffset.Parse("2026-09-18T06:00:00Z");
+        public override DateTimeOffset GetUtcNow() => Now;
+    }
+
+    public sealed record SentEmail(string To, string Subject, string Body);
+    // Captures emails instead of sending them, so tests never touch a real provider.
+    public sealed class RecordingEmailSender : IEmailSender
+    {
+        public List<SentEmail> Sent { get; } = [];
+        public Task SendAsync(string toEmail, string subject, string htmlBody, CancellationToken ct = default)
+        {
+            lock (Sent) Sent.Add(new SentEmail(toEmail, subject, htmlBody));
+            return Task.CompletedTask;
+        }
     }
 }

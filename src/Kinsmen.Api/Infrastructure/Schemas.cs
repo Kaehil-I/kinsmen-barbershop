@@ -27,6 +27,7 @@ public static class Schemas
           "notes":{"bsonType":["string","null"],"maxLength":500},
           "creationFingerprint":{"bsonType":["string","null"],"maxLength":64},
           "customerEmail":{"bsonType":["string","null"],"maxLength":254},
+        "reminderSentUtc":{"bsonType":["date","null"]},
           "status":{"enum":["Pending","Confirmed","Cancelled","Completed","NoShow"]},
           "services":{"bsonType":"array","minItems":1,"maxItems":10,"items":{"bsonType":"object",
             "required":["serviceId","name","priceCents","durationMinutes"],"properties":{

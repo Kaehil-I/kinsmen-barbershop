@@ -212,6 +212,15 @@ internal sealed class MongoSession(IMongoDatabase db, IClientSessionHandle? sess
         => (await Find("reviews", Builders<Review>.Filter.Eq(x => x.BookingId, bookingId))).SingleOrDefault();
     public Task<List<Review>> ReviewsForBarber(string barberId)
         => Find("reviews", Builders<Review>.Filter.Eq(x => x.BarberId, barberId));
+    public async Task<bool> ClaimReminder(string bookingId, DateTime whenUtc)
+    {
+        // A targeted update (not a replace) so the booking's Version doesn't change under an open page.
+        var f = Builders<Booking>.Filter;
+        var result = await db.GetCollection<Booking>("bookings").UpdateOneAsync(WriteSession,
+            f.Eq(x => x.Id, bookingId) & f.Eq(x => x.Status, BookingStatus.Confirmed) & f.Eq(x => x.ReminderSentUtc, null),
+            Builders<Booking>.Update.Set(x => x.ReminderSentUtc, whenUtc), cancellationToken: ct);
+        return result.ModifiedCount == 1;
+    }
     public async Task SaveReview(Review review)
     {
         try { await db.GetCollection<Review>("reviews").InsertOneAsync(WriteSession, review, cancellationToken: ct); }
