@@ -35,6 +35,10 @@ else
 {
     <section id="book">
         <div class="wrap">
+            @if (Model.RebookNotice is not null)
+            {
+                <p class="price-note rebook-notice" role="status">@Model.RebookNotice</p>
+            }
             <div class="booking-shell">
 
                 <div class="field-row">
@@ -58,8 +62,8 @@ else
                             @for (var i = 0; i < Model.Services.Count; i++)
                             {
                                 var service = Model.Services[i];
-                                var isActive = Model.PreselectedServiceId is not null
-                                    ? service.Id == Model.PreselectedServiceId
+                                var isActive = Model.PreselectedServiceIds.Count > 0
+                                    ? Model.PreselectedServiceIds.Contains(service.Id)
                                     : i == 0;
                                 <button type="button"
                                         class="service-chip @(isActive ? "neo-pill-pressed active" : "neo-pill-raised")"
@@ -145,7 +149,7 @@ else
             Services = Model.Services,
             Barbers = Model.Barbers,
             Products = Model.Products,
-            PreselectedServiceId = Model.PreselectedServiceId,
+            PreselectedServiceIds = Model.PreselectedServiceIds,
             PreselectedProductId = Model.PreselectedProductId
         }, jsonOptions))</script>
     <script src="~/js/auth-fetch.js" asp-append-version="true"></script>

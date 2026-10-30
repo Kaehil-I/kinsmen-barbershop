@@ -53,6 +53,10 @@
                 @if (!isStaff)
                 {
                     <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <a asp-controller="Profile" asp-action="Index">Profile</a>
+                    }
                     <a asp-controller="Location" asp-action="Index">Location</a>
                 }
             </nav>
@@ -97,6 +101,10 @@
             @if (!isStaff)
             {
                 <a asp-controller="MyBookings" asp-action="Index">My Bookings</a>
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <a asp-controller="Profile" asp-action="Index">Profile</a>
+                    }
                 <a asp-controller="Location" asp-action="Index">Location</a>
             }
             <hr />
