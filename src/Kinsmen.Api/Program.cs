@@ -62,6 +62,8 @@ else
     builder.Services.AddHttpClient();
     builder.Services.AddSingleton<IEmailSender>(sp => new BrevoEmailSender(
         sp.GetRequiredService<IHttpClientFactory>().CreateClient(), brevoKey, fromAddress, fromName));
+    // Reminders only run with a real email provider, so none are marked sent without actually being sent.
+    builder.Services.AddHostedService<ReminderWorker>();
 }
 builder.Services.AddSingleton<BookingService>();
 var authority = builder.Configuration["Auth:Authority"];

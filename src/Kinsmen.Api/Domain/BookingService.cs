@@ -155,8 +155,7 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
 
         // Sent only after the transaction has committed, so a retried transaction can't duplicate it.
         if (created)
-            await SendBookingEmail(result, "We've received your booking request",
-                $"<p>Thanks for booking with Kinsmen! We've received your request for {Describe(result)}. We'll email you again once it's confirmed.</p>");
+            await SendBookingEmail(result, name => BookingEmails.Received(result, name));
         return result;
     }
 
@@ -186,8 +185,10 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
             throw DomainError.Conflict("The cancellation or rescheduling notice period has passed.");
     }
 
-    public Task<Booking> Reschedule(Actor actor, string id, RescheduleRequest input, CancellationToken ct = default)
-        => store.Write(async s =>
+    public async Task<Booking> Reschedule(Actor actor, string id, RescheduleRequest input, CancellationToken ct = default)
+    {
+        var previousStart = default(DateTime);
+        var updated = await store.Write(async s =>
         {
             var original = await s.BookingById(id) ?? throw DomainError.Missing();
             CanManage(actor, original);
@@ -198,22 +199,34 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
             var barber = (await s.Barbers()).Single(b => b.Id == original.BarberId);
             var end = start.AddMinutes(original.Services.Sum(x => x.DurationMinutes));
             if (!await Free(s, barber, start, end, id)) throw DomainError.Conflict("The new time is unavailable; your original booking is unchanged.");
-            var updated = original with { StartUtc = start, EndUtc = end, Version = original.Version + 1 };
-            await s.SaveBooking(updated);
-            return updated;
+            previousStart = original.StartUtc;
+            // The reminder was for the old time, so clear it: the new time gets its own.
+            var moved = original with { StartUtc = start, EndUtc = end, Version = original.Version + 1, ReminderSentUtc = null };
+            await s.SaveBooking(moved);
+            return moved;
         }, ct);
 
-    public Task<Booking> Cancel(Actor actor, string id, long version, CancellationToken ct = default)
-        => store.Write(async s =>
+        // Sent only after the transaction has committed, so a retry can't duplicate it.
+        await SendBookingEmail(updated, name => BookingEmails.Rescheduled(updated, previousStart, name));
+        return updated;
+    }
+
+    public async Task<Booking> Cancel(Actor actor, string id, long version, CancellationToken ct = default)
+    {
+        var updated = await store.Write(async s =>
         {
             var original = await s.BookingById(id) ?? throw DomainError.Missing();
             CanManage(actor, original);
             CanChange(original, version);
             await s.TouchBarbers([original.BarberId]);
-            var updated = original with { Status = BookingStatus.Cancelled, Version = original.Version + 1 };
-            await s.SaveBooking(updated);
-            return updated;
+            var cancelled = original with { Status = BookingStatus.Cancelled, Version = original.Version + 1 };
+            await s.SaveBooking(cancelled);
+            return cancelled;
         }, ct);
+
+        await SendBookingEmail(updated, name => BookingEmails.Cancelled(updated, name));
+        return updated;
+    }
 
     public async Task<Booking> ChangeStatus(Actor actor, string id, StatusChangeRequest input, CancellationToken ct = default)
     {
@@ -242,27 +255,46 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
         // Sent only after the transaction has committed, so a retry can't duplicate it. The recipient comes
         // from the address stored on the booking, because the caller here is staff, not the customer.
         if (updated.Status == BookingStatus.Confirmed)
-            await SendBookingEmail(updated, "Your booking is confirmed",
-                $"<p>Your appointment ({Describe(updated)}) is confirmed. See you then!</p>");
+            await SendBookingEmail(updated, name => BookingEmails.Confirmed(updated, name));
         else if (updated.Status == BookingStatus.Completed)
-            await SendBookingEmail(updated, "How was your visit?",
-                "<p>Thanks for visiting Kinsmen! We'd love to hear how it went. Sign in and open My Bookings to leave a review.</p>");
+            await SendBookingEmail(updated, _ => BookingEmails.ReviewRequest());
         return updated;
     }
 
-    private static string Describe(Booking booking)
-    {
-        var local = TimeZoneInfo.ConvertTimeFromUtc(booking.StartUtc, ShopZone);
-        var services = string.Join(", ", booking.Services.Select(s => WebUtility.HtmlEncode(s.Name)));
-        return $"{services} on {local.ToString("dddd d MMMM", CultureInfo.InvariantCulture)} at {local.ToString("HH:mm", CultureInfo.InvariantCulture)}";
-    }
-
     // A failed or slow email provider must never fail the booking action the customer is waiting on.
-    private async Task SendBookingEmail(Booking booking, string subject, string htmlBody)
+    private async Task SendBookingEmail(Booking booking, Func<string, EmailMessage> build)
     {
         if (email is null || string.IsNullOrWhiteSpace(booking.CustomerEmail)) return;
-        try { await email.SendAsync(booking.CustomerEmail, subject, htmlBody); }
+        try
+        {
+            var barberName = await store.Read(async s =>
+                (await s.Barbers()).SingleOrDefault(b => b.Id == booking.BarberId)?.Name) ?? "your barber";
+            var message = build(barberName);
+            await email.SendAsync(booking.CustomerEmail, message.Subject, message.Html);
+        }
         catch (Exception e) { Console.Error.WriteLine($"Booking email failed: {e.GetType().Name}"); }
+    }
+
+    private static readonly TimeSpan ReminderLead = TimeSpan.FromHours(24);
+
+    /// <summary>Emails a reminder for each confirmed booking starting within 24 hours that hasn't had one.
+    /// Bookings made less than 24 hours ahead are skipped: their confirmation email already says it all.
+    /// Each booking is claimed before sending, so overlapping sweeps or two instances can't double-send.</summary>
+    public async Task<int> SendDueReminders(CancellationToken ct = default)
+    {
+        if (email is null) return 0;
+        var due = await store.Read(async s => (await s.Bookings(null, null, Now, Now + ReminderLead))
+            .Where(b => b.Status == BookingStatus.Confirmed && b.ReminderSentUtc is null && b.StartUtc > Now
+                && !string.IsNullOrWhiteSpace(b.CustomerEmail) && b.CreatedUtc <= b.StartUtc - ReminderLead)
+            .ToList(), ct);
+        var sent = 0;
+        foreach (var booking in due)
+        {
+            if (!await store.Write(s => s.ClaimReminder(booking.Id, Now), ct)) continue;
+            await SendBookingEmail(booking, name => BookingEmails.Reminder(booking, name));
+            sent++;
+        }
+        return sent;
     }
 
     public Task<Review> SubmitReview(Actor actor, string bookingId, SubmitReviewRequest input, CancellationToken ct = default)
