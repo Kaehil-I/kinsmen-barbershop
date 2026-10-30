@@ -221,8 +221,10 @@ demonstration:
 
 - **Loyalty:** shown in the prototype, but listed as out of scope in the Task 1 report. Not built.
 - **Guest booking:** the report describes a Guest role; the system currently requires an account to book.
-- **Shop checkout:** the public Shop page lists products available in-store. Online payment, stock deduction
-  and checkout are deliberately out of scope until the business confirms fulfilment requirements.
+- **Shop checkout:** the public Shop page lists products available in-store, and customers can reserve them with a
+  booking: stock is held when the booking is made and returned if it is cancelled. Online payment and checkout are
+  deliberately out of scope until the business confirms fulfilment requirements, so products are collected and paid
+  for in store.
 - **Email and review delivery:** live. Booking emails are sent through Brevo from a dedicated project mailbox; reviews are available on completed bookings. Check the mailbox spam folder when testing.
 - **Staff role changes:** require the limited Auth0 Management API machine-to-machine credentials in Render.
   Until they are configured, the Staff page remains safely disabled.

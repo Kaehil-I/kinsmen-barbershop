@@ -35,8 +35,8 @@ Version 0.1, 20 September 2026. The executable source is `src/Kinsmen.Api`; [ope
 | `PUT /api/admin/services/{id}` | Admin | `name`, `priceCents`, `durationMinutes` | `200` updated service |
 | `PATCH /api/admin/services/{id}/active` | Admin | `active` | `200` updated service |
 | `GET /api/admin/products` | Admin | None | `200` all products, including inactive and stock |
-| `POST /api/admin/products` | Admin | `name`, `priceCents`, `stockQuantity` | `201` new active product |
-| `PUT /api/admin/products/{id}` | Admin | `name`, `priceCents`, `stockQuantity` | `200` updated product |
+| `POST /api/admin/products` | Admin | `name`, `priceCents`, `stockQuantity`; optional `description`, `category`, `imageUrl`, `lowStockThreshold`, `displayOrder` | `201` new active product. `imageUrl` must be an `https://` link or a file in `/img/products/` |
+| `PUT /api/admin/products/{id}` | Admin | `name`, `priceCents`; optional `stockQuantity` and the optional fields above | `200` updated product. Leave `stockQuantity` out to keep the current stock (bookings and adjustments change it); send it only to correct a count |
 | `PATCH /api/admin/products/{id}/stock` | Admin | `quantityDelta` | `200` adjusted stock; cannot go below zero |
 | `PATCH /api/admin/products/{id}/active` | Admin | `active` | `200` shown/hidden product |
 | `GET /api/admin/barbers` | Admin | None | `200` all barber profiles, including linked `userId` and `active` |

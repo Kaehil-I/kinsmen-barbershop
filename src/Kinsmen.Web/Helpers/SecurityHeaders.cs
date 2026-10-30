@@ -17,7 +17,8 @@ public static class SecurityHeaders
             "script-src 'self'",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "font-src 'self' https://fonts.gstatic.com",
-            "img-src 'self' data:",
+            // https: so admins can use a product photo from any https link; scripts and everything else stay locked down.
+            "img-src 'self' data: https:",
             "frame-src https://maps.google.com https://www.google.com",
             "connect-src 'self'",
             "form-action 'self'" + auth0,
