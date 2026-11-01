@@ -88,6 +88,16 @@ public sealed class BarberIdentityResolverTests
             => throw new NotImplementedException();
         public Task<List<RetailProduct>> GetProductsAsync(CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
+        public Task<List<RetailProduct>> GetAdminProductsAsync(CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+        public Task<RetailProduct> CreateAdminProductAsync(ProductInput input, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+        public Task<RetailProduct> UpdateAdminProductAsync(string id, ProductInput input, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+        public Task<RetailProduct> AdjustAdminProductStockAsync(string id, int quantityDelta, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+        public Task<RetailProduct> SetAdminProductActiveAsync(string id, bool active, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
         public Task<List<Barber>> GetBarbersAsync(CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
         public Task<List<AvailableSlot>> GetAvailabilityAsync(

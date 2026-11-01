@@ -18,7 +18,7 @@ Version 0.1, 20 September 2026. The executable source is `src/Kinsmen.Api`; [ope
 | Method and route | Access | Input | Success |
 |---|---|---|---|
 | `GET /api/services` | Public | None | `200` active services |
-| `GET /api/products` | Public | None | `200` active products: ID, name, price in cents, current stock and active flag |
+| `GET /api/products` | Public | None | `200` active products, in display order: `id`, `name`, `priceCents`, `stockQuantity`, `active`, `description`, `category`, `imageUrl`, `lowStockThreshold`, `displayOrder`. Stock and threshold are public on purpose: the Shop page shows "low stock" and "out of stock" |
 | `GET /api/barbers` | Public | None | `200` active barber IDs, names and working periods; staff account IDs omitted |
 | `GET /api/availability` | Public | `date`, repeated `serviceIds`, optional `barberId` | `200` available barber/start/end combinations |
 | `POST /api/bookings` | Customer/Admin | `barberId` or null, `serviceIds`, `start`, optional `products`; admin additionally supplies `customerId` | `201` persisted Pending booking and reserved stock |
