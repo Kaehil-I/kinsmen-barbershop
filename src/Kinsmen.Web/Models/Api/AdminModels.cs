@@ -47,3 +47,19 @@ public sealed class ActiveInput
 {
     public bool Active { get; set; }
 }
+public sealed class ProductInput
+{
+    public string Name { get; set; } = string.Empty;
+    public int PriceCents { get; set; }
+    /// <summary>Required for a new product. When editing, null keeps the stock as it is now.</summary>
+    public int? StockQuantity { get; set; }
+    public string? Description { get; set; }
+    public string? Category { get; set; }
+    public string? ImageUrl { get; set; }
+    public int LowStockThreshold { get; set; } = 5;
+    public int DisplayOrder { get; set; }
+}
+public sealed class StockAdjustmentInput
+{
+    public int QuantityDelta { get; set; }
+}

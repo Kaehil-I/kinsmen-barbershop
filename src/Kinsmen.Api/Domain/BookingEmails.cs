@@ -65,6 +65,9 @@ public static class BookingEmails
     private static string Layout(string heading, string intro, Booking b, string barberName,
         IReadOnlyList<ReservedProduct>? products, string footer)
     {
+        // Products the customer reserved with this booking are listed in every email about it, unless the caller
+        // passed its own list.
+        products ??= b.Products?.Select(p => new ReservedProduct(p.Name, p.Quantity)).ToList();
         var sb = new StringBuilder();
         sb.Append("<h2 style=\"margin:0 0 12px\">").Append(E(heading)).Append("</h2><p>").Append(E(intro)).Append("</p>");
         sb.Append("<table style=\"width:100%;border-collapse:collapse;border-top:1px solid #ddd;border-bottom:1px solid #ddd\">");

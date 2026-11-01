@@ -37,6 +37,7 @@ public sealed class SecurityTests : IDisposable
         var response = await factory.CreateClient().GetAsync("/");
         var csp = response.Headers.GetValues("Content-Security-Policy").Single();
         Assert.Contains("script-src 'self';", csp);          // no inline or third-party scripts
+        Assert.Contains("img-src 'self' data: https:", csp);  // product photos can come from any https link
         Assert.Contains("frame-ancestors 'none'", csp);       // no clickjacking
         Assert.Contains("form-action 'self' https://kinsmen.eu.auth0.com", csp);
         Assert.Equal("DENY", response.Headers.GetValues("X-Frame-Options").Single());

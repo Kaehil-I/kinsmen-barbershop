@@ -24,12 +24,14 @@ public sealed class AdminController(IKinsmenApiClient apiClient) : Controller
         {
             var servicesTask = apiClient.GetAdminServicesAsync(cancellationToken);
             var barbersTask = apiClient.GetAdminBarbersAsync(cancellationToken);
-            await Task.WhenAll(servicesTask, barbersTask);
+            var productsTask = apiClient.GetAdminProductsAsync(cancellationToken);
+            await Task.WhenAll(servicesTask, barbersTask, productsTask);
 
             return View(new AdminCataloguePageViewModel
             {
                 Services = servicesTask.Result,
-                Barbers = barbersTask.Result
+                Barbers = barbersTask.Result,
+                Products = productsTask.Result
             });
         }
         catch (KinsmenApiException ex)
@@ -76,6 +78,52 @@ public sealed class AdminController(IKinsmenApiClient apiClient) : Controller
         try
         {
             var saved = await apiClient.SetAdminServiceActiveAsync(id, request.Active, cancellationToken);
+            return Json(new { success = true, id = saved.Id, active = saved.Active });
+        }
+        catch (KinsmenApiException ex) { return Failure(ex); }
+        catch (HttpRequestException) { return ConnectionFailure(); }
+    }
+
+    // --- Products and stock -------------------------------------------------
+
+    [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.Writes)]
+    public async Task<IActionResult> SaveProduct([FromBody] SaveProductAjaxRequest request, CancellationToken cancellationToken)
+    {
+        var input = new ProductInput { Name = request.Name, PriceCents = request.PriceCents, StockQuantity = request.StockQuantity,
+            Description = request.Description, Category = request.Category, ImageUrl = request.ImageUrl,
+            LowStockThreshold = request.LowStockThreshold, DisplayOrder = request.DisplayOrder };
+        try
+        {
+            var saved = string.IsNullOrEmpty(request.Id)
+                ? await apiClient.CreateAdminProductAsync(input, cancellationToken)
+                : await apiClient.UpdateAdminProductAsync(request.Id, input, cancellationToken);
+            return Json(new { success = true, id = saved.Id });
+        }
+        catch (KinsmenApiException ex) { return Failure(ex); }
+        catch (HttpRequestException) { return ConnectionFailure(); }
+    }
+
+    [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.Writes)]
+    public async Task<IActionResult> AdjustProductStock(string id, [FromBody] StockAdjustmentInput request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var saved = await apiClient.AdjustAdminProductStockAsync(id, request.QuantityDelta, cancellationToken);
+            return Json(new { success = true, id = saved.Id, stockQuantity = saved.StockQuantity });
+        }
+        catch (KinsmenApiException ex) { return Failure(ex); }
+        catch (HttpRequestException) { return ConnectionFailure(); }
+    }
+
+    [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.Writes)]
+    public async Task<IActionResult> SetProductActive(string id, [FromBody] ActiveInput request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var saved = await apiClient.SetAdminProductActiveAsync(id, request.Active, cancellationToken);
             return Json(new { success = true, id = saved.Id, active = saved.Active });
         }
         catch (KinsmenApiException ex) { return Failure(ex); }
