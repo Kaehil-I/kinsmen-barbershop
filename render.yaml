@@ -2,7 +2,7 @@
 # Values marked `sync: false` are secrets or per-deployment URLs. Render asks for them when the
 # Blueprint is first applied and they are stored only in the Render dashboard, never in Git.
 #
-# Staging deploys from integration-part2. Switch `branch` to main for the submission build.
+# Staging deploys from integration-part3 while Part 3 is tested. Switch `branch` to main for the submission build.
 
 # Shared by both services. Proxy__Key lets the API trust the web app's "which visitor is this" header, so the
 # API rate limits per visitor instead of treating the web server as one caller. Render generates the value;
@@ -19,7 +19,7 @@ services:
     runtime: docker
     plan: free
     region: frankfurt # Keep in the same region as (or nearest to) the Atlas cluster.
-    branch: integration-part2
+    branch: integration-part3
     dockerContext: .
     dockerfilePath: ./src/Kinsmen.Api/Dockerfile
     autoDeployTrigger: checksPass # Only deploy commits whose GitHub checks passed.
@@ -63,7 +63,7 @@ services:
     runtime: docker
     plan: free
     region: frankfurt
-    branch: integration-part2
+    branch: integration-part3
     dockerContext: .
     dockerfilePath: ./src/Kinsmen.Web/Dockerfile
     autoDeployTrigger: checksPass
