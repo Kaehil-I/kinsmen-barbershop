@@ -68,7 +68,8 @@
                          data-booking-id="@booking.Id"
                          data-version="@booking.Version"
                          data-barber-id="@booking.BarberId"
-                         data-service-ids="@string.Join(",", booking.Services.Select(s => s.ServiceId))">
+                         data-service-ids="@string.Join(",", booking.Services.Select(s => s.ServiceId))"
+                         data-book-again-url="@BookAgainLink.For(Url, booking)">
                         <div class="mtop">
                             <div class="mname">@string.Join(", ", booking.Services.Select(s => s.Name))</div>
                             <span class="badge-pill @StatusBadgeClass(booking.Status)">@StatusLabel(booking.Status)</span>
@@ -105,6 +106,13 @@
                                     <button class="btn-confirm neo-pill-raised reschedule-confirm-btn" disabled type="button">Confirm New Time</button>
                                 </div>
                                 <p class="reschedule-error form-error"></p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="my-booking-actions">
+                                <a class="neo-pill-raised book-again-link" href="@BookAgainLink.For(Url, booking)"
+                                   aria-label="Book again: @string.Join(", ", booking.Services.Select(s => s.Name)) with @barberName">Book again</a>
                             </div>
                         }
 

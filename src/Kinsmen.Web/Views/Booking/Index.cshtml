@@ -35,6 +35,10 @@ else
 {
     <section id="book">
         <div class="wrap">
+            @if (Model.RebookNotice is not null)
+            {
+                <p class="price-note rebook-notice" role="status">@Model.RebookNotice</p>
+            }
             <div class="booking-shell">
 
                 <div class="field-row">
@@ -58,8 +62,8 @@ else
                             @for (var i = 0; i < Model.Services.Count; i++)
                             {
                                 var service = Model.Services[i];
-                                var isActive = Model.PreselectedServiceId is not null
-                                    ? service.Id == Model.PreselectedServiceId
+                                var isActive = Model.PreselectedServiceIds.Count > 0
+                                    ? Model.PreselectedServiceIds.Contains(service.Id)
                                     : i == 0;
                                 <button type="button"
                                         class="service-chip @(isActive ? "neo-pill-pressed active" : "neo-pill-raised")"
@@ -93,7 +97,7 @@ else
 
                 <div class="panel neo-raised">
                     <label class="accent-ochre">Add grooming products <span style="text-transform:none; letter-spacing:0;">&mdash; optional, collect and pay when you visit</span></label>
-                    <p class="price-note" style="margin:6px 0 14px;">Stock is reserved when your booking is confirmed. Low-stock products can sell out while another customer is booking.</p>
+                    <p class="price-note" style="margin:6px 0 14px;">Products are held for you as soon as you book, and released if the booking is cancelled. Low-stock products can sell out while another customer is booking.</p>
                     <div id="booking-products" class="shop-grid" style="margin:0;">
                         @foreach (var product in Model.Products)
                         {
@@ -145,7 +149,7 @@ else
             Services = Model.Services,
             Barbers = Model.Barbers,
             Products = Model.Products,
-            PreselectedServiceId = Model.PreselectedServiceId,
+            PreselectedServiceIds = Model.PreselectedServiceIds,
             PreselectedProductId = Model.PreselectedProductId
         }, jsonOptions))</script>
     <script src="~/js/auth-fetch.js" asp-append-version="true"></script>

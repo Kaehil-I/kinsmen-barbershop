@@ -30,6 +30,7 @@ public sealed class ApiFactory(IReadOnlyDictionary<string, string>? settings = n
             services.RemoveAll<TimeProvider>(); services.AddSingleton<TimeProvider, TestClock>();
             services.RemoveAll<IEmailSender>(); services.AddSingleton<IEmailSender, RecordingEmailSender>();
             services.RemoveAll<IAuditLog>(); services.AddSingleton<IAuditLog, InMemoryAuditLog>();
+            services.RemoveAll<IProfileStore>(); services.AddSingleton<IProfileStore, InMemoryProfileStore>();
         });
     }
     public HttpClient Client(string? user = null, string role = "Customer", bool expired = false, string audience = "kinsmen-api", bool includeSubject = true)

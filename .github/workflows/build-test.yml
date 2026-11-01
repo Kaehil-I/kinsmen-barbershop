@@ -2,9 +2,9 @@ name: Build and test
 
 on:
   pull_request:
-    branches: [integration-part2, main]
+    branches: [integration-part2, integration-part3, main]
   push:
-    branches: [integration-part2, main]
+    branches: [integration-part2, integration-part3, main]
   workflow_dispatch:
 
 permissions:

@@ -26,10 +26,11 @@ public sealed class CatalogueService(IBookingStore store, TimeProvider clock, Bo
     {
         RequireAdmin(actor);
         var productDetails = ValidateProduct(input);
+        var stock = input.StockQuantity ?? throw DomainError.Invalid("Enter the stock on hand for a new product.");
         return store.Write(async s =>
         {
             await RequireUniqueProductName(s, productDetails.Name, null);
-            var product = new ProductItem(Guid.NewGuid().ToString("N"), productDetails.Name, input.PriceCents, input.StockQuantity,
+            var product = new ProductItem(Guid.NewGuid().ToString("N"), productDetails.Name, input.PriceCents, stock,
                 Description: productDetails.Description, Category: productDetails.Category, ImageUrl: productDetails.ImageUrl,
                 LowStockThreshold: input.LowStockThreshold, DisplayOrder: input.DisplayOrder);
             await s.SaveProduct(product, true);
@@ -45,7 +46,7 @@ public sealed class CatalogueService(IBookingStore store, TimeProvider clock, Bo
         {
             var existing = (await s.Products()).SingleOrDefault(x => x.Id == id) ?? throw DomainError.Missing();
             await RequireUniqueProductName(s, productDetails.Name, id);
-            var updated = existing with { Name = productDetails.Name, PriceCents = input.PriceCents, StockQuantity = input.StockQuantity,
+            var updated = existing with { Name = productDetails.Name, PriceCents = input.PriceCents, StockQuantity = input.StockQuantity ?? existing.StockQuantity,
                 Description = productDetails.Description, Category = productDetails.Category, ImageUrl = productDetails.ImageUrl,
                 LowStockThreshold = input.LowStockThreshold, DisplayOrder = input.DisplayOrder };
             await s.SaveProduct(updated);
@@ -202,6 +203,17 @@ public sealed class CatalogueService(IBookingStore store, TimeProvider clock, Bo
             throw new DomainError(409, "duplicate_name", "An active product already uses this name.");
     }
 
+    // A file shipped with the site (one folder, one file name), or an https link. Plain http would be blocked as mixed
+    // content, and links carrying a username or password have no business in an image address.
+    private static readonly System.Text.RegularExpressions.Regex LocalImage = new(
+        @"^/img/products/[A-Za-z0-9][A-Za-z0-9._-]{0,100}\.(png|jpe?g|webp|gif|avif)$",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    private static bool IsAllowedImage(string value)
+        => value.Length <= 2048
+            && (LocalImage.IsMatch(value)
+                || (Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps && string.IsNullOrEmpty(uri.UserInfo)));
+
     private static (string Name, string? Description, string? Category, string? ImageUrl) ValidateProduct(ProductRequest input)
     {
         var name = input.Name?.Trim();
@@ -215,8 +227,8 @@ public sealed class CatalogueService(IBookingStore store, TimeProvider clock, Bo
         var imageUrl = string.IsNullOrWhiteSpace(input.ImageUrl) ? null : input.ImageUrl.Trim();
         if (description?.Length > 500) throw DomainError.Invalid("Product description must be at most 500 characters.");
         if (category?.Length > 60) throw DomainError.Invalid("Product category must be at most 60 characters.");
-        if (imageUrl is not null && (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri) || uri.Scheme is not ("https" or "http") || imageUrl.Length > 2048))
-            throw DomainError.Invalid("Product image must be a valid http or https image URL.");
+        if (imageUrl is not null && !IsAllowedImage(imageUrl))
+            throw DomainError.Invalid("Product image must be an https:// image link or a file in /img/products/ (for example /img/products/beard-oil.jpg).");
         return (name, description, category, imageUrl);
     }
 
