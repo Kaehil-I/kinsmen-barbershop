@@ -18,7 +18,7 @@ Version 0.1, 20 September 2026. The executable source is `src/Kinsmen.Api`; [ope
 | Method and route | Access | Input | Success |
 |---|---|---|---|
 | `GET /api/services` | Public | None | `200` active services |
-| `GET /api/products` | Public | None | `200` active products: ID, name, price in cents, current stock and active flag |
+| `GET /api/products` | Public | None | `200` active products, in display order: `id`, `name`, `priceCents`, `stockQuantity`, `active`, `description`, `category`, `imageUrl`, `lowStockThreshold`, `displayOrder`. Stock and threshold are public on purpose: the Shop page shows "low stock" and "out of stock" |
 | `GET /api/barbers` | Public | None | `200` active barber IDs, names and working periods; staff account IDs omitted |
 | `GET /api/availability` | Public | `date`, repeated `serviceIds`, optional `barberId` | `200` available barber/start/end combinations |
 | `POST /api/bookings` | Customer/Admin | `barberId` or null, `serviceIds`, `start`, optional `products`; admin additionally supplies `customerId` | `201` persisted Pending booking and reserved stock |
@@ -39,6 +39,7 @@ Version 0.1, 20 September 2026. The executable source is `src/Kinsmen.Api`; [ope
 | `PUT /api/admin/products/{id}` | Admin | `name`, `priceCents`; optional `stockQuantity` and the optional fields above | `200` updated product. Leave `stockQuantity` out to keep the current stock (bookings and adjustments change it); send it only to correct a count |
 | `PATCH /api/admin/products/{id}/stock` | Admin | `quantityDelta` | `200` adjusted stock; cannot go below zero |
 | `PATCH /api/admin/products/{id}/active` | Admin | `active` | `200` shown/hidden product |
+| `GET /api/admin/dashboard` | Admin | `from`, `to` (shop-local dates, both included, at most 366 days) | `200` `{ from, to, totals, topServices, lowStock }`: counts of bookings starting in the period by outcome, revenue from completed ones, the five most booked services, and products at or below their low-stock threshold (current stock, ignores the dates) |
 | `GET /api/admin/barbers` | Admin | None | `200` all barber profiles, including linked `userId` and `active` |
 | `POST /api/admin/barbers` | Admin | `name`, `userId`, `hours` | `201` new active barber profile |
 | `PUT /api/admin/barbers/{id}` | Admin | `name`, `userId`, `hours` | `200` updated barber profile |

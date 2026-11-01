@@ -149,7 +149,17 @@ builder.Services.AddHttpClient<IProfileApiClient, ProfileApiClient>((serviceProv
     if (!string.IsNullOrWhiteSpace(apiOptions.BaseUrl)) client.BaseAddress = new Uri(apiOptions.BaseUrl);
 })
     .AddHttpMessageHandler<BearerTokenHandler>()
-    .AddHttpMessageHandler<ProxyHeadersHandler>();
+    .AddHttpMessageHandler<ProxyHeadersHandler>()
+    .AddHttpMessageHandler<ColdStartRetryHandler>();
+
+builder.Services.AddHttpClient<IDashboardApiClient, DashboardApiClient>((serviceProvider, client) =>
+{
+    var apiOptions = serviceProvider.GetRequiredService<IOptions<ApiClientOptions>>().Value;
+    if (!string.IsNullOrWhiteSpace(apiOptions.BaseUrl)) client.BaseAddress = new Uri(apiOptions.BaseUrl);
+})
+    .AddHttpMessageHandler<BearerTokenHandler>()
+    .AddHttpMessageHandler<ProxyHeadersHandler>()
+    .AddHttpMessageHandler<ColdStartRetryHandler>();
 
 var app = builder.Build();
 
