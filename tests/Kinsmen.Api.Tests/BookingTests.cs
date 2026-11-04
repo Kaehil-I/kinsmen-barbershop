@@ -19,6 +19,24 @@ public sealed class BookingTests
         Assert.Equal(30000, b.TotalCents); Assert.Equal(TimeSpan.FromMinutes(45), b.EndUtc - b.StartUtc);
         Assert.Equal(DateTimeKind.Utc, b.StartUtc.Kind); Assert.Equal(BookingStatus.Pending, b.Status);
     }
+    [Fact] public async Task BookingProductsReserveStockAndCancellationReturnsIt()
+    {
+        var initial = store.Inventory.Single(product => product.Id == "beard-oil").StockQuantity;
+        var booking = await Service.Create(Customer, Request() with { Products = [new("beard-oil", 2)] });
+        Assert.Equal(30000 + 50000, booking.TotalCents);
+        Assert.Equal(2, booking.Products!.Single().Quantity);
+        Assert.Equal(initial - 2, store.Inventory.Single(product => product.Id == "beard-oil").StockQuantity);
+
+        await Service.Cancel(Customer, booking.Id, booking.Version);
+        Assert.Equal(initial, store.Inventory.Single(product => product.Id == "beard-oil").StockQuantity);
+    }
+    [Fact] public async Task BookingRejectsUnavailableProductWithoutChangingStock()
+    {
+        var original = store.Inventory.Single(product => product.Id == "matify");
+        var error = await Assert.ThrowsAsync<DomainError>(() => Service.Create(Customer, Request() with { Products = [new("matify", original.StockQuantity + 1)] }));
+        Assert.Equal("insufficient_stock", error.Code);
+        Assert.Equal(original.StockQuantity, store.Inventory.Single(product => product.Id == "matify").StockQuantity);
+    }
     [Fact] public async Task DuplicateServiceIsRejected()
         => Assert.Equal(400, (await Assert.ThrowsAsync<DomainError>(() => Service.Create(Customer, Request(ids: ["haircut", "haircut"])))).Status);
     [Fact] public async Task UnknownServiceIsRejected()

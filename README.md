@@ -3,9 +3,9 @@
 INSY7315 Work Integrated Learning project for **Kinsmen Barbers**, Shop 5, 8 Mackeurtan Ave, Durban North.
 Built by **Kaehil, Kyra, Zario and Gregory** — BCA3, IIE Emeris.
 
-Customers browse services and barbers, book a chair online and manage their own bookings. Barbers see
-their schedule, confirm appointments and block off time. Admins manage the service catalogue, barber
-profiles, barber service skills and staff access.
+Customers browse services, barbers and in-store grooming products, book a chair online and manage their
+own bookings. Barbers see their schedule, confirm appointments and block off time. Admins manage the
+service catalogue, barber profiles, barber service skills and staff access.
 
 | | Link |
 |---|---|
@@ -221,7 +221,8 @@ demonstration:
 
 - **Loyalty:** shown in the prototype, but listed as out of scope in the Task 1 report. Not built.
 - **Guest booking:** the report describes a Guest role; the system currently requires an account to book.
-- **Shop and checkout:** the report's cart/checkout flow and the prototype's Barber POS are not built.
+- **Shop checkout:** the public Shop page lists products available in-store. Online payment, stock deduction
+  and checkout are deliberately out of scope until the business confirms fulfilment requirements.
 - **Email and review delivery:** live. Booking emails are sent through Brevo from a dedicated project mailbox; reviews are available on completed bookings. Check the mailbox spam folder when testing.
 - **Staff role changes:** require the limited Auth0 Management API machine-to-machine credentials in Render.
   Until they are configured, the Staff page remains safely disabled.

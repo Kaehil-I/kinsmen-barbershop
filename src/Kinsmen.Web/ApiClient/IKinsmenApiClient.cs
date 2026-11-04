@@ -12,6 +12,8 @@ public interface IKinsmenApiClient
 
     Task<List<Service>> GetServicesAsync(CancellationToken cancellationToken = default);
 
+    Task<List<RetailProduct>> GetProductsAsync(CancellationToken cancellationToken = default);
+
     Task<List<Barber>> GetBarbersAsync(CancellationToken cancellationToken = default);
 
     /// <param name="date">The shop's local calendar date to check.</param>
@@ -77,6 +79,12 @@ public interface IKinsmenApiClient
 
     Task<Service> SetAdminServiceActiveAsync(
         string id, bool active, CancellationToken cancellationToken = default);
+
+    Task<List<RetailProduct>> GetAdminProductsAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    Task<RetailProduct> CreateAdminProductAsync(ProductInput input, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    Task<RetailProduct> UpdateAdminProductAsync(string id, ProductInput input, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    Task<RetailProduct> AdjustAdminProductStockAsync(string id, int quantityDelta, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    Task<RetailProduct> SetAdminProductActiveAsync(string id, bool active, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
     /// <summary>Every barber, including inactive ones and each one's linked login.</summary>
     Task<List<AdminBarber>> GetAdminBarbersAsync(CancellationToken cancellationToken = default);

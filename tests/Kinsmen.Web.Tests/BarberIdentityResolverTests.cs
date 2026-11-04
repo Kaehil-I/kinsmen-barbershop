@@ -86,6 +86,8 @@ public sealed class BarberIdentityResolverTests
 
         public Task<List<Service>> GetServicesAsync(CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
+        public Task<List<RetailProduct>> GetProductsAsync(CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
         public Task<List<Barber>> GetBarbersAsync(CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
         public Task<List<AvailableSlot>> GetAvailabilityAsync(

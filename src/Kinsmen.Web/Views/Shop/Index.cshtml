@@ -1,0 +1,80 @@
+@model List<RetailProduct>
+@{
+    ViewData["Title"] = "Shop";
+    var errorMessage = ViewData["ErrorMessage"] as string;
+}
+
+<section class="page-intro">
+    <div class="wrap">
+        <div class="tag">Kinsmen Grooming</div>
+        <h1>Shop products</h1>
+        <p>Professional styling and beard-care products, available to purchase in store.</p>
+    </div>
+</section>
+
+<section>
+    <div class="wrap" style="padding-bottom:80px;">
+        @if (errorMessage is not null)
+        {
+            <p class="price-note" data-api-waking="@(ApiErrorMessages.IsWakingUp(errorMessage) ? "" : null)">@errorMessage</p>
+        }
+        else
+        {
+            <p class="price-note">Reserve in-stock products with your appointment. You will collect and pay for them at Kinsmen.</p>
+            <div class="shop-tools panel neo-raised">
+                <div class="input-shell neo-pressed"><input id="shop-search" type="search" maxlength="100" placeholder="Search products" aria-label="Search products" /></div>
+                <div id="shop-category-filters" class="service-chip-row" aria-label="Filter products by category"></div>
+                <label class="shop-availability-filter"><input id="shop-in-stock-only" type="checkbox" /> Show in-stock only</label>
+            </div>
+            <p id="shop-result-count" class="price-note" style="margin:14px 0 0;" aria-live="polite"></p>
+            <div class="shop-grid" id="shop-products">
+                @foreach (var product in Model)
+                {
+                    var outOfStock = product.StockQuantity == 0;
+                    var lowStock = product.StockQuantity is > 0 && product.StockQuantity <= product.LowStockThreshold;
+                    var fullyStocked = product.StockQuantity >= 20;
+                    <article class="panel neo-raised shop-product" data-product-name="@product.Name" data-product-category="@product.Category" data-product-description="@product.Description" data-in-stock="@(!outOfStock ? "true" : "false")">
+                        <div class="shop-product-heading">
+                            @if (!string.IsNullOrWhiteSpace(product.ImageUrl))
+                            {
+                                <img class="shop-product-image" src="@product.ImageUrl" alt="@product.Name" loading="lazy" referrerpolicy="no-referrer" />
+                            }
+                            else
+                            {
+                                <div class="shop-product-mark" aria-hidden="true">K</div>
+                            }
+                            <div class="shop-product-identity">
+                                @if (!string.IsNullOrWhiteSpace(product.Category)) { <div class="tag shop-category">@product.Category</div> }
+                                <div class="name">@product.Name</div>
+                            </div>
+                        </div>
+                        <div class="shop-product-content">
+                            <p class="shop-product-note">@(string.IsNullOrWhiteSpace(product.Description) ? "Available at Kinsmen Barbers" : product.Description)</p>
+                        </div>
+                        <div class="shop-product-footer">
+                            <div>
+                                <span class="shop-price-label">In-store price</span>
+                                <strong class="price">@PriceFormatter.FormatZarCents(product.PriceCents)</strong>
+                            </div>
+                            <span class="stock-badge @(outOfStock ? "stock-low" : lowStock ? "stock-low" : "")">
+                                @(outOfStock ? "Out of stock" : lowStock ? $"Low stock: {product.StockQuantity} left" : fullyStocked ? "Fully stocked" : $"In stock: {product.StockQuantity}")
+                            </span>
+                        </div>
+                        @if (!outOfStock)
+                        {
+                            <a asp-controller="Booking" asp-action="Index" asp-route-productId="@product.Id" class="shop-reserve-link">Reserve with booking <span aria-hidden="true">→</span></a>
+                        }
+                    </article>
+                }
+            </div>
+            <div class="panel neo-raised shop-callout">
+                <div>
+                    <h2>Need help choosing?</h2>
+                    <p>Ask your barber which product works best for your hair or beard routine.</p>
+                </div>
+                <a asp-controller="Booking" asp-action="Index" class="book-link neo-pill-raised">Book and reserve products</a>
+            </div>
+        }
+    </div>
+</section>
+<script src="~/js/shop.js" asp-append-version="true"></script>

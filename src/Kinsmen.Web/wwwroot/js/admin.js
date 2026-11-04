@@ -155,6 +155,56 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     });
 
+    // --- Shop inventory -------------------------------------------------------
+    var productForm = document.getElementById('product-form');
+    var productId = document.getElementById('product-id');
+    var productName = document.getElementById('product-name');
+    var productPrice = document.getElementById('product-price');
+    var productStock = document.getElementById('product-stock');
+    var productDescription = document.getElementById('product-description');
+    var productCategory = document.getElementById('product-category');
+    var productImageUrl = document.getElementById('product-image-url');
+    var productLowStock = document.getElementById('product-low-stock');
+    var productDisplayOrder = document.getElementById('product-display-order');
+    var productSave = document.getElementById('product-save-btn');
+    var productError = document.getElementById('product-error');
+    var productsMessage = document.getElementById('products-message');
+    function openProductForm(item) {
+        productId.value = item ? item.id : ''; productName.value = item ? item.name : '';
+        productPrice.value = item ? (item.priceCents / 100).toFixed(2) : '';
+        productStock.value = item ? item.stock : ''; productDescription.value = item ? (item.description || '') : '';
+        productCategory.value = item ? (item.category || '') : ''; productImageUrl.value = item ? (item.imageUrl || '') : '';
+        productLowStock.value = item ? item.lowStock : '5'; productDisplayOrder.value = item ? item.displayOrder : '0';
+        productSave.textContent = item ? 'Save changes' : 'Add product';
+        hide(productError); productForm.style.display = ''; productName.focus();
+    }
+    document.getElementById('add-product-btn').addEventListener('click', function () { openProductForm(null); });
+    document.getElementById('product-cancel-btn').addEventListener('click', function () { productForm.style.display = 'none'; });
+    document.getElementById('products-list').addEventListener('click', function (e) {
+        var row = e.target.closest('.product-item'); if (!row) return;
+        if (e.target.closest('.edit-product-btn')) openProductForm({ id: row.dataset.id, name: row.dataset.name, priceCents: parseInt(row.dataset.priceCents, 10), stock: parseInt(row.dataset.stock, 10), description: row.dataset.description, category: row.dataset.category, imageUrl: row.dataset.imageUrl, lowStock: parseInt(row.dataset.lowStock, 10), displayOrder: parseInt(row.dataset.displayOrder, 10) });
+        else if (e.target.closest('.toggle-product-btn')) toggleActive('/Admin/SetProductActive/', row, productsMessage);
+        else {
+            var stockButton = e.target.closest('.stock-adjust-btn');
+            if (!stockButton) return;
+            postJson('/Admin/AdjustProductStock/' + encodeURIComponent(row.dataset.id), { quantityDelta: parseInt(stockButton.dataset.delta, 10) })
+                .then(function (result) { if (!result.ok) showFailure(productsMessage, result); else window.location.reload(); })
+                .catch(function () { showNetworkFailure(productsMessage); });
+        }
+    });
+    productSave.addEventListener('click', function () {
+        hide(productError); var name = productName.value.trim(); var price = parseFloat(productPrice.value); var stock = parseInt(productStock.value, 10); var lowStock = parseInt(productLowStock.value, 10); var displayOrder = parseInt(productDisplayOrder.value, 10);
+        if (!name) { show(productError, 'Enter a name.'); return; }
+        if (isNaN(price) || price < 0 || price > 10000) { show(productError, 'Enter a price between R0 and R10 000.'); return; }
+        if (isNaN(stock) || stock < 0 || stock > 100000) { show(productError, 'Enter stock between 0 and 100 000.'); return; }
+        if (isNaN(lowStock) || lowStock < 1 || lowStock > 1000) { show(productError, 'Enter a low-stock warning between 1 and 1 000.'); return; }
+        if (isNaN(displayOrder) || displayOrder < -10000 || displayOrder > 10000) { show(productError, 'Enter a display order between -10 000 and 10 000.'); return; }
+        productSave.disabled = true;
+        postJson('/Admin/SaveProduct', { id: productId.value || null, name: name, priceCents: Math.round(price * 100), stockQuantity: stock, description: productDescription.value.trim() || null, category: productCategory.value.trim() || null, imageUrl: productImageUrl.value.trim() || null, lowStockThreshold: lowStock, displayOrder: displayOrder })
+            .then(function (result) { productSave.disabled = false; if (!result.ok) showFailure(productError, result); else window.location.reload(); })
+            .catch(function () { productSave.disabled = false; showNetworkFailure(productError); });
+    });
+
     // --- Barbers ---------------------------------------------------------------
 
     var barberForm = document.getElementById('barber-form');
