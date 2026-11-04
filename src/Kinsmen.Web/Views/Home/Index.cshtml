@@ -43,3 +43,36 @@
         </div>
     </div>
 </section>
+
+<section class="home-features">
+    <div class="wrap">
+        <h2>Everything in one place</h2>
+        <p class="lede">Book, manage and shop with Kinsmen online. Each part of the site has its own page.</p>
+        <div class="feature-grid">
+            <a asp-controller="Booking" asp-action="Index" class="panel neo-raised feature-card">
+                <span class="ficon" aria-hidden="true">01</span>
+                <h3>Book a chair</h3>
+                <p>Pick one or more services, a barber (or any available barber) and a time that suits you.</p>
+                <span class="flink">Start a booking &rarr;</span>
+            </a>
+            <a asp-controller="Team" asp-action="Index" class="panel neo-raised feature-card teal">
+                <span class="ficon" aria-hidden="true">02</span>
+                <h3>Meet the barbers</h3>
+                <p>See who works at Kinsmen, what each barber specialises in and when they are in.</p>
+                <span class="flink">See the team &rarr;</span>
+            </a>
+            <a asp-controller="Shop" asp-action="Index" class="panel neo-raised feature-card ochre">
+                <span class="ficon" aria-hidden="true">03</span>
+                <h3>Shop products</h3>
+                <p>Browse grooming products and reserve them with your booking. Collect and pay in store.</p>
+                <span class="flink">Browse the shop &rarr;</span>
+            </a>
+            <a asp-controller="MyBookings" asp-action="Index" class="panel neo-raised feature-card">
+                <span class="ficon" aria-hidden="true">04</span>
+                <h3>Manage bookings</h3>
+                <p>Reschedule or cancel, rebook a past visit, and get an email reminder the day before.</p>
+                <span class="flink">My bookings &rarr;</span>
+            </a>
+        </div>
+    </div>
+</section>
