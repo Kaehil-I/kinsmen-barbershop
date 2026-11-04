@@ -20,6 +20,9 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
     public Task<List<Barber>> Barbers(CancellationToken ct) => store.Read(async s =>
         (await s.Barbers()).Where(x => x.Active).ToList(), ct);
 
+    public Task<List<ProductItem>> Products(CancellationToken ct) => store.Read(async s =>
+        (await s.Products()).Where(x => x.Active).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToList(), ct);
+
     private static ServiceSnapshot[] SelectServices(List<ServiceItem> catalog, string[]? ids)
     {
         ValidateServiceIds(ids);
@@ -35,6 +38,22 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
     {
         if (ids is null || ids.Length is < 1 or > 10 || ids.Any(string.IsNullOrWhiteSpace) || ids.Distinct().Count() != ids.Length)
             throw DomainError.Invalid("Select 1 to 10 distinct service IDs.");
+    }
+
+    private static ProductSnapshot[] SelectProducts(List<ProductItem> catalogue, ProductSelection[]? selections)
+    {
+        if (selections is null || selections.Length == 0) return [];
+        if (selections.Length > 10 || selections.Any(x => string.IsNullOrWhiteSpace(x.ProductId) || x.Quantity is < 1 or > 10)
+            || selections.Select(x => x.ProductId).Distinct(StringComparer.Ordinal).Count() != selections.Length)
+            throw DomainError.Invalid("Select up to 10 distinct products with quantities from 1 to 10.");
+        return selections.Select(selection =>
+        {
+            var product = catalogue.SingleOrDefault(x => x.Id == selection.ProductId && x.Active)
+                ?? throw DomainError.Invalid("A selected product is unavailable.");
+            if (product.StockQuantity < selection.Quantity)
+                throw new DomainError(409, "insufficient_stock", $"{product.Name} does not have enough stock. Refresh the page and try again.");
+            return new ProductSnapshot(product.Id, product.Name, product.PriceCents, selection.Quantity);
+        }).ToArray();
     }
 
     private static string Hash(object value) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(value))));
@@ -98,6 +117,7 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
             CustomerId = customer,
             input.BarberId,
             Services = input.ServiceIds.Order(StringComparer.Ordinal).ToArray(),
+            Products = (input.Products ?? []).OrderBy(x => x.ProductId, StringComparer.Ordinal).Select(x => new { x.ProductId, x.Quantity }).ToArray(),
             StartUtcTicks = start.Ticks,
             Notes = notes
         });
@@ -117,6 +137,7 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
                     return Replay(previous, fingerprint);
                 ValidateStart(start);
                 var services = SelectServices(await s.Services(), input.ServiceIds);
+                var products = SelectProducts(await s.Products(), input.Products);
                 await s.TouchCustomer(customer);
                 var active = (await s.Bookings(customer, null, Now, Now.AddDays(policy.HorizonDays + 1)))
                     .Count(b => b.Status is BookingStatus.Pending or BookingStatus.Confirmed);
@@ -134,9 +155,14 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
                 foreach (var barber in candidates)
                 {
                     if (!await Free(s, barber, start, end)) continue;
+                    foreach (var product in products)
+                    {
+                        var item = (await s.Products()).Single(x => x.Id == product.ProductId);
+                        await s.SaveProduct(item with { StockQuantity = item.StockQuantity - product.Quantity });
+                    }
                     var booking = new Booking(bookingId, customer, barber.Id, start, end,
-                        services, services.Sum(x => x.PriceCents), BookingStatus.Pending, Now,
-                        Notes: notes, CreationFingerprint: fingerprint, CustomerEmail: customerEmail);
+                        services, services.Sum(x => x.PriceCents) + products.Sum(x => x.PriceCents * x.Quantity), BookingStatus.Pending, Now,
+                        Notes: notes, CreationFingerprint: fingerprint, CustomerEmail: customerEmail, Products: products);
                     await s.SaveBooking(booking, true);
                     created = true;
                     return booking;
@@ -155,8 +181,7 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
 
         // Sent only after the transaction has committed, so a retried transaction can't duplicate it.
         if (created)
-            await SendBookingEmail(result, "We've received your booking request",
-                $"<p>Thanks for booking with Kinsmen! We've received your request for {Describe(result)}. We'll email you again once it's confirmed.</p>");
+            await SendBookingEmail(result, name => BookingEmails.Received(result, name));
         return result;
     }
 
@@ -186,8 +211,10 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
             throw DomainError.Conflict("The cancellation or rescheduling notice period has passed.");
     }
 
-    public Task<Booking> Reschedule(Actor actor, string id, RescheduleRequest input, CancellationToken ct = default)
-        => store.Write(async s =>
+    public async Task<Booking> Reschedule(Actor actor, string id, RescheduleRequest input, CancellationToken ct = default)
+    {
+        var previousStart = default(DateTime);
+        var updated = await store.Write(async s =>
         {
             var original = await s.BookingById(id) ?? throw DomainError.Missing();
             CanManage(actor, original);
@@ -198,22 +225,40 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
             var barber = (await s.Barbers()).Single(b => b.Id == original.BarberId);
             var end = start.AddMinutes(original.Services.Sum(x => x.DurationMinutes));
             if (!await Free(s, barber, start, end, id)) throw DomainError.Conflict("The new time is unavailable; your original booking is unchanged.");
-            var updated = original with { StartUtc = start, EndUtc = end, Version = original.Version + 1 };
-            await s.SaveBooking(updated);
-            return updated;
+            previousStart = original.StartUtc;
+            // The reminder was for the old time, so clear it: the new time gets its own.
+            var moved = original with { StartUtc = start, EndUtc = end, Version = original.Version + 1, ReminderSentUtc = null };
+            await s.SaveBooking(moved);
+            return moved;
         }, ct);
 
-    public Task<Booking> Cancel(Actor actor, string id, long version, CancellationToken ct = default)
-        => store.Write(async s =>
+        // Sent only after the transaction has committed, so a retry can't duplicate it.
+        await SendBookingEmail(updated, name => BookingEmails.Rescheduled(updated, previousStart, name));
+        return updated;
+    }
+
+    public async Task<Booking> Cancel(Actor actor, string id, long version, CancellationToken ct = default)
+    {
+        var updated = await store.Write(async s =>
         {
             var original = await s.BookingById(id) ?? throw DomainError.Missing();
             CanManage(actor, original);
             CanChange(original, version);
             await s.TouchBarbers([original.BarberId]);
-            var updated = original with { Status = BookingStatus.Cancelled, Version = original.Version + 1 };
-            await s.SaveBooking(updated);
-            return updated;
+            // Products reserved for this booking go back on the shelf.
+            foreach (var product in original.Products ?? [])
+            {
+                var item = (await s.Products()).SingleOrDefault(x => x.Id == product.ProductId);
+                if (item is not null) await s.SaveProduct(item with { StockQuantity = item.StockQuantity + product.Quantity });
+            }
+            var cancelled = original with { Status = BookingStatus.Cancelled, Version = original.Version + 1 };
+            await s.SaveBooking(cancelled);
+            return cancelled;
         }, ct);
+
+        await SendBookingEmail(updated, name => BookingEmails.Cancelled(updated, name));
+        return updated;
+    }
 
     public async Task<Booking> ChangeStatus(Actor actor, string id, StatusChangeRequest input, CancellationToken ct = default)
     {
@@ -242,27 +287,46 @@ public sealed class BookingService(IBookingStore store, TimeProvider clock, Book
         // Sent only after the transaction has committed, so a retry can't duplicate it. The recipient comes
         // from the address stored on the booking, because the caller here is staff, not the customer.
         if (updated.Status == BookingStatus.Confirmed)
-            await SendBookingEmail(updated, "Your booking is confirmed",
-                $"<p>Your appointment ({Describe(updated)}) is confirmed. See you then!</p>");
+            await SendBookingEmail(updated, name => BookingEmails.Confirmed(updated, name));
         else if (updated.Status == BookingStatus.Completed)
-            await SendBookingEmail(updated, "How was your visit?",
-                "<p>Thanks for visiting Kinsmen! We'd love to hear how it went. Sign in and open My Bookings to leave a review.</p>");
+            await SendBookingEmail(updated, _ => BookingEmails.ReviewRequest());
         return updated;
     }
 
-    private static string Describe(Booking booking)
-    {
-        var local = TimeZoneInfo.ConvertTimeFromUtc(booking.StartUtc, ShopZone);
-        var services = string.Join(", ", booking.Services.Select(s => WebUtility.HtmlEncode(s.Name)));
-        return $"{services} on {local.ToString("dddd d MMMM", CultureInfo.InvariantCulture)} at {local.ToString("HH:mm", CultureInfo.InvariantCulture)}";
-    }
-
     // A failed or slow email provider must never fail the booking action the customer is waiting on.
-    private async Task SendBookingEmail(Booking booking, string subject, string htmlBody)
+    private async Task SendBookingEmail(Booking booking, Func<string, EmailMessage> build)
     {
         if (email is null || string.IsNullOrWhiteSpace(booking.CustomerEmail)) return;
-        try { await email.SendAsync(booking.CustomerEmail, subject, htmlBody); }
+        try
+        {
+            var barberName = await store.Read(async s =>
+                (await s.Barbers()).SingleOrDefault(b => b.Id == booking.BarberId)?.Name) ?? "your barber";
+            var message = build(barberName);
+            await email.SendAsync(booking.CustomerEmail, message.Subject, message.Html);
+        }
         catch (Exception e) { Console.Error.WriteLine($"Booking email failed: {e.GetType().Name}"); }
+    }
+
+    private static readonly TimeSpan ReminderLead = TimeSpan.FromHours(24);
+
+    /// <summary>Emails a reminder for each confirmed booking starting within 24 hours that hasn't had one.
+    /// Bookings made less than 24 hours ahead are skipped: their confirmation email already says it all.
+    /// Each booking is claimed before sending, so overlapping sweeps or two instances can't double-send.</summary>
+    public async Task<int> SendDueReminders(CancellationToken ct = default)
+    {
+        if (email is null) return 0;
+        var due = await store.Read(async s => (await s.Bookings(null, null, Now, Now + ReminderLead))
+            .Where(b => b.Status == BookingStatus.Confirmed && b.ReminderSentUtc is null && b.StartUtc > Now
+                && !string.IsNullOrWhiteSpace(b.CustomerEmail) && b.CreatedUtc <= b.StartUtc - ReminderLead)
+            .ToList(), ct);
+        var sent = 0;
+        foreach (var booking in due)
+        {
+            if (!await store.Write(s => s.ClaimReminder(booking.Id, Now), ct)) continue;
+            await SendBookingEmail(booking, name => BookingEmails.Reminder(booking, name));
+            sent++;
+        }
+        return sent;
     }
 
     public Task<Review> SubmitReview(Actor actor, string bookingId, SubmitReviewRequest input, CancellationToken ct = default)

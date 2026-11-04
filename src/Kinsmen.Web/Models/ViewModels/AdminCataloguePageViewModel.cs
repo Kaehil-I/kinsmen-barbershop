@@ -9,5 +9,6 @@ public sealed class AdminCataloguePageViewModel
 {
     public List<Service> Services { get; set; } = [];
     public List<AdminBarber> Barbers { get; set; } = [];
+    public List<RetailProduct> Products { get; set; } = [];
     public string? ErrorMessage { get; set; }
 }

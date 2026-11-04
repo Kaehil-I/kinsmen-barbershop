@@ -21,7 +21,7 @@
     <div class="wrap" id="staff-page" style="padding-bottom: 80px;">
         @if (Model.ErrorMessage is not null)
         {
-            <p class="price-note">@Model.ErrorMessage</p>
+            <p class="price-note" data-api-waking="@(ApiErrorMessages.IsWakingUp(Model.ErrorMessage) ? "" : null)">@Model.ErrorMessage</p>
         }
         else if (!Model.Enabled)
         {

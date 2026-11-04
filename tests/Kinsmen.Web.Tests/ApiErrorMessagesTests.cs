@@ -44,19 +44,49 @@ public sealed class ApiErrorMessagesTests
         Assert.Contains(expectedWord, message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void AnInternalServerErrorSaysTheServiceHitAProblem()
+    {
+        var message = ApiErrorMessages.For(Error(500));
+
+        Assert.NotEqual(RawMessage, message);
+        Assert.Contains("problem", message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // 502/503/504 are what Render returns while the API wakes from its free-tier sleep: telling people to
+    // refresh in a minute is accurate, where "hit a problem" made it look broken.
     [Theory]
-    [InlineData(500)]
     [InlineData(502)]
     [InlineData(503)]
-    public void ServerSideFailuresAllShareOneMessage(int status)
+    [InlineData(504)]
+    public void GatewayFailuresSayTheServiceIsStartingUp(int status)
     {
         var message = ApiErrorMessages.For(Error(status));
 
-        Assert.NotEqual(RawMessage, message);
-        Assert.Equal(ApiErrorMessages.For(Error(500)), message);
+        Assert.Contains("minute", message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("refresh", message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // These are the messages the view marks with data-api-waking, so the page reloads itself once the API is up.
+    [Fact]
+    public void StartingUpMessagesAreRecognisedAndOthersAreNot()
+    {
+        Assert.True(ApiErrorMessages.IsWakingUp(ApiErrorMessages.For(Error(503))));
+        Assert.True(ApiErrorMessages.IsWakingUp(ApiErrorMessages.ForConnectionFailure()));
+
+        Assert.False(ApiErrorMessages.IsWakingUp(ApiErrorMessages.For(Error(500))));
+        Assert.False(ApiErrorMessages.IsWakingUp(ApiErrorMessages.For(Error(401))));
+        Assert.False(ApiErrorMessages.IsWakingUp(null));
     }
 
     [Fact]
     public void ConnectionFailureMessagePointsAtTheApiNotBeingReachable()
-        => Assert.Contains("reach", ApiErrorMessages.ForConnectionFailure(), StringComparison.OrdinalIgnoreCase);
+    {
+        var message = ApiErrorMessages.ForConnectionFailure();
+
+        Assert.Contains("reach", message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("refresh", message, StringComparison.OrdinalIgnoreCase);
+        // Customers see this on the live site, so no developer instructions.
+        Assert.DoesNotContain("docs/", message);
+    }
 }

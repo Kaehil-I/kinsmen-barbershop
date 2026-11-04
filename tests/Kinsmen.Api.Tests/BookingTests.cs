@@ -19,6 +19,24 @@ public sealed class BookingTests
         Assert.Equal(30000, b.TotalCents); Assert.Equal(TimeSpan.FromMinutes(45), b.EndUtc - b.StartUtc);
         Assert.Equal(DateTimeKind.Utc, b.StartUtc.Kind); Assert.Equal(BookingStatus.Pending, b.Status);
     }
+    [Fact] public async Task BookingProductsReserveStockAndCancellationReturnsIt()
+    {
+        var initial = store.Inventory.Single(product => product.Id == "beard-oil").StockQuantity;
+        var booking = await Service.Create(Customer, Request() with { Products = [new("beard-oil", 2)] });
+        Assert.Equal(30000 + 50000, booking.TotalCents);
+        Assert.Equal(2, booking.Products!.Single().Quantity);
+        Assert.Equal(initial - 2, store.Inventory.Single(product => product.Id == "beard-oil").StockQuantity);
+
+        await Service.Cancel(Customer, booking.Id, booking.Version);
+        Assert.Equal(initial, store.Inventory.Single(product => product.Id == "beard-oil").StockQuantity);
+    }
+    [Fact] public async Task BookingRejectsUnavailableProductWithoutChangingStock()
+    {
+        var original = store.Inventory.Single(product => product.Id == "matify");
+        var error = await Assert.ThrowsAsync<DomainError>(() => Service.Create(Customer, Request() with { Products = [new("matify", original.StockQuantity + 1)] }));
+        Assert.Equal("insufficient_stock", error.Code);
+        Assert.Equal(original.StockQuantity, store.Inventory.Single(product => product.Id == "matify").StockQuantity);
+    }
     [Fact] public async Task DuplicateServiceIsRejected()
         => Assert.Equal(400, (await Assert.ThrowsAsync<DomainError>(() => Service.Create(Customer, Request(ids: ["haircut", "haircut"])))).Status);
     [Fact] public async Task UnknownServiceIsRejected()
@@ -352,5 +370,102 @@ public sealed class BookingTests
         await EmailService.SubmitReview(CustomerWithEmail, booking.Id, new(5, "Excellent"));
         Assert.Single(await EmailService.ReviewsForBarber(booking.BarberId));
         Assert.Empty(await EmailService.ReviewsForBarber("barber-b"));
+    }
+
+    private async Task<Booking> ConfirmedBooking()
+    {
+        var booking = await EmailService.Create(CustomerWithEmail, Request());
+        var confirmed = await EmailService.ChangeStatus(Staff, booking.Id, new(BookingStatus.Confirmed, booking.Version));
+        emails.Sent.Clear();
+        return confirmed;
+    }
+
+    [Fact]
+    public async Task EmailsListServiceBarberTimeTotalAndReference()
+    {
+        await EmailService.Create(CustomerWithEmail, Request());
+        var body = Assert.Single(emails.Sent).Body;
+        Assert.Contains("Demo barber A", body);
+        Assert.Contains("Demo haircut", body);
+        Assert.Contains("R300.00", body);
+        Assert.Contains("45 minutes", body);
+        Assert.DoesNotContain("Reserved products", body);
+    }
+    [Fact]
+    public async Task CancellingEmailsTheCustomer()
+    {
+        var booking = await EmailService.Create(CustomerWithEmail, Request());
+        emails.Sent.Clear();
+        await EmailService.Cancel(CustomerWithEmail, booking.Id, booking.Version);
+        var mail = Assert.Single(emails.Sent);
+        Assert.Equal("Your booking has been cancelled", mail.Subject);
+        Assert.Equal("a@example.com", mail.To);
+    }
+    [Fact]
+    public async Task ReschedulingEmailsTheNewAndPreviousTime()
+    {
+        var booking = await EmailService.Create(CustomerWithEmail, Request());
+        emails.Sent.Clear();
+        await EmailService.Reschedule(CustomerWithEmail, booking.Id, new(Start.AddHours(1), booking.Version));
+        var mail = Assert.Single(emails.Sent);
+        Assert.Equal("Your booking has been rescheduled", mail.Subject);
+        Assert.Contains("Saturday 19 September at 11:00", mail.Body);
+        Assert.Contains("previously Saturday 19 September at 10:00", mail.Body);
+    }
+    [Fact]
+    public async Task ARejectedCancelOrRescheduleSendsNoEmail()
+    {
+        var booking = await EmailService.Create(CustomerWithEmail, Request());
+        emails.Sent.Clear();
+        await Assert.ThrowsAsync<DomainError>(() => EmailService.Cancel(new Actor("customer-b", "Customer", "b@example.com"), booking.Id, booking.Version));
+        await Assert.ThrowsAsync<DomainError>(() => EmailService.Reschedule(CustomerWithEmail, booking.Id, new(Start.AddHours(1), booking.Version + 5)));
+        Assert.Empty(emails.Sent);
+    }
+    [Fact]
+    public async Task ReminderGoesOutOnceOnceTheAppointmentIsWithin24Hours()
+    {
+        await ConfirmedBooking();
+        Assert.Equal(0, await EmailService.SendDueReminders());          // 26 hours away
+        clock.Now = Start.AddHours(-23);
+        Assert.Equal(1, await EmailService.SendDueReminders());
+        Assert.Equal(0, await EmailService.SendDueReminders());          // never twice
+        var mail = Assert.Single(emails.Sent);
+        Assert.StartsWith("Reminder:", mail.Subject);
+        Assert.Equal("a@example.com", mail.To);
+    }
+    [Fact]
+    public async Task NoReminderForPendingOrShortNoticeBookings()
+    {
+        await EmailService.Create(CustomerWithEmail, Request());          // still Pending
+        clock.Now = Start.AddHours(-23);
+        Assert.Equal(0, await EmailService.SendDueReminders());
+
+        store.Saved.Clear(); emails.Sent.Clear();
+        clock.Now = Start.AddHours(-3);                                    // booked 3 hours ahead
+        var late = await EmailService.Create(CustomerWithEmail, Request());
+        await EmailService.ChangeStatus(Staff, late.Id, new(BookingStatus.Confirmed, late.Version));
+        emails.Sent.Clear();
+        Assert.Equal(0, await EmailService.SendDueReminders());
+    }
+    [Fact]
+    public async Task ReschedulingGivesTheNewTimeItsOwnReminder()
+    {
+        var booking = await ConfirmedBooking();
+        clock.Now = Start.AddHours(-23);
+        await EmailService.SendDueReminders();
+        // Half an hour later, so the new time is inside the 24-hour window rather than exactly on its edge.
+        await EmailService.Reschedule(CustomerWithEmail, booking.Id, new(Start.AddMinutes(30), booking.Version));
+        Assert.Null(store.Saved.Single().ReminderSentUtc);
+        Assert.Equal(1, await EmailService.SendDueReminders());
+    }
+    [Fact]
+    public void ReservedProductsAreListedAndEncodedWhenPresent()
+    {
+        var booking = new Booking("abc12345xyz", "customer-a", "barber-a", Start.UtcDateTime, Start.UtcDateTime.AddMinutes(45),
+            [new("haircut", "Haircut", 20000, 30)], 20000, BookingStatus.Confirmed, DateTime.UtcNow);
+        var html = BookingEmails.Confirmed(booking, "Sam", [new("Beard oil <50ml>", 2)]).Html;
+        Assert.Contains("Reserved products", html);
+        Assert.Contains("Beard oil &lt;50ml&gt; &times; 2", html);
+        Assert.DoesNotContain("Reserved products", BookingEmails.Confirmed(booking, "Sam").Html);
     }
 }

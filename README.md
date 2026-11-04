@@ -3,9 +3,11 @@
 INSY7315 Work Integrated Learning project for **Kinsmen Barbers**, Shop 5, 8 Mackeurtan Ave, Durban North.
 Built by **Kaehil, Kyra, Zario and Gregory** — BCA3, IIE Emeris.
 
-Customers browse services and barbers, book a chair online and manage their own bookings. Barbers see
-their schedule, confirm appointments and block off time. Admins manage the service catalogue, barber
-profiles, barber service skills and staff access.
+Customers browse services, barbers and in-store grooming products, book a chair online, reserve products with
+a booking, manage their own bookings and rebook a past visit from their profile. They receive booking emails
+and a reminder about 24 hours before an appointment. Barbers see their schedule, confirm appointments and
+block off time. Admins manage the service catalogue, barber profiles and skills, products and stock and staff
+access, and see a dashboard of bookings, revenue, top services and low stock.
 
 | | Link |
 |---|---|
@@ -15,8 +17,9 @@ profiles, barber service skills and staff access.
 | **Part 1 prototype** | https://kaehil-i.github.io/kinsmen-barbershop/kinsmen_prototype.html |
 
 The live system runs on Render's free tier: after about 15 minutes without visitors it sleeps, and the
-first page load can take up to a minute. Open it shortly before a demo. If it's unavailable, the demo video
-shows the full walkthrough.
+first page load can take up to a minute. The web app retries while the API wakes and shows a waiting page
+that reloads by itself. Open it shortly before a demo. If it's unavailable, the demo video shows the full
+walkthrough. Go-live moves both services to always-on plans.
 
 ## How it works
 
@@ -35,7 +38,12 @@ Browser ──> Kinsmen.Web (ASP.NET Core MVC) ──server-to-server, bearer to
   tokens signed by our Auth0 tenant with audience `kinsmen-api` and a `role` of Customer, Barber or Admin.
 - **Staff management** lets an existing admin assign Customer, Barber or Admin roles through the
   application once the restricted Auth0 Management API integration has been configured in Render. Every
-  role change is audit-logged in MongoDB.
+  role change is audit-logged in MongoDB. An admin cannot change their own role, and a barber with upcoming
+  bookings cannot be demoted.
+- **Shop and reservations** hold stock inside the booking transaction and return it if the booking is
+  cancelled. Products are collected and paid for in store.
+- **Reminders** are sent by a background worker about 24 hours before an appointment, once per booking, when
+  the Brevo email settings are configured.
 
 More detail: [architecture and data model](docs/backend/ARCHITECTURE.md) ·
 [API contract](docs/backend/API-CONTRACT.md) · [OpenAPI definition](docs/backend/openapi.json).
@@ -159,8 +167,8 @@ set. The live Auth0 tests are skipped there.
 ## Deployment
 
 The system deploys to Render as two Docker web services (`kinsmen-api`, `kinsmen-web`) from
-[`render.yaml`](render.yaml). Staging deploys from `integration-part2`, and only after a commit's GitHub
-checks pass; the submission build deploys from `main`.
+[`render.yaml`](render.yaml). The submission build deploys from `main`, and only after a commit's GitHub checks pass.
+During Part 3 the services tracked `integration-part3`.
 
 Secrets are entered in the Render dashboard and never committed. The API requires the MongoDB connection
 string and, where those features are enabled, the Brevo transactional-email settings and restricted Auth0
@@ -170,10 +178,11 @@ Management API credentials. Setup steps, Atlas network access and free-tier beha
 
 ## Working on the code
 
-1. Branch from `integration-part2` (`feature/<name>-<topic>`).
-2. Open a pull request back into `integration-part2`. The **Build and test** and **Container images**
-   checks must pass, and a teammate reviews before merging.
-3. `integration-part2` is merged into `main` for submission.
+1. Branch from the current integration branch (`integration-part3` for Task 3), using
+   `feature/<name>-<topic>`.
+2. Open a pull request back into that integration branch. The **Build and test** and **Container images**
+   checks must pass, and a teammate other than the author must approve before merging.
+3. The integration branch is merged into `main` for submission.
 
 Never commit connection strings, passwords, client secrets or tokens. Use `dotnet user-secrets` or
 environment variables locally.
@@ -198,30 +207,35 @@ kinsmen-barbershop/
 ├── compose.mongo.yaml          # local MongoDB replica set
 ├── Kinsmen.slnx                # .NET solution
 ├── kinsmen_prototype.html      # Part 1 prototype (single file)
-└── Documentation/              # Task 1 report, WBS/ERD/DevOps, questionnaire, meeting minutes
+└── Documentation/              # Task 1 report, WBS/ERD/DevOps, questionnaire, minutes, Part 3 pack
 ```
 
 ## Team
 
 | Member | Area |
 |---|---|
-| Kaehil | Group leader; GitHub workflow, CI, hosting, deployment, admin catalogue and staff management |
-| Zario | Booking API, MongoDB data design, booking rules and barber-service matching |
-| Gregory | Front end and user experience |
-| Kyra | Authentication, security, email/review workflow and testing |
+| Kaehil | Group leader; GitHub workflow, CI, hosting, deployment, admin catalogue, staff management and dashboard |
+| Zario | Booking API, MongoDB data design, booking rules, barber-service matching and the product shop |
+| Gregory | Front end and user experience, customer profile and Book again |
+| Kyra | Authentication, security, booking emails, 24-hour reminders and testing |
 
 ## Scope and remaining configuration
 
-The implemented Part 2 scope includes customer booking, customer booking management, role-based access,
-barber scheduling, service and barber administration, MongoDB persistence, Auth0 authentication, Render
-deployment and automated CI checks.
+The implemented scope includes customer booking, booking management, role-based access, barber scheduling,
+service and barber administration, MongoDB persistence, Auth0 authentication, Render deployment and automated
+CI checks (Part 2). Part 3 added the product shop with reservations, the customer profile and Book again,
+the admin dashboard, 24-hour reminder emails, free-tier wake-up handling and clearer feature areas on the
+home page.
 
 The following items either sit outside the agreed Part 2 scope or require final configuration before a live
 demonstration:
 
 - **Loyalty:** shown in the prototype, but listed as out of scope in the Task 1 report. Not built.
 - **Guest booking:** the report describes a Guest role; the system currently requires an account to book.
-- **Shop and checkout:** the report's cart/checkout flow and the prototype's Barber POS are not built.
+- **Shop checkout:** the public Shop page lists products available in-store, and customers can reserve them with a
+  booking: stock is held when the booking is made and returned if it is cancelled. Online payment and checkout are
+  deliberately out of scope until the business confirms fulfilment requirements, so products are collected and paid
+  for in store.
 - **Email and review delivery:** live. Booking emails are sent through Brevo from a dedicated project mailbox; reviews are available on completed bookings. Check the mailbox spam folder when testing.
 - **Staff role changes:** require the limited Auth0 Management API machine-to-machine credentials in Render.
   Until they are configured, the Staff page remains safely disabled.

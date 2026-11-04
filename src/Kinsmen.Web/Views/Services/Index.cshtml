@@ -20,7 +20,7 @@
     <div class="wrap">
         @if (errorMessage is not null)
         {
-            <p class="price-note">@errorMessage</p>
+            <p class="price-note" data-api-waking="@(ApiErrorMessages.IsWakingUp(errorMessage) ? "" : null)">@errorMessage</p>
         }
         else if (Model.Count == 0)
         {

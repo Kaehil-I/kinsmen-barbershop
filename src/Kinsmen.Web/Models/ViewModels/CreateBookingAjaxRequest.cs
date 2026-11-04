@@ -1,3 +1,5 @@
+using Kinsmen.Web.Models.Api;
+
 namespace Kinsmen.Web.Models.ViewModels;
 
 /// <summary>Body the booking page's JS posts to BookingController.Create. Distinct from
@@ -11,6 +13,7 @@ public sealed class CreateBookingAjaxRequest
     public string? BarberId { get; set; }
 
     public List<string> ServiceIds { get; set; } = [];
+    public List<ProductSelection> Products { get; set; } = [];
 
     /// <summary>The exact startUtc value from the availability slot the customer clicked.</summary>
     public string StartUtc { get; set; } = string.Empty;

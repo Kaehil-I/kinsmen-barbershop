@@ -84,7 +84,7 @@
     <div class="wrap" style="padding-bottom: 80px;">
         @if (Model.ErrorMessage is not null)
         {
-            <p class="price-note">@Model.ErrorMessage</p>
+            <p class="price-note" data-api-waking="@(ApiErrorMessages.IsWakingUp(Model.ErrorMessage) ? "" : null)">@Model.ErrorMessage</p>
         }
         else
         {
@@ -157,6 +157,10 @@
                                     @CustomerLabel(booking.CustomerId) &middot; @LocalTime(booking.StartUtc)&ndash;@LocalTime(booking.EndUtc)
                                     &middot; <span class="bprice">@PriceFormatter.FormatZarCents(booking.TotalCents)</span>
                                 </div>
+                                @if (booking.Products.Count > 0)
+                                {
+                                    <div class="bmeta" style="margin-top:2px;">Products reserved: @string.Join(", ", booking.Products.Select(product => $"{product.Quantity} × {product.Name}"))</div>
+                                }
                                 @if (!string.IsNullOrWhiteSpace(booking.Notes))
                                 {
                                     <div class="bmeta" style="margin-top:2px; font-style:italic;">&ldquo;@booking.Notes&rdquo;</div>

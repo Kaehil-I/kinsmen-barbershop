@@ -41,7 +41,7 @@
     <div class="wrap" style="padding-bottom: 80px;">
         @if (Model.ErrorMessage is not null)
         {
-            <p class="price-note">@Model.ErrorMessage</p>
+            <p class="price-note" data-api-waking="@(ApiErrorMessages.IsWakingUp(Model.ErrorMessage) ? "" : null)">@Model.ErrorMessage</p>
         }
         else if (Model.Bookings.Count == 0)
         {
@@ -68,7 +68,8 @@
                          data-booking-id="@booking.Id"
                          data-version="@booking.Version"
                          data-barber-id="@booking.BarberId"
-                         data-service-ids="@string.Join(",", booking.Services.Select(s => s.ServiceId))">
+                         data-service-ids="@string.Join(",", booking.Services.Select(s => s.ServiceId))"
+                         data-book-again-url="@BookAgainLink.For(Url, booking)">
                         <div class="mtop">
                             <div class="mname">@string.Join(", ", booking.Services.Select(s => s.Name))</div>
                             <span class="badge-pill @StatusBadgeClass(booking.Status)">@StatusLabel(booking.Status)</span>
@@ -76,6 +77,10 @@
                         <div class="mmeta">
                             with @barberName &middot; <span class="booking-date">@LocalDate(booking.StartUtc)</span> at <span class="booking-time">@LocalTime(booking.StartUtc)</span> &middot; @PriceFormatter.FormatZarCents(booking.TotalCents)
                         </div>
+                        @if (booking.Products.Count > 0)
+                        {
+                            <div class="mmeta" style="margin-top:3px;">Products reserved: @string.Join(", ", booking.Products.Select(product => $"{product.Quantity} × {product.Name}"))</div>
+                        }
 
                         @if (canManage)
                         {
@@ -101,6 +106,13 @@
                                     <button class="btn-confirm neo-pill-raised reschedule-confirm-btn" disabled type="button">Confirm New Time</button>
                                 </div>
                                 <p class="reschedule-error form-error"></p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="my-booking-actions">
+                                <a class="neo-pill-raised book-again-link" href="@BookAgainLink.For(Url, booking)"
+                                   aria-label="Book again: @string.Join(", ", booking.Services.Select(s => s.Name)) with @barberName">Book again</a>
                             </div>
                         }
 

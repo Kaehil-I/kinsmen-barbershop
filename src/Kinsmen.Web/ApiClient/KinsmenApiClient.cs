@@ -30,6 +30,12 @@ public sealed class KinsmenApiClient(HttpClient httpClient) : IKinsmenApiClient
         return await ReadOrThrowAsync<List<Service>>(response, cancellationToken);
     }
 
+    public async Task<List<RetailProduct>> GetProductsAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync("/api/products", cancellationToken);
+        return await ReadOrThrowAsync<List<RetailProduct>>(response, cancellationToken);
+    }
+
     public async Task<List<Barber>> GetBarbersAsync(CancellationToken cancellationToken = default)
     {
         using var response = await httpClient.GetAsync("/api/barbers", cancellationToken);
@@ -200,6 +206,34 @@ public sealed class KinsmenApiClient(HttpClient httpClient) : IKinsmenApiClient
             JsonContent.Create(new ActiveInput { Active = active }, options: JsonOptions),
             cancellationToken);
         return await ReadOrThrowAsync<Service>(response, cancellationToken);
+    }
+
+    public async Task<List<RetailProduct>> GetAdminProductsAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync("/api/admin/products", cancellationToken);
+        return await ReadOrThrowAsync<List<RetailProduct>>(response, cancellationToken);
+    }
+    public async Task<RetailProduct> CreateAdminProductAsync(ProductInput input, CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsJsonAsync("/api/admin/products", input, JsonOptions, cancellationToken);
+        return await ReadOrThrowAsync<RetailProduct>(response, cancellationToken);
+    }
+    public async Task<RetailProduct> UpdateAdminProductAsync(string id, ProductInput input, CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PutAsJsonAsync($"/api/admin/products/{Uri.EscapeDataString(id)}", input, JsonOptions, cancellationToken);
+        return await ReadOrThrowAsync<RetailProduct>(response, cancellationToken);
+    }
+    public async Task<RetailProduct> AdjustAdminProductStockAsync(string id, int quantityDelta, CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PatchAsync($"/api/admin/products/{Uri.EscapeDataString(id)}/stock",
+            JsonContent.Create(new StockAdjustmentInput { QuantityDelta = quantityDelta }, options: JsonOptions), cancellationToken);
+        return await ReadOrThrowAsync<RetailProduct>(response, cancellationToken);
+    }
+    public async Task<RetailProduct> SetAdminProductActiveAsync(string id, bool active, CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PatchAsync($"/api/admin/products/{Uri.EscapeDataString(id)}/active",
+            JsonContent.Create(new ActiveInput { Active = active }, options: JsonOptions), cancellationToken);
+        return await ReadOrThrowAsync<RetailProduct>(response, cancellationToken);
     }
 
     public async Task<List<AdminBarber>> GetAdminBarbersAsync(CancellationToken cancellationToken = default)
