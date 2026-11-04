@@ -765,3 +765,40 @@
     .shop-callout{ align-items:flex-start; flex-direction:column; }
     .shop-product{ min-height:235px; }
   }
+
+  /* ---------- feature separation ----------
+     The neomorphic surfaces share one colour, so cards read as one soft sheet. Each feature area
+     gets a fixed accent (brick = book, teal = people/schedule, ochre = shop) as a top bar plus a
+     hairline edge, and the home page lists the features as distinct cards. */
+  .neo-raised{ border:1px solid rgba(85,80,63,0.14); }
+  .service-row, .team-card, .shop-product{ position:relative; overflow:hidden; }
+  .service-row::before, .team-card::before, .shop-product::before{
+    content:""; position:absolute; left:0; top:0; right:0; height:4px; background:var(--accent);
+  }
+  .team-card::before{ background:var(--teal); }
+  .shop-product::before{ background:var(--ochre); }
+
+  .home-features{ padding:8px 0 72px; }
+  .home-features h2{
+    font-family:var(--display); font-weight:600; font-size:26px; color:var(--heading); margin-bottom:6px;
+  }
+  .home-features .lede{ color:var(--text-dim); margin-bottom:24px; max-width:560px; }
+  .feature-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:20px; }
+  .feature-card{
+    position:relative; overflow:hidden; padding:26px 22px 22px; display:flex; flex-direction:column; gap:10px;
+    border:1px solid rgba(85,80,63,0.14); border-top:5px solid var(--accent);
+    transition:transform .15s ease;
+  }
+  .feature-card:hover, .feature-card:focus-visible{ transform:translateY(-3px); }
+  .feature-card .ficon{
+    width:44px; height:44px; border-radius:12px; display:grid; place-items:center;
+    background:var(--accent); color:var(--accent-ink);
+    font-family:var(--mono); font-weight:700; font-size:18px;
+  }
+  .feature-card h3{ font-family:var(--display); font-weight:600; font-size:18px; color:var(--heading); }
+  .feature-card p{ font-size:14px; color:var(--text-dim); flex:1; }
+  .feature-card .flink{ font-family:var(--mono); font-size:13px; color:var(--accent); }
+  .feature-card.teal{ border-top-color:var(--teal); } .feature-card.teal .ficon{ background:var(--teal); } .feature-card.teal .flink{ color:var(--teal); }
+  .feature-card.ochre{ border-top-color:var(--ochre); } .feature-card.ochre .ficon{ background:var(--ochre); } .feature-card.ochre .flink{ color:var(--ochre); }
+  @media (prefers-reduced-motion: reduce){ .feature-card{ transition:none; } .feature-card:hover{ transform:none; } }
+
